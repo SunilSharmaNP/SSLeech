@@ -287,6 +287,7 @@ def get_readable_message():
             MirrorStatus.STATUS_SEEDING,
             MirrorStatus.STATUS_METADATA,
         ]:
+            msg += BotTheme("mm")
             msg += BotTheme(
                 "BAR",
                 Bar=f"{get_progress_bar_string(download.progress())} {download.progress()}",
@@ -328,6 +329,7 @@ def get_readable_message():
             )
         msg += BotTheme(
             "CANCEL", Cancel=f"/{BotCommands.CancelMirror}_{download.gid()}"
+        msg += BotTheme("mn")
         )
 
     if len(msg) == 0:
