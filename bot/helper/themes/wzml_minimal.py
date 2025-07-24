@@ -197,9 +197,9 @@ class WZMLStyle:
     STATUS_NAME = "<b>🎥 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
 
     #####---------PROGRESSIVE STATUS-------
-    mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a><</b> »༺━━┓"
+    mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┓"
     BAR = "\n┠ {Bar}"
-    PROCESSED = "\n┠<b>⚡𝐏ʀᴏᴄᴇssᴇᴅ:</b>{Processed}"
+    PROCESSED = "\n┠<b>⚡𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
     STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
     ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
     SPEED = "\n┠<b>☘️ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
