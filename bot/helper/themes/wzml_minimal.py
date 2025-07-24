@@ -161,15 +161,15 @@ class WZMLStyle:
     NAME = "<b> 🎥𝐓ɪᴛᴛʟᴇ:</b><code> {Name}</code>\n\n"
     SIZE = "┎ <b>📦 𝐒ɪᴢᴇ: </b>{Size}\n"
     ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ: </b>{Time}\n"
-    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}"
+    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}\n"
     pwr = "\n\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
 
     # ----- LEECH -------
-    L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs: </b>{Files}\n"
-    L_CORRUPTED_FILES = "┠ <b>🛑 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs: </b>{Corrupt}\n"
-    L_CC = "┖ <b>✨ 𝐔ᴘʟᴏᴀᴅᴇᴅ 𝐁ʏ: </b>{Tag}\n\n"
+    L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
+    L_CORRUPTED_FILES = "┠ <b>🛑 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs : </b>{Corrupt}\n"
+    L_CC = "┖ <b>✨ 𝐔ᴘʟᴏᴀᴅᴇᴅ 𝐁ʏ : </b>{Tag}\n\n"
     PM_BOT_MSG = "<b>☝️ 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
-    L_BOT_MSG = " <b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌 (𝐏ʀɪᴠᴀᴛᴇ)</b>"
+    L_BOT_MSG = "<b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌 (𝐏ʀɪᴠᴀᴛᴇ)</b>"
     L_LL_MSG = "<b>🔗 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
 
     M_TYPE = "┠ <b>𝐓ʏᴘᴇ: </b>{Mimetype}\n"
@@ -196,20 +196,20 @@ class WZMLStyle:
 
     # def get_readable_message(): ---> bot_utilis.py
     ####--------OVERALL MSG HEADER----------
-    STATUS_NAME = "<b>🎥𝐓ɪᴛᴛʟᴇ: </b><code> {Name}</code>\n"
+    STATUS_NAME = "<b>🎥𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>\n"
 
     #####---------PROGRESSIVE STATUS-------
-    mm = "\n┏━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┓"
-    BAR = "\n┃ {Bar}"
-    PROCESSED = "\n┠ <b>⚡𝐏ʀᴏᴄᴇssᴇᴅ:</b> {Processed}"
-    STATUS = '\n┠ <b>🪄𝐒ᴛᴀᴛᴜs:</b> <a href="{Url}">{Status}</a>'
-    ETA = " | <b>𝐄ᴛᴀ:</b> {Eta}"
-    SPEED = "\n┠ <b>⏳𝐒ᴘᴇᴇᴅ:</b> {Speed}"
-    ELAPSED = " | <b>🕓𝐄ʟᴀᴘsᴇᴅ:</b> {Elapsed}"
-    ENGINE = "\n┠ <b>🪩𝐄ɴɢɪɴᴇ:</b> {Engine}"
-    STA_MODE = "\n┠ <b>🌐𝐌ᴏᴅᴇ:</b> {Mode}"
-    SEEDERS = "\n┠ <b>🌱𝐒ᴇᴇᴅᴇʀs:</b> {Seeders}"
-    LEECHERS = "\n┠<b>☘️𝐋ᴇᴇᴄʜᴇʀs:</b> {Leechers}"
+    mm = "\n┏━━━━━༻ «<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a><</b> » ༺━━━━━┓"
+    BAR = "\n┠ {Bar}"
+    PROCESSED = "\n┠ <b>⚡𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
+    STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
+    ETA = "┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
+    SPEED = "\n┠<b>⏳ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
+    ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
+    ENGINE = "\n┠ <b>🪩 𝐄ɴɢɪɴᴇ :</b> {Engine}"
+    STA_MODE = "\n┠ <b>🌐 𝐌ᴏᴅᴇ :</b> {Mode}"
+    SEEDERS = "\n┠ <b>🌱 𝐒ᴇᴇᴅᴇʀs :</b> {Seeders}"
+    LEECHERS = "\n┠<b>☘️ 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
 
     ####--------𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
     SEED_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
@@ -224,14 +224,14 @@ class WZMLStyle:
     NON_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
     ####--------OVERALL MSG FOOTER----------
-    USER = "\n┠ <b>👤 𝐔sᴇʀ:</b> <code>{User}</code>"
-    ID = "\n┠ <b>🆔 𝐈𝐃:</b> <code>{Id}</code>"
-    BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ:</b> {Btsel}"
+    USER = "\n┠ <b>👤 𝐔sᴇʀ :</b> <code>{User}</code>"
+    ID = "\n┠ <b>🆔 𝐈𝐃 :</b> <code>{Id}</code>"
+    BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
     CANCEL = "\n┠ {Cancel}\n"
-    mn = "┗━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┛\n"
+    mn = "┗━━━━━༻ « <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> » ༺━━━━━┛\n"
 
     ####------FOOTER--------
-    FOOTER = "\n┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs</i></b>\n"
+    FOOTER = "\n┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
     TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}\n"
     BOT_TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>𝐀ᴠʟ:</b> {Free}\n"
     Cpu = "┠ <b> 𝐂ᴘᴜ:</b> {cpu}% | "
