@@ -46,117 +46,115 @@ class WZMLStyle:
     HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
 
     # async def stats(client, message):
-    BOT_STATS = """┎⌬ <b><i>𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒 :</i></b>
-┖ <b>𝐁𝐨𝐭 𝐔𝐩𝐭𝐢𝐦𝐞 :</b> {bot_uptime}
+    BOT_STATS = """┎⌬ <b><i>𝐁ᴏᴛ 𝐒ᴛᴀᴛɪsᴛɪᴄs :</i></b>
+┖ <b>𝐁ᴏᴛ 𝐔ᴘᴛɪᴍᴇ :</b> {bot_uptime}
 
-┎ <b><i>𝐑𝐀𝐌 ( 𝐌𝐄𝐌𝐎𝐑𝐘 ) :</i></b>
+┎ <b><i>𝐑ᴀᴍ ( 𝐌ᴇᴍᴏʀʏ ) :</i></b>
 ┃ {ram_bar} {ram}%
 ┖ <b>𝐔 :</b> {ram_u} | <b>𝐅 :</b> {ram_f} | <b>𝐓 :</b> {ram_t}
 
-┎ <b><i>𝐒𝐖𝐀𝐏 𝐌𝐄𝐌𝐎𝐑𝐘 :</i></b>
+┎ <b><i>𝐒ᴡᴀᴘ 𝐌ᴇᴍᴏʀʏ :</i></b>
 ┃ {swap_bar} {swap}%
 ┖ <b>𝐔 :</b> {swap_u} | <b>𝐅 :</b> {swap_f} | <b>𝐓 :</b> {swap_t}
 
-┎ <b><i>𝐃𝐈𝐒𝐊 :</i></b>
+┎ <b><i>𝐃ɪsᴋ :</i></b>
 ┃ {disk_bar} {disk}%
-┃ <b>𝐓𝐨𝐭𝐚𝐥 𝐃𝐢𝐬𝐤 𝐑𝐞𝐚𝐝 :</b> {disk_read}
-┃ <b>𝐓𝐨𝐭𝐚𝐥 𝐃𝐢𝐬𝐤 𝐖𝐫𝐢𝐭𝐞 :</b> {disk_write}
+┃ <b>𝐓ᴏᴛᴀʟ 𝐃ɪsᴋ 𝐑ᴇᴀᴅ :</b> {disk_read}
+┃ <b>𝐓ᴏᴛᴀʟ 𝐃ɪsᴋ 𝐖ʀɪᴛᴇ :</b> {disk_write}
 ┖ <b>𝐔 :</b> {disk_u} | <b>𝐅 :</b> {disk_f} | <b>𝐓 :</b> {disk_t}
 """
 
-    SYS_STATS = """┎⌬ <b><i>𝐎𝐒 𝐒𝐘𝐒𝐓𝐄𝐌 :</i></b>
-┠ <b>𝐎𝐒 𝐔𝐩𝐭𝐢𝐦𝐞 :</b> {os_uptime}
-┠ <b>𝐎𝐒 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 :</b> {os_version}
-┖ <b>𝐎𝐒 𝐀𝐫𝐜𝐡 :</b> {os_arch}
+    SYS_STATS = """┎⌬ <b><i>𝐎s 𝐒ʏsᴛᴇᴍ :</i></b>
+┠ <b>𝐎s 𝐔ᴘᴛɪᴍᴇ :</b> {os_uptime}
+┠ <b>𝐎s 𝐕ᴇʀsɪᴏɴ :</b> {os_version}
+┖ <b>𝐎s 𝐀ʀᴄʜ :</b> {os_arch}
 
-┎⌬ <b><i>𝐍𝐄𝐓𝐖𝐎𝐑𝐊 𝐒𝐓𝐀𝐓𝐒 :</i></b>
-┠ <b>𝐔𝐩𝐥𝐨𝐚𝐝 𝐃𝐚𝐭𝐚 :</b> {up_data}
-┠ <b>𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐃𝐚𝐭𝐚 :</b> {dl_data}
-┠ <b>𝐏𝐤𝐭𝐬 𝐒𝐞𝐧𝐭 :</b> {pkt_sent}k
-┠ <b>𝐏𝐤𝐭𝐬 𝐑𝐞𝐜𝐞𝐢𝐯𝐞𝐝 :</b> {pkt_recv}k
-┖ <b>𝐓𝐨𝐭𝐚𝐥 𝐈/𝐎 𝐃𝐚𝐭𝐚 :</b> {tl_data}
+┎⌬ <b><i>𝐍ᴇᴛᴡᴏʀᴋ 𝐒ᴛᴀᴛs :</i></b>
+┠ <b>𝐔ᴘʟᴏᴀᴅ 𝐃ᴀᴛᴀ :</b> {up_data}
+┠ <b>𝐃ᴏᴡɴʟᴏᴀᴅ 𝐃ᴀᴛᴀ :</b> {dl_data}
+┠ <b>𝐏ᴋᴛs 𝐒ᴇɴᴛ :</b> {pkt_sent}k
+┠ <b>𝐏ᴋᴛs 𝐑ᴇᴄᴇɪᴠᴇᴅ :</b> {pkt_recv}k
+┖ <b>𝐓ᴏᴛᴀʟ 𝐈/𝐎 𝐃ᴀᴛᴀ :</b> {tl_data}
 
-┎ <b>𝐂𝐏𝐔 :</b>
+┎ <b><i>𝐂ᴘᴜ :</i></b>
 ┃ {cpu_bar} {cpu}%
-┠ <b>𝐂𝐏𝐔 𝐅𝐫𝐞𝐪𝐮𝐞𝐧𝐜𝐲 :</b> {cpu_freq}
-┠ <b>𝐒𝐲𝐬𝐭𝐞𝐦 𝐀𝐯𝐠 𝐋𝐨𝐚𝐝 :</b> {sys_load}
-┠ <b>𝐏-𝐂𝐨𝐫𝐞(𝐬) :</b> {p_core} | <b>𝐕-𝐂𝐨𝐫𝐞(𝐬) :</b> {v_core}
-┠ <b>𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐫𝐞(𝐬) :</b> {total_core}
-┖ <b>𝐔𝐬𝐚𝐛𝐥𝐞 𝐂𝐏𝐔(𝐬) :</b> {cpu_use}
+┠ <b>𝐂ᴘᴜ 𝐅ʀᴇǫᴜᴇɴᴄʏ :</b> {cpu_freq}
+┠ <b>𝐒ʏsᴛᴇᴍ 𝐀ᴠɢ 𝐋ᴏᴀᴅ :</b> {sys_load}
+┠ <b>𝐏-𝐂ᴏʀᴇ(s) :</b> {p_core} | <b>𝐕-𝐂ᴏʀᴇ(s) :</b> {v_core}
+┠ <b>𝐓ᴏᴛᴀʟ 𝐂ᴏʀᴇ(s) :</b> {total_core}
+┖ <b>𝐔sᴀʙʟᴇ 𝐂ᴘᴜ(s) :</b> {cpu_use}
+"""
+    REPO_STATS = """⌬ <b><i>𝐑ᴇᴘᴏ 𝐒ᴛᴀᴛɪsᴛɪᴄs :</i></b>
+┠ <b>𝐁ᴏᴛ 𝐔ᴘᴅᴀᴛᴇᴅ :</b> {last_commit}
+┠ <b>𝐂ᴜʀʀᴇɴᴛ 𝐕ᴇʀsɪᴏɴ :</b> {bot_version}
+┠ <b>𝐋ᴀᴛᴇsᴛ 𝐕ᴇʀsɪᴏɴ :</b> {lat_version}
+┖ <b>𝐋ᴀsᴛ 𝐂ʜᴀɴɢᴇ𝐋ᴏɢ :</b> {commit_details}
+
+┎⌬ <b>𝐑ᴇᴍᴀʀᴋs :</b> <code>{remarks}</code>
 """
 
-    REPO_STATS = """⌬ <b><i>𝐑𝐄𝐏𝐎 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒 :</i></b>
-┠ <b>𝐁𝐨𝐭 𝐔𝐩𝐝𝐚𝐭𝐞𝐝 :</b> {last_commit}
-┠ <b>𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 :</b> {bot_version}
-┠ <b>𝐋𝐚𝐭𝐞𝐬𝐭 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 :</b> {lat_version}
-┖ <b>𝐋𝐚𝐬𝐭 𝐂𝐡𝐚𝐧𝐠𝐞𝐋𝐨𝐠 :</b> {commit_details}
+    BOT_LIMITS = """⌬ <b><i>𝐁ᴏᴛ 𝐋ɪᴍɪᴛᴀᴛɪᴏɴs :</i></b>
+┠ <b>𝐃ɪʀᴇᴄᴛ 𝐋ɪᴍɪᴛ :</b> {DL} GB
+┠ <b>𝐓ᴏʀʀᴇɴᴛ 𝐋ɪᴍɪᴛ :</b> {TL} GB
+┠ <b>𝐆𝐃ʀɪᴠᴇ 𝐋ɪᴍɪᴛ :</b> {GL} GB
+┠ <b>𝐘ᴛ-𝐃ʟᴘ 𝐋ɪᴍɪᴛ :</b> {YL} GB
+┠ <b>𝐏ʟᴀʏʟɪsᴛ 𝐋ɪᴍɪᴛ :</b> {PL}
+┠ <b>𝐌ᴇɢᴀ 𝐋ɪᴍɪᴛ :</b> {ML} GB
+┠ <b>𝐂ʟᴏɴᴇ 𝐋ɪᴍɪᴛ :</b> {CL} GB
+┖ <b>𝐋ᴇᴇᴄʜ 𝐋ɪᴍɪᴛ :</b> {LL} GB
 
-┎⌬ <b>𝐑𝐄𝐌𝐀𝐑𝐊𝐒 :</b> <code>{remarks}</code>
-"""
-
-    BOT_LIMITS = """⌬ <b><i>𝐁𝐎𝐓 𝐋𝐈𝐌𝐈𝐓𝐀𝐓𝐈𝐎𝐍𝐒 :</i></b>
-┠ <b>𝐃𝐢𝐫𝐞𝐜𝐭 𝐋𝐢𝐦𝐢𝐭 :</b> {DL} GB
-┠ <b>𝐓𝐨𝐫𝐫𝐞𝐧𝐭 𝐋𝐢𝐦𝐢𝐭 :</b> {TL} GB
-┠ <b>𝐆𝐃𝐫𝐢𝐯𝐞 𝐋𝐢𝐦𝐢𝐭 :</b> {GL} GB
-┠ <b>𝐘𝐓-𝐃𝐋𝐏 𝐋𝐢𝐦𝐢𝐭 :</b> {YL} GB
-┠ <b>𝐏𝐥𝐚𝐲𝐥𝐢𝐬𝐭 𝐋𝐢𝐦𝐢𝐭 :</b> {PL}
-┠ <b>𝐌𝐞𝐠𝐚 𝐋𝐢𝐦𝐢𝐭 :</b> {ML} GB
-┠ <b>𝐂𝐥𝐨𝐧𝐞 𝐋𝐢𝐦𝐢𝐭 :</b> {CL} GB
-┖ <b>𝐋𝐞𝐞𝐜𝐡 𝐋𝐢𝐦𝐢𝐭 :</b> {LL} GB
-
-┎ <b>𝐓𝐨𝐤𝐞𝐧 𝐕𝐚𝐥𝐢𝐝𝐢𝐭𝐲 :</b> {TV}
-┠ <b>𝐔𝐬𝐞𝐫 𝐓𝐢𝐦𝐞 𝐋𝐢𝐦𝐢𝐭 :</b> {UTI} / task
-┠ <b>𝐔𝐬𝐞𝐫 𝐏𝐚𝐫𝐚𝐥𝐥𝐞𝐥 𝐓𝐚𝐬𝐤𝐬 :</b> {UT}
-┖ <b>𝐁𝐨𝐭 𝐏𝐚𝐫𝐚𝐥𝐥𝐞𝐥 𝐓𝐚𝐬𝐤𝐬 :</b> {BT}
+┎ <b>𝐓ᴏᴋᴇɴ 𝐕ᴀʟɪᴅɪᴛʏ :</b> {TV}
+┠ <b>𝐔sᴇʀ 𝐓ɪᴍᴇ 𝐋ɪᴍɪᴛ :</b> {UTI} / task
+┠ <b>𝐔sᴇʀ 𝐏ᴀʀᴀʟʟᴇʟ 𝐓ᴀsᴋs :</b> {UT}
+┖ <b>𝐁ᴏᴛ 𝐏ᴀʀᴀʟʟᴇʟ 𝐓ᴀsᴋs :</b> {BT}
 """
 
     # ---------------------
 
     # async def restart(client, message): ---> __main__.py
-    RESTARTING = "<i>Restarting...</i>"
+    RESTARTING = "<i>𝐑ᴇsᴛᴀʀᴛɪɴɢ...</i>"
     # ---------------------
 
     # async def restart_notification(): ---> __main__.py
-    RESTART_SUCCESS = """┎⌬ <b><i>Restarted Successfully!</i></b>
-┠ <b>Date:</b> {date}
-┠ <b>Time:</b> {time}
-┠ <b>TimeZone:</b> {timz}
-┖ <b>Version:</b> {version}"""
-    RESTARTED = """⌬ <b><i>Bot Restarted!</i></b>"""
+    RESTART_SUCCESS = """┎⌬ <b><i>𝐑ᴇsᴛᴀʀᴛᴇᴅ 𝐒ᴜᴄᴄᴇssғᴜʟʟʏ!</i></b>
+┠ <b>𝐃ᴀᴛᴇ:</b> {date}
+┠ <b>𝐓ɪᴍᴇ:</b> {time}
+┠ <b>𝐓ɪᴍᴇ𝐙ᴏɴᴇ:</b> {timz}
+┖ <b>𝐕ᴇʀsɪᴏɴ:</b> {version}"""
+    RESTARTED = """⌬ <b><i>𝐁ᴏᴛ 𝐑ᴇsᴛᴀʀᴛᴇᴅ!</i></b>"""
     # ---------------------
 
 # async def restart_notification(): ---> __main__.py
-    RESTART_SUCCESS = """┎⌬ <b><i>𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋𝐋𝐘!</i></b>
-┠ <b>𝐃𝐀𝐓𝐄:</b> {date}
-┠ <b>𝐓𝐈𝐌𝐄:</b> {time}
-┠ <b>𝐓𝐈𝐌𝐄𝐙𝐎𝐍𝐄:</b> {timz}
-┖ <b>𝐕𝐄𝐑𝐒𝐈𝐎𝐍:</b> {version}"""
+    RESTART_SUCCESS = """┎⌬ <b><i>𝐑ᴇsᴛᴀʀᴛᴇᴅ 𝐒ᴜᴄᴄᴇssғᴜʟʟʏ!</i></b>
+┠ <b>𝐃ᴀᴛᴇ:</b> {date}
+┠ <b>𝐓ɪᴍᴇ:</b> {time}
+┠ <b>𝐓ɪᴍᴇ𝐙ᴏɴᴇ:</b> {timz}
+┖ <b>𝐕ᴇʀsɪᴏɴ:</b> {version}"""
 
-    RESTARTED = """⌬ <b><i>𝐁𝐎𝐓 𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃!</i></b>"""
+    RESTARTED = """⌬ <b><i>𝐁ᴏᴛ 𝐑ᴇsᴛᴀʀᴛᴇᴅ!</i></b>"""
 
 # ---------------------
 
 # async def ping(client, message): ---> __main__.py
-    PING = "<i>𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆 𝐏𝐈𝐍𝐆...</i>"
-    PING_VALUE = "<b>𝐏𝐎𝐍𝐆</b>\n<code>{value} ms...</code>"
+    PING = "<i>𝐒ᴛᴀʀᴛɪɴɢ 𝐏ɪɴɢ...</i>"
+    PING_VALUE = "<b>𝐏ᴏɴɢ</b>\n<code>{value} ms...</code>"
 
 # ---------------------
 
 # async def onDownloadStart(self): --> tasks_listener.py
-    LINKS_START = """<b><i>┎𝐓𝐀𝐒𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃</i></b>
-┠ <b>𝐌𝐎𝐃𝐄:</b> {Mode}
-┖ <b>𝐁𝐘:</b> {Tag}\n\n"""
+    LINKS_START = """<b><i>┎𝐓ᴀsᴋ 𝐒ᴛᴀʀᴛᴇᴅ</i></b>
+┠ <b>𝐌ᴏᴅᴇ:</b> {Mode}
+┖ <b>𝐁ʏ:</b> {Tag}\n\n"""
 
-    LINKS_SOURCE = """➲ <b>𝐒𝐎𝐔𝐑𝐂𝐄:</b>
-┖ <b>𝐀𝐃𝐃𝐄𝐃 𝐎𝐍:</b> {On}
+    LINKS_SOURCE = """➲ <b>𝐒ᴏᴜʀᴄᴇ:</b>
+┖ <b>𝐀ᴅᴅᴇᴅ 𝐎ɴ:</b> {On}
 ------------------------------------------
 {Source}
 ------------------------------------------\n\n"""
 
 # async def __msg_to_reply(self): ---> pyrogramEngine.py
-    PM_START = "➲ <b><u>𝐓𝐀𝐒𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃 :</u></b>\n┖ <b>𝐒𝐎𝐔𝐑𝐂𝐄 𝐋𝐈𝐍𝐊:</b> <a href='{msg_link}'>𝐂𝐋𝐈𝐂𝐊 𝐇𝐄𝐑𝐄</a>"
-    L_LOG_START = "➲ <b><u>𝐋𝐄𝐄𝐂𝐇 𝐒𝐓𝐀𝐑𝐓𝐄𝐃 :</u></b>\n┠ <b>𝐔𝐒𝐄𝐑 :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒𝐎𝐔𝐑𝐂𝐄 𝐋𝐈𝐍𝐊 :</b> <a href='{msg_link}'>𝐂𝐋𝐈𝐂𝐊 𝐇𝐄𝐑𝐄</a>"
-
+    PM_START = "➲ <b><u>𝐓ᴀsᴋ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ:</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
+    L_LOG_START = "➲ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┠ <b>𝐔sᴇʀ :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ :</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
     # async def onUploadComplete(): ---> tasks_listener.py
     NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><code> {Name}</code>\n\n"
     SIZE = "┎ <b>📦 𝐒ɪᴢᴇ : </b>{Size}\n"
@@ -196,15 +194,15 @@ class WZMLStyle:
 
     # def get_readable_message(): ---> bot_utilis.py
     ####--------OVERALL MSG HEADER----------
-    STATUS_NAME = "<b>🎥 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>\n"
+    STATUS_NAME = "<b>🎥 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
 
     #####---------PROGRESSIVE STATUS-------
-    mm = "\n┏━━༻ «<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a><</b> » ༺━━┓"
+    mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a><</b> »༺━━┓"
     BAR = "\n┠ {Bar}"
-    PROCESSED = "\n┠ <b>⚡𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
+    PROCESSED = "\n┠<b>⚡𝐏ʀᴏᴄᴇssᴇᴅ:</b>{Processed}"
     STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
     ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
-    SPEED = "\n┠<b>⏳ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
+    SPEED = "\n┠<b>☘️ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
     ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
     ENGINE = "\n┠ <b>🪩 𝐄ɴɢɪɴᴇ :</b> {Engine}"
     STA_MODE = "\n┠ <b>🌐 𝐌ᴏᴅᴇ :</b> {Mode}"
@@ -228,10 +226,10 @@ class WZMLStyle:
     ID = "\n┠ <b>🆔 𝐈𝐃 :</b> <code>{Id}</code>"
     BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
     CANCEL = "\n┠ {Cancel}\n"
-    mn = "┗━━༻ « <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> » ༺━━┛\n"
+    mn = "┗━━༻« <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┛\n\n"
 
     ####------FOOTER--------
-    FOOTER = "\n┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
+    FOOTER = "┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
     TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}\n"
     BOT_TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>𝐀ᴠʟ:</b> {Free}\n"
     Cpu = "┠ <b> 𝐂ᴘᴜ:</b> {cpu}% | "
