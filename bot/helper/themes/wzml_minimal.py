@@ -2,12 +2,13 @@
 class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
-    ST_BN1_NAME = "Repo"
-    ST_BN1_URL = "https://www.github.com/weebzone/WZML-X"
-    ST_BN2_NAME = "Updates"
-    ST_BN2_URL = "https://t.me/WZML_X"
-    ST_MSG = """<i>This bot can mirror all your links|files|torrents to Google Drive or any rclone cloud or to telegram or to ddl servers.</i>
-<b>Type {help_command} to get a list of available commands</b>"""
+    ST_BN1_NAME = '👑 ᴏᴡɴᴇʀ '
+    ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
+    ST_BN2_NAME = '📢 ᴜᴘᴅᴀᴛᴇs'
+    ST_BN2_URL = 'https://t.me/SSBotsUpdates'
+    ST_MSG = '''<b>🙏 ᴛʜᴀɴᴋs 😇  
+ɴᴏᴡ, ɪ ᴡɪʟʟ sᴇɴᴅ ᴀʟʟ ʏᴏᴜʀ ʟᴇᴇᴄʜ/ᴍɪʀʀᴏʀ ғɪʟᴇs & ʟɪɴᴋs ʜᴇʀᴇ.  
+sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️</b>'''
     ST_BOTPM = """<i>Now, This bot will send all your files and links here. Start Using ...</i>"""
     ST_UNAUTH = """<i>You Are not authorized user! Deploy your own WZML-X Mirror-Leech bot</i>"""
     OWN_TOKEN_GENERATE = (
@@ -136,11 +137,11 @@ class WZMLStyle:
 ------------------------------------------\n\n"""
 
     # async def __msg_to_reply(self): ---> pyrogramEngine.py
-    PM_START = "➲ <b><u>Task Started :</u></b>\n┃\n┖ <b>Link:</b> <a href='{msg_link}'>Click Here</a>"
-    L_LOG_START = "➲ <b><u>Leech Started :</u></b>\n┃\n┠ <b>User :</b> {mention} ( #ID{uid} )\n┖ <b>Source :</b> <a href='{msg_link}'>Click Here</a>"
+    PM_START = "➲ <b><u>Task Started :</u></b>\n┖ <b>Source Link:</b> <a href='{msg_link}'>Click Here</a>"
+    L_LOG_START = "➲ <b><u>Leech Started :</u></b>\n┠ <b>User :</b> {mention} ( #ID{uid} )\n┖ <b>Source Link :</b> <a href='{msg_link}'>Click Here</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b><i>{Name}</i></b>\n┃\n"
+    NAME = "<b>TITLE : {Name}</b>\n┃\n"
     SIZE = "┠ <b>Size: </b>{Size}\n"
     ELAPSE = "┠ <b>Elapsed: </b>{Time}\n"
     MODE = "┠ <b>Mode: </b>{Mode}\n"
