@@ -9,103 +9,106 @@ class WZMLStyle:
     ST_MSG = '''<b>🙏 ᴛʜᴀɴᴋs 😇  
 ɴᴏᴡ, ɪ ᴡɪʟʟ sᴇɴᴅ ᴀʟʟ ʏᴏᴜʀ ʟᴇᴇᴄʜ/ᴍɪʀʀᴏʀ ғɪʟᴇs & ʟɪɴᴋs ʜᴇʀᴇ.  
 sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️</b>'''
-    ST_BOTPM = """<i>Now, This bot will send all your files and links here. Start Using ...</i>"""
-    ST_UNAUTH = """<i>You Are not authorized user! Deploy your own WZML-X Mirror-Leech bot</i>"""
+    ST_BOTPM = """<i>𝐍ᴏᴡ, 𝐓ʜɪs 𝐛ᴏᴛ ᴡɪʟʟ sᴇɴᴅ ᴀʟʟ ʏᴏᴜʀ 𝐅ɪʟᴇs ᴀɴᴅ 𝐋ɪɴᴋs ʜᴇʀᴇ. 𝐒ᴛᴀʀᴛ 𝐔sɪɴɢ ...</i>"""
+    ST_UNAUTH = """<i>𝐘ᴏᴜ 𝐀ʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ ᴜsᴇʀ! 𝐃ᴇᴘʟᴏʏ ʏᴏᴜʀ ᴏᴡɴ 𝐖𝐙𝐌𝐋-𝐗 𝐌ɪʀʀᴏʀ-𝐋ᴇᴇᴄʜ 𝐛ᴏᴛ</i>"""
     OWN_TOKEN_GENERATE = (
-        """<b>Temporary Token is not yours!</b>\n\n<i>Kindly generate your own.</i>"""
-    )
+    """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
+)
     USED_TOKEN = (
-        """<b>Temporary Token already used!</b>\n\n<i>Kindly generate a new one.</i>"""
-    )
-    LOGGED_PASSWORD = """<b>Bot Already Logged In via Password</b>\n\n<i>No Need to Accept Temp Tokens.</i>"""
-    ACTIVATE_BUTTON = "Activate Temporary Token"
-    TOKEN_MSG = """<b><u>Generated Temporary Login Token!</u></b>
-<b>Temp Token:</b> <code>{token}</code>
-<b>Validity:</b> {validity}"""
-    # ---------------------
-    # async def token_callback(_, query): ---> __main__.py
-    ACTIVATED = "✅️ Activated ✅"
-    # ---------------------
-    # async def login(_, message): --> __main__.py
-    LOGGED_IN = "<b>Already Bot Login In!</b>"
-    INVALID_PASS = "<b>Invalid Password!</b>\n\nKindly put the correct Password ."
-    PASS_LOGGED = "<b>Bot Permanent Login Successfully!</b>"
-    LOGIN_USED = "<b>Bot Login Usage :</b>\n\n<code>/cmd [password]</code>"
-    # ---------------------
-    # async def log(_, message): ---> __main__.py
-    LOG_DISPLAY_BT = "📑 Log Display"
-    WEB_PASTE_BT = "📨 Web Paste (SB)"
-    # ---------------------
-    # async def bot_help(client, message): ---> __main__.py
-    BASIC_BT = "Basic"
-    USER_BT = "Users"
-    MICS_BT = "Mics"
-    O_S_BT = "Owner & Sudos"
-    CLOSE_BT = "Close"
-    HELP_HEADER = "㊂ <b><i>Help Guide Menu!</i></b>\n\n<b>NOTE: <i>Click on any CMD to see more minor detalis.</i></b>"
+    """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ᴀʟʀᴇᴀᴅʏ ᴜsᴇᴅ!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ɴᴇᴡ ᴏɴᴇ.</i>"""
+)
+    LOGGED_PASSWORD = """<b>𝐁ᴏᴛ 𝐀ʟʀᴇᴀᴅʏ 𝐋ᴏɢɢᴇᴅ 𝐈ɴ ᴠɪᴀ 𝐏ᴀssᴡᴏʀᴅ</b>\n\n<i>𝐍ᴏ ɴᴇᴇᴅ ᴛᴏ 𝐀ᴄᴄᴇᴘᴛ 𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴs.</i>"""
+    ACTIVATE_BUTTON = "𝐀ᴄᴛɪᴠᴀᴛᴇ 𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ"
+    TOKEN_MSG = """<b><u>𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐋ᴏɢɪɴ 𝐓ᴏᴋᴇɴ!</u></b>
+<b>𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴ:</b> <code>{token}</code>
+<b>𝐕ᴀʟɪᴅɪᴛʏ:</b> {validity}"""
+# ---------------------
+# async def token_callback(_, query): ---> __main__.py
+    ACTIVATED = "✅️ 𝐀ᴄᴛɪᴠᴀᴛᴇᴅ ✅"
+# ---------------------
+# async def login(_, message): --> __main__.py
+    LOGGED_IN = "<b>𝐀ʟʀᴇᴀᴅʏ 𝐁ᴏᴛ 𝐋ᴏɢɪɴ 𝐈ɴ!</b>"
+    INVALID_PASS = "<b>𝐈ɴᴠᴀʟɪᴅ 𝐏ᴀssᴡᴏʀᴅ!</b>\n\n𝐊ɪɴᴅʟʏ ᴘᴜᴛ ᴛʜᴇ ᴄᴏʀʀᴇᴄᴛ 𝐏ᴀssᴡᴏʀᴅ ."
+    PASS_LOGGED = "<b>𝐁ᴏᴛ 𝐏ᴇʀᴍᴀɴᴇɴᴛ 𝐋ᴏɢɪɴ 𝐒ᴜᴄᴄᴇssғᴜʟʟʏ!</b>"
+    LOGIN_USED = "<b>𝐁ᴏᴛ 𝐋ᴏɢɪɴ 𝐔sᴀɢᴇ :</b>\n\n<code>/cmd [password]</code>"
+# ---------------------
+# async def log(_, message): ---> __main__.py
+    LOG_DISPLAY_BT = "📑 𝐋ᴏɢ 𝐃ɪsᴘʟᴀʏ"
+    WEB_PASTE_BT = "📨 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (SB)"
+# ---------------------
+# async def bot_help(client, message): ---> __main__.py
+   BASIC_BT = "𝐁ᴀsɪᴄ"
+   USER_BT = "𝐔sᴇʀs"
+   MICS_BT = "𝐌ɪᴄs"
+   O_S_BT = "𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
+   CLOSE_BT = "𝐂ʟᴏsᴇ"
+   HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
 
     # async def stats(client, message):
-    BOT_STATS = """┎⌬ <b><i>BOT STATISTICS :</i></b>
-┖ <b>Bot Uptime :</b> {bot_uptime}
+   BOT_STATS = """┎⌬ <b><i>𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒 :</i></b>
+┖ <b>𝐁𝐨𝐭 𝐔𝐩𝐭𝐢𝐦𝐞 :</b> {bot_uptime}
 
-┎ <b><i>RAM ( MEMORY ) :</i></b>
+┎ <b><i>𝐑𝐀𝐌 ( 𝐌𝐄𝐌𝐎𝐑𝐘 ) :</i></b>
 ┃ {ram_bar} {ram}%
-┖ <b>U :</b> {ram_u} | <b>F :</b> {ram_f} | <b>T :</b> {ram_t}
+┖ <b>𝐔 :</b> {ram_u} | <b>𝐅 :</b> {ram_f} | <b>𝐓 :</b> {ram_t}
 
-┎ <b><i>SWAP MEMORY :</i></b>
+┎ <b><i>𝐒𝐖𝐀𝐏 𝐌𝐄𝐌𝐎𝐑𝐘 :</i></b>
 ┃ {swap_bar} {swap}%
-┖ <b>U :</b> {swap_u} | <b>F :</b> {swap_f} | <b>T :</b> {swap_t}
+┖ <b>𝐔 :</b> {swap_u} | <b>𝐅 :</b> {swap_f} | <b>𝐓 :</b> {swap_t}
 
-┎ <b><i>DISK :</i></b>
+┎ <b><i>𝐃𝐈𝐒𝐊 :</i></b>
 ┃ {disk_bar} {disk}%
-┃ <b>Total Disk Read :</b> {disk_read}
-┃ <b>Total Disk Write :</b> {disk_write}
-┖ <b>U :</b> {disk_u} | <b>F :</b> {disk_f} | <b>T :</b> {disk_t}
-    
-    """
-    SYS_STATS = """┎⌬ <b><i>OS SYSTEM :</i></b>
-┠ <b>OS Uptime :</b> {os_uptime}
-┠ <b>OS Version :</b> {os_version}
-┖ <b>OS Arch :</b> {os_arch}
+┃ <b>𝐓𝐨𝐭𝐚𝐥 𝐃𝐢𝐬𝐤 𝐑𝐞𝐚𝐝 :</b> {disk_read}
+┃ <b>𝐓𝐨𝐭𝐚𝐥 𝐃𝐢𝐬𝐤 𝐖𝐫𝐢𝐭𝐞 :</b> {disk_write}
+┖ <b>𝐔 :</b> {disk_u} | <b>𝐅 :</b> {disk_f} | <b>𝐓 :</b> {disk_t}
+"""
 
-┎⌬ <b><i>NETWORK STATS :</i></b>
-┠ <b>Upload Data:</b> {up_data}
-┠ <b>Download Data:</b> {dl_data}
-┠ <b>Pkts Sent:</b> {pkt_sent}k
-┠ <b>Pkts Received:</b> {pkt_recv}k
-┖ <b>Total I/O Data:</b> {tl_data}
+    SYS_STATS = """┎⌬ <b><i>𝐎𝐒 𝐒𝐘𝐒𝐓𝐄𝐌 :</i></b>
+┠ <b>𝐎𝐒 𝐔𝐩𝐭𝐢𝐦𝐞 :</b> {os_uptime}
+┠ <b>𝐎𝐒 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 :</b> {os_version}
+┖ <b>𝐎𝐒 𝐀𝐫𝐜𝐡 :</b> {os_arch}
 
-┎ <b>CPU :</b>
+┎⌬ <b><i>𝐍𝐄𝐓𝐖𝐎𝐑𝐊 𝐒𝐓𝐀𝐓𝐒 :</i></b>
+┠ <b>𝐔𝐩𝐥𝐨𝐚𝐝 𝐃𝐚𝐭𝐚 :</b> {up_data}
+┠ <b>𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐃𝐚𝐭𝐚 :</b> {dl_data}
+┠ <b>𝐏𝐤𝐭𝐬 𝐒𝐞𝐧𝐭 :</b> {pkt_sent}k
+┠ <b>𝐏𝐤𝐭𝐬 𝐑𝐞𝐜𝐞𝐢𝐯𝐞𝐝 :</b> {pkt_recv}k
+┖ <b>𝐓𝐨𝐭𝐚𝐥 𝐈/𝐎 𝐃𝐚𝐭𝐚 :</b> {tl_data}
+
+┎ <b>𝐂𝐏𝐔 :</b>
 ┃ {cpu_bar} {cpu}%
-┠ <b>CPU Frequency :</b> {cpu_freq}
-┠ <b>System Avg Load :</b> {sys_load}
-┠ <b>P-Core(s) :</b> {p_core} | <b>V-Core(s) :</b> {v_core}
-┠ <b>Total Core(s) :</b> {total_core}
-┖ <b>Usable CPU(s) :</b> {cpu_use}
-    """
-    REPO_STATS = """⌬ <b><i>REPO STATISTICS :</i></b>
-┠ <b>Bot Updated :</b> {last_commit}
-┠ <b>Current Version :</b> {bot_version}
-┠ <b>Latest Version :</b> {lat_version}
-┖ <b>Last ChangeLog :</b> {commit_details}
+┠ <b>𝐂𝐏𝐔 𝐅𝐫𝐞𝐪𝐮𝐞𝐧𝐜𝐲 :</b> {cpu_freq}
+┠ <b>𝐒𝐲𝐬𝐭𝐞𝐦 𝐀𝐯𝐠 𝐋𝐨𝐚𝐝 :</b> {sys_load}
+┠ <b>𝐏-𝐂𝐨𝐫𝐞(𝐬) :</b> {p_core} | <b>𝐕-𝐂𝐨𝐫𝐞(𝐬) :</b> {v_core}
+┠ <b>𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐫𝐞(𝐬) :</b> {total_core}
+┖ <b>𝐔𝐬𝐚𝐛𝐥𝐞 𝐂𝐏𝐔(𝐬) :</b> {cpu_use}
+"""
 
-┎⌬ <b>REMARKS :</b> <code>{remarks}</code>
-    """
-    BOT_LIMITS = """⌬ <b><i>BOT LIMITATIONS :</i></b>
-┠ <b>Direct Limit :</b> {DL} GB
-┠ <b>Torrent Limit :</b> {TL} GB
-┠ <b>GDrive Limit :</b> {GL} GB
-┠ <b>YT-DLP Limit :</b> {YL} GB
-┠ <b>Playlist Limit :</b> {PL}
-┠ <b>Mega Limit :</b> {ML} GB
-┠ <b>Clone Limit :</b> {CL} GB
-┖ <b>Leech Limit :</b> {LL} GB
+    REPO_STATS = """⌬ <b><i>𝐑𝐄𝐏𝐎 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒 :</i></b>
+┠ <b>𝐁𝐨𝐭 𝐔𝐩𝐝𝐚𝐭𝐞𝐝 :</b> {last_commit}
+┠ <b>𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 :</b> {bot_version}
+┠ <b>𝐋𝐚𝐭𝐞𝐬𝐭 𝐕𝐞𝐫𝐬𝐢𝐨𝐧 :</b> {lat_version}
+┖ <b>𝐋𝐚𝐬𝐭 𝐂𝐡𝐚𝐧𝐠𝐞𝐋𝐨𝐠 :</b> {commit_details}
 
-┎ <b>Token Validity :</b> {TV}
-┠ <b>User Time Limit :</b> {UTI} / task
-┠ <b>User Parallel Tasks :</b> {UT}
-┖ <b>Bot Parallel Tasks :</b> {BT}
-    """
+┎⌬ <b>𝐑𝐄𝐌𝐀𝐑𝐊𝐒 :</b> <code>{remarks}</code>
+"""
+
+    BOT_LIMITS = """⌬ <b><i>𝐁𝐎𝐓 𝐋𝐈𝐌𝐈𝐓𝐀𝐓𝐈𝐎𝐍𝐒 :</i></b>
+┠ <b>𝐃𝐢𝐫𝐞𝐜𝐭 𝐋𝐢𝐦𝐢𝐭 :</b> {DL} GB
+┠ <b>𝐓𝐨𝐫𝐫𝐞𝐧𝐭 𝐋𝐢𝐦𝐢𝐭 :</b> {TL} GB
+┠ <b>𝐆𝐃𝐫𝐢𝐯𝐞 𝐋𝐢𝐦𝐢𝐭 :</b> {GL} GB
+┠ <b>𝐘𝐓-𝐃𝐋𝐏 𝐋𝐢𝐦𝐢𝐭 :</b> {YL} GB
+┠ <b>𝐏𝐥𝐚𝐲𝐥𝐢𝐬𝐭 𝐋𝐢𝐦𝐢𝐭 :</b> {PL}
+┠ <b>𝐌𝐞𝐠𝐚 𝐋𝐢𝐦𝐢𝐭 :</b> {ML} GB
+┠ <b>𝐂𝐥𝐨𝐧𝐞 𝐋𝐢𝐦𝐢𝐭 :</b> {CL} GB
+┖ <b>𝐋𝐞𝐞𝐜𝐡 𝐋𝐢𝐦𝐢𝐭 :</b> {LL} GB
+
+┎ <b>𝐓𝐨𝐤𝐞𝐧 𝐕𝐚𝐥𝐢𝐝𝐢𝐭𝐲 :</b> {TV}
+┠ <b>𝐔𝐬𝐞𝐫 𝐓𝐢𝐦𝐞 𝐋𝐢𝐦𝐢𝐭 :</b> {UTI} / task
+┠ <b>𝐔𝐬𝐞𝐫 𝐏𝐚𝐫𝐚𝐥𝐥𝐞𝐥 𝐓𝐚𝐬𝐤𝐬 :</b> {UT}
+┖ <b>𝐁𝐨𝐭 𝐏𝐚𝐫𝐚𝐥𝐥𝐞𝐥 𝐓𝐚𝐬𝐤𝐬 :</b> {BT}
+"""
+
     # ---------------------
 
     # async def restart(client, message): ---> __main__.py
@@ -121,25 +124,37 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     RESTARTED = """⌬ <b><i>Bot Restarted!</i></b>"""
     # ---------------------
 
-    # async def ping(client, message): ---> __main__.py
-    PING = "<i>Starting Ping..</i>"
-    PING_VALUE = "<b>Pong</b>\n<code>{value} ms..</code>"
-    # ---------------------
+# async def restart_notification(): ---> __main__.py
+    RESTART_SUCCESS = """┎⌬ <b><i>𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋𝐋𝐘!</i></b>
+┠ <b>𝐃𝐀𝐓𝐄:</b> {date}
+┠ <b>𝐓𝐈𝐌𝐄:</b> {time}
+┠ <b>𝐓𝐈𝐌𝐄𝐙𝐎𝐍𝐄:</b> {timz}
+┖ <b>𝐕𝐄𝐑𝐒𝐈𝐎𝐍:</b> {version}"""
 
-    # async def onDownloadStart(self): --> tasks_listener.py
-    LINKS_START = """<b><i>┎Task Started</i></b>
-┠ <b>Mode:</b> {Mode}
-┖ <b>By:</b> {Tag}\n\n"""
-    LINKS_SOURCE = """➲ <b>Source:</b>
-┖ <b>Added On:</b> {On}
+    RESTARTED = """⌬ <b><i>𝐁𝐎𝐓 𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃!</i></b>"""
+
+# ---------------------
+
+# async def ping(client, message): ---> __main__.py
+    PING = "<i>𝐒𝐓𝐀𝐑𝐓𝐈𝐍𝐆 𝐏𝐈𝐍𝐆...</i>"
+    PING_VALUE = "<b>𝐏𝐎𝐍𝐆</b>\n<code>{value} ms...</code>"
+
+# ---------------------
+
+# async def onDownloadStart(self): --> tasks_listener.py
+    LINKS_START = """<b><i>┎𝐓𝐀𝐒𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃</i></b>
+┠ <b>𝐌𝐎𝐃𝐄:</b> {Mode}
+┖ <b>𝐁𝐘:</b> {Tag}\n\n"""
+
+    LINKS_SOURCE = """➲ <b>𝐒𝐎𝐔𝐑𝐂𝐄:</b>
+┖ <b>𝐀𝐃𝐃𝐄𝐃 𝐎𝐍:</b> {On}
 ------------------------------------------
 {Source}
 ------------------------------------------\n\n"""
-    
-    
-    # async def __msg_to_reply(self): ---> pyrogramEngine.py
-    PM_START = "➲ <b><u>Task Started :</u></b>\n┖ <b>Source Link:</b> <a href='{msg_link}'>Click Here</a>"
-    L_LOG_START = "➲ <b><u>Leech Started :</u></b>\n┠ <b>User :</b> {mention} ( #ID{uid} )\n┖ <b>Source Link :</b> <a href='{msg_link}'>Click Here</a>"
+
+# async def __msg_to_reply(self): ---> pyrogramEngine.py
+    PM_START = "➲ <b><u>𝐓𝐀𝐒𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃 :</u></b>\n┖ <b>𝐒𝐎𝐔𝐑𝐂𝐄 𝐋𝐈𝐍𝐊:</b> <a href='{msg_link}'>𝐂𝐋𝐈𝐂𝐊 𝐇𝐄𝐑𝐄</a>"
+    L_LOG_START = "➲ <b><u>𝐋𝐄𝐄𝐂𝐇 𝐒𝐓𝐀𝐑𝐓𝐄𝐃 :</u></b>\n┠ <b>𝐔𝐒𝐄𝐑 :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒𝐎𝐔𝐑𝐂𝐄 𝐋𝐈𝐍𝐊 :</b> <a href='{msg_link}'>𝐂𝐋𝐈𝐂𝐊 𝐇𝐄𝐑𝐄</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
     NAME = "<b> 🎥𝐓ɪᴛᴛʟᴇ: {Name}</b>\n┃\n"
