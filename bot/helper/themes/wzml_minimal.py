@@ -158,11 +158,11 @@ class WZMLStyle:
     L_LOG_START = "➲ <b><u>𝐋𝐄𝐄𝐂𝐇 𝐒𝐓𝐀𝐑𝐓𝐄𝐃 :</u></b>\n┠ <b>𝐔𝐒𝐄𝐑 :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒𝐎𝐔𝐑𝐂𝐄 𝐋𝐈𝐍𝐊 :</b> <a href='{msg_link}'>𝐂𝐋𝐈𝐂𝐊 𝐇𝐄𝐑𝐄</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b> 🎥𝐓ɪᴛᴛʟᴇ:</b><code> {Name}</code>\n\n"
-    SIZE = "┎ <b>📦 𝐒ɪᴢᴇ: </b>{Size}\n"
-    ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ: </b>{Time}\n"
-    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}\n"
-    CREDIT = "\n\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
+    NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><code> {Name}</code>\n\n"
+    SIZE = "┎ <b>📦 𝐒ɪᴢᴇ : </b>{Size}\n"
+    ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
+    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ : </b>{Mode}\n"
+    CREDIT = "━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
 
     # ----- LEECH -------
     L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
@@ -172,11 +172,11 @@ class WZMLStyle:
     L_BOT_MSG = "<b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌 (𝐏ʀɪᴠᴀᴛᴇ)</b>"
     L_LL_MSG = "<b>🔗 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
 
-    M_TYPE = "┠ <b>𝐓ʏᴘᴇ: </b>{Mimetype}\n"
-    M_SUBFOLD = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs: </b>{Folder}\n"
-    TOTAL_FILES = "┠ <b>𝐅ɪʟᴇs: </b>{Files}\n"
-    RCPATH = "┠ <b>𝐏ᴀᴛʜ: </b><code>{RCpath}</code>\n"
-    M_CC = "┖ <b>𝐁ʏ: </b>{Tag}\n\n"
+    M_TYPE = "┠ <b>𝐓ʏᴘᴇ : </b>{Mimetype}\n"
+    M_SUBFOLD = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs : </b>{Folder}\n"
+    TOTAL_FILES = "┠ <b>𝐅ɪʟᴇs : </b>{Files}\n"
+    RCPATH = "┠ <b>𝐏ᴀᴛʜ : </b><code>{RCpath}</code>\n"
+    M_CC = "┖ <b>𝐁ʏ : </b>{Tag}\n\n"
     M_BOT_MSG = "➲ <b><i>𝐋ɪɴᴋ(s) ʜᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏ᴍ (𝐏ʀɪᴠᴀᴛᴇ)</i></b>"
     # ----- BUTTONS -------
     CLOUD_LINK = "☁️ 𝐂ʟᴏᴜᴅ 𝐋ɪɴᴋ"
@@ -196,14 +196,14 @@ class WZMLStyle:
 
     # def get_readable_message(): ---> bot_utilis.py
     ####--------OVERALL MSG HEADER----------
-    STATUS_NAME = "<b>🎥𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>\n"
+    STATUS_NAME = "<b>🎥 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>\n"
 
     #####---------PROGRESSIVE STATUS-------
-    mm = "\n┏━━━━━༻ «<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a><</b> » ༺━━━━━┓"
+    mm = "\n┏━━༻ «<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a><</b> » ༺━━┓"
     BAR = "\n┠ {Bar}"
     PROCESSED = "\n┠ <b>⚡𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
     STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
-    ETA = "┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
+    ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
     SPEED = "\n┠<b>⏳ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
     ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
     ENGINE = "\n┠ <b>🪩 𝐄ɴɢɪɴᴇ :</b> {Engine}"
@@ -212,23 +212,23 @@ class WZMLStyle:
     LEECHERS = "\n┠<b>☘️ 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
 
     ####--------𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
-    SEED_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
-    SEED_SPEED = "\n┠ <b>𝐒ᴘᴇᴇᴅ: </b> {Speed} | "
-    UPLOADED = "<b>𝐔ᴘʟᴏᴀᴅᴇᴅ: </b> {Upload}"
-    RATIO = "\n┠ <b>𝐑ᴀᴛɪᴏ: </b> {Ratio} | "
-    TIME = "<b>𝐓ɪᴍᴇ: </b> {Time}"
-    SEED_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
+    SEED_SIZE = "\n┠ <b>𝐒ɪᴢᴇ : </b>{Size}"
+    SEED_SPEED = "\n┠ <b>𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
+    UPLOADED = "<b>𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
+    RATIO = "\n┠ <b>𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
+    TIME = "<b>𝐓ɪᴍᴇ : </b> {Time}"
+    SEED_ENGINE = "\n ┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
 ####--------𝐍ᴏɴ-𝐏ʀᴏɢʀᴇssɪᴠᴇ + 𝐍ᴏɴ 𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
-    STATUS_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
-    NON_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
+    STATUS_SIZE = "\n┠ <b>𝐒ɪᴢᴇ : </b>{Size}"
+    NON_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ :</b> {Engine}"
 
     ####--------OVERALL MSG FOOTER----------
     USER = "\n┠ <b>👤 𝐔sᴇʀ :</b> <code>{User}</code>"
     ID = "\n┠ <b>🆔 𝐈𝐃 :</b> <code>{Id}</code>"
     BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
     CANCEL = "\n┠ {Cancel}\n"
-    mn = "┗━━━━━༻ « <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> » ༺━━━━━┛\n"
+    mn = "┗━━༻ « <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> » ༺━━┛\n"
 
     ####------FOOTER--------
     FOOTER = "\n┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
