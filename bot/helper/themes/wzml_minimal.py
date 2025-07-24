@@ -6,6 +6,136 @@ class WZMLStyle:
     ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
     ST_BN2_NAME = '📢 ᴜᴘᴅᴀᴛᴇs'
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
+    ST_MSG = '''<b>🙏 ᴛʜᴀɴᴋs 😇  
+ɴᴏᴡ, ɪ ᴡɪʟʟ sᴇɴᴅ ᴀʟʟ ʏᴏᴜʀ ʟᴇᴇᴄʜ/ᴍɪʀʀᴏʀ ғɪʟᴇs & ʟɪɴᴋs ʜᴇʀᴇ.  
+sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️</b>'''
+    ST_BOTPM = """<i>Now, This bot will send all your files and links here. Start Using ...</i>"""
+    ST_UNAUTH = """<i>You Are not authorized user! Deploy your own WZML-X Mirror-Leech bot</i>"""
+    OWN_TOKEN_GENERATE = (
+        """<b>Temporary Token is not yours!</b>\n\n<i>Kindly generate your own.</i>"""
+    )
+    USED_TOKEN = (
+        """<b>Temporary Token already used!</b>\n\n<i>Kindly generate a new one.</i>"""
+    )
+    LOGGED_PASSWORD = """<b>Bot Already Logged In via Password</b>\n\n<i>No Need to Accept Temp Tokens.</i>"""
+    ACTIVATE_BUTTON = "Activate Temporary Token"
+    TOKEN_MSG = """<b><u>Generated Temporary Login Token!</u></b>
+<b>Temp Token:</b> <code>{token}</code>
+<b>Validity:</b> {validity}"""
+    # ---------------------
+    # async def token_callback(_, query): ---> __main__.py
+    ACTIVATED = "✅️ Activated ✅"
+    # ---------------------
+    # async def login(_, message): --> __main__.py
+    LOGGED_IN = "<b>Already Bot Login In!</b>"
+    INVALID_PASS = "<b>Invalid Password!</b>\n\nKindly put the correct Password ."
+    PASS_LOGGED = "<b>Bot Permanent Login Successfully!</b>"
+    LOGIN_USED = "<b>Bot Login Usage :</b>\n\n<code>/cmd [password]</code>"
+    # ---------------------
+    # async def log(_, message): ---> __main__.py
+    LOG_DISPLAY_BT = "📑 Log Display"
+    WEB_PASTE_BT = "📨 Web Paste (SB)"
+    # ---------------------
+    # async def bot_help(client, message): ---> __main__.py
+    BASIC_BT = "Basic"
+    USER_BT = "Users"
+    MICS_BT = "Mics"
+    O_S_BT = "Owner & Sudos"
+    CLOSE_BT = "Close"
+    HELP_HEADER = "㊂ <b><i>Help Guide Menu!</i></b>\n\n<b>NOTE: <i>Click on any CMD to see more minor detalis.</i></b>"
+
+    # async def stats(client, message):
+    BOT_STATS = """⌬ <b><i>BOT STATISTICS :</i></b>
+┖ <b>Bot Uptime :</b> {bot_uptime}
+
+┎ <b><i>RAM ( MEMORY ) :</i></b>
+┃ {ram_bar} {ram}%
+┖ <b>U :</b> {ram_u} | <b>F :</b> {ram_f} | <b>T :</b> {ram_t}
+
+┎ <b><i>SWAP MEMORY :</i></b>
+┃ {swap_bar} {swap}%
+┖ <b>U :</b> {swap_u} | <b>F :</b> {swap_f} | <b>T :</b> {swap_t}
+
+┎ <b><i>DISK :</i></b>
+┃ {disk_bar} {disk}%
+┃ <b>Total Disk Read :</b> {disk_read}
+┃ <b>Total Disk Write :</b> {disk_write}
+┖ <b>U :</b> {disk_u} | <b>F :</b> {disk_f} | <b>T :</b> {disk_t}
+    
+    """
+    SYS_STATS = """⌬ <b><i>OS SYSTEM :</i></b>
+┠ <b>OS Uptime :</b> {os_uptime}
+┠ <b>OS Version :</b> {os_version}
+┖ <b>OS Arch :</b> {os_arch}
+
+⌬ <b><i>NETWORK STATS :</i></b>
+┠ <b>Upload Data:</b> {up_data}
+┠ <b>Download Data:</b> {dl_data}
+┠ <b>Pkts Sent:</b> {pkt_sent}k
+┠ <b>Pkts Received:</b> {pkt_recv}k
+┖ <b>Total I/O Data:</b> {tl_data}
+
+┎ <b>CPU :</b>
+┃ {cpu_bar} {cpu}%
+┠ <b>CPU Frequency :</b> {cpu_freq}
+┠ <b>System Avg Load :</b> {sys_load}
+┠ <b>P-Core(s) :</b> {p_core} | <b>V-Core(s) :</b> {v_core}
+┠ <b>Total Core(s) :</b> {total_core}
+┖ <b>Usable CPU(s) :</b> {cpu_use}
+    """
+    REPO_STATS = """⌬ <b><i>REPO STATISTICS :</i></b>
+┠ <b>Bot Updated :</b> {last_commit}
+┠ <b>Current Version :</b> {bot_version}
+┠ <b>Latest Version :</b> {lat_version}
+┖ <b>Last ChangeLog :</b> {commit_details}
+
+⌬ <b>REMARKS :</b> <code>{remarks}</code>
+    """
+    BOT_LIMITS = """⌬ <b><i>BOT LIMITATIONS :</i></b>
+┠ <b>Direct Limit :</b> {DL} GB
+┠ <b>Torrent Limit :</b> {TL} GB
+┠ <b>GDrive Limit :</b> {GL} GB
+┠ <b>YT-DLP Limit :</b> {YL} GB
+┠ <b>Playlist Limit :</b> {PL}
+┠ <b>Mega Limit :</b> {ML} GB
+┠ <b>Clone Limit :</b> {CL} GB
+┖ <b>Leech Limit :</b> {LL} GB
+
+┎ <b>Token Validity :</b> {TV}
+┠ <b>User Time Limit :</b> {UTI} / task
+┠ <b>User Parallel Tasks :</b> {UT}
+┖ <b>Bot Parallel Tasks :</b> {BT}
+    """
+    # ---------------------
+
+    # async def restart(client, message): ---> __main__.py
+    RESTARTING = "<i>Restarting...</i>"
+    # ---------------------
+
+    # async def restart_notification(): ---> __main__.py
+    RESTART_SUCCESS = """⌬ <b><i>Restarted Successfully!</i></b>
+┠ <b>Date:</b> {date}
+┠ <b>Time:</b> {time}
+┠ <b>TimeZone:</b> {timz}
+┖ <b>Version:</b> {version}"""
+    RESTARTED = """⌬ <b><i>Bot Restarted!</i></b>"""
+    # ---------------------
+
+    # async def ping(client, message): ---> __main__.py
+    PING = "<i>Starting Ping..</i>"
+    PING_VALUE = "<b>Pong</b>\n<code>{value} ms..</code>"
+    # ---------------------
+
+    # async def onDownloadStart(self): --> tasks_listener.py
+    LINKS_START = """<b><i>Task Started</i></b>
+┠ <b>Mode:</b> {Mode}
+┖ <b>By:</b> {Tag}\n\n"""
+    LINKS_SOURCE = """➲ <b>Source:</b>
+┖ <b>Added On:</b> {On}
+------------------------------------------
+{Source}
+------------------------------------------\n\n"""
+    
     
     # async def __msg_to_reply(self): ---> pyrogramEngine.py
     PM_START = "➲ <b><u>Task Started :</u></b>\n┖ <b>Source Link:</b> <a href='{msg_link}'>Click Here</a>"
