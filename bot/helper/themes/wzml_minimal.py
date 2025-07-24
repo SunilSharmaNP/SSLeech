@@ -37,15 +37,15 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     WEB_PASTE_BT = "📨 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (SB)"
 # ---------------------
 # async def bot_help(client, message): ---> __main__.py
-   BASIC_BT = "𝐁ᴀsɪᴄ"
-   USER_BT = "𝐔sᴇʀs"
-   MICS_BT = "𝐌ɪᴄs"
-   O_S_BT = "𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
-   CLOSE_BT = "𝐂ʟᴏsᴇ"
-   HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
+    BASIC_BT = "𝐁ᴀsɪᴄ"
+    USER_BT = "𝐔sᴇʀs"
+    MICS_BT = "𝐌ɪᴄs"
+    O_S_BT = "𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
+    CLOSE_BT = "𝐂ʟᴏsᴇ"
+    HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
 
     # async def stats(client, message):
-   BOT_STATS = """┎⌬ <b><i>𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒 :</i></b>
+    BOT_STATS = """┎⌬ <b><i>𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐂𝐒 :</i></b>
 ┖ <b>𝐁𝐨𝐭 𝐔𝐩𝐭𝐢𝐦𝐞 :</b> {bot_uptime}
 
 ┎ <b><i>𝐑𝐀𝐌 ( 𝐌𝐄𝐌𝐎𝐑𝐘 ) :</i></b>
