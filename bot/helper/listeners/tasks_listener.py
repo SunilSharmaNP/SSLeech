@@ -648,7 +648,6 @@ class MirrorLeechListener:
                 if self.isSuperGroup and not self.isPM:
                     message += BotTheme("L_LL_MSG")
                 elif self.isSuperGroup and self.isPM:
-                    message += BotTheme("L_LL_MSG")
                     message += BotTheme("L_BOT_MSG")
                     buttons.ibutton(
                         BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header"
