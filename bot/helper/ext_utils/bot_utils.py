@@ -329,8 +329,8 @@ def get_readable_message():
             )
         msg += BotTheme(
             "CANCEL", Cancel=f"/{BotCommands.CancelMirror}_{download.gid()}"
-        msg += BotTheme("mn")
         )
+        msg += BotTheme("mn")
 
     if len(msg) == 0:
         return None, None
