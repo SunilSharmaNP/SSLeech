@@ -317,6 +317,7 @@ def get_readable_message():
             msg += BotTheme("TIME", Time=download.seeding_time())
             msg += BotTheme("SEED_ENGINE", Engine=download.eng())
         else:
+            msg += BotTheme("mm")
             msg += BotTheme("STATUS", Status=download.status(), Url=msg_link)
             msg += BotTheme("STATUS_SIZE", Size=download.size())
             msg += BotTheme("NON_ENGINE", Engine=download.eng())
