@@ -282,14 +282,14 @@ class WZMLStyle:
     USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
         
 ┎<b> 𝐍ᴀᴍᴇ :</b> {NAME}
-┠<b> 𝐈𝐃:</b> <code>{Id}</code>
+┠<b> 𝐈𝐃:</b> <code>{ID}</code>
 ┠<b> 𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
 ┖<b> 𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
 
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
 • <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ
 
-━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
@@ -302,7 +302,7 @@ class WZMLStyle:
 ┠<b> 𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
 ┖<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
 
-━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
@@ -316,7 +316,7 @@ class WZMLStyle:
 ┠<b> 𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
 ┖<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
 
-━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs 𝐟ᴏʀ {NAME}</u></b>
@@ -334,5 +334,5 @@ class WZMLStyle:
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
 ┖<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
 
-━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
