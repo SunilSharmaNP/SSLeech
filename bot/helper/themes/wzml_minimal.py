@@ -162,7 +162,7 @@ class WZMLStyle:
     SIZE = "┎ <b>📦 𝐒ɪᴢᴇ: </b>{Size}\n"
     ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ: </b>{Time}\n"
     MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}\n"
-    pwr = "\n\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
+    CREDIT = "\n\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
 
     # ----- LEECH -------
     L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
