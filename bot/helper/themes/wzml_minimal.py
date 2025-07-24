@@ -195,7 +195,7 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
 
     # def get_readable_message(): ---> bot_utilis.py
     ####--------OVERALL MSG HEADER----------
-    STATUS_NAME = "<b><i>🎥𝐓ɪᴛᴛʟᴇ: {Name}</i></b>"
+    STATUS_NAME = "<b>🎥𝐓ɪᴛᴛʟᴇ: </b><code> {Name}</code>"
 
     #####---------PROGRESSIVE STATUS-------
     mm = "┏━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┓"
