@@ -283,7 +283,6 @@ class WZMLStyle:
         
 ┎<b> 𝐍ᴀᴍᴇ :</b> {NAME}
 ┠<b> 𝐈𝐃:</b> <code>{Id}</code>
-┠<b> 𝐔sᴇʀɴᴀᴍᴇ :</b> {USERNAME}
 ┠<b> 𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
 ┖<b> 𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
 
