@@ -630,6 +630,7 @@ class MirrorLeechListener:
             if mime_type != 0:
                 msg += BotTheme("L_CORRUPTED_FILES", Corrupt=mime_type)
             msg += BotTheme("L_CC", Tag=self.tag)
+            msg += BotTheme("CREDIT")
             btn_added = False
 
             if not files:
