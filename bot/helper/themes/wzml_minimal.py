@@ -157,19 +157,19 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     L_LOG_START = "➲ <b><u>𝐋𝐄𝐄𝐂𝐇 𝐒𝐓𝐀𝐑𝐓𝐄𝐃 :</u></b>\n┠ <b>𝐔𝐒𝐄𝐑 :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒𝐎𝐔𝐑𝐂𝐄 𝐋𝐈𝐍𝐊 :</b> <a href='{msg_link}'>𝐂𝐋𝐈𝐂𝐊 𝐇𝐄𝐑𝐄</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b> 🎥𝐓ɪᴛᴛʟᴇ: {Name}</b>\n┃\n"
+    NAME = "<b> 🎥𝐓ɪᴛᴛʟᴇ:</b><code> {Name}</code>\n\n"
     SIZE = "┎ <b>📦 𝐒ɪᴢᴇ: </b>{Size}\n"
     ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ: </b>{Time}\n"
-    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}\n"
-    lce = "\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
+    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}"
+    pwr = "\n\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
 
     # ----- LEECH -------
     L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs: </b>{Files}\n"
     L_CORRUPTED_FILES = "┠ <b>🛑 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs: </b>{Corrupt}\n"
-    L_CC = "┖ <b> 𝐁ʏ: </b>{Tag}\n\n"
-    PM_BOT_MSG = "➲ <b><i>☝️ 𝐅ɪʟᴇ(ꜱ) 𝐡ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</i></b>"
-    L_BOT_MSG = "➲ <b><i>📩 𝐅ɪʟᴇ(ꜱ) 𝐡ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌 (𝐏ʀɪᴠᴀᴛᴇ)</i></b>"
-    L_LL_MSG = "➲ <b><i>🔗 𝐅ɪʟᴇ(ꜱ) 𝐡ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</i></b>\n"
+    L_CC = "┖ <b>✨ 𝐔ᴘʟᴏᴀᴅᴇᴅ 𝐁ʏ: </b>{Tag}\n\n"
+    PM_BOT_MSG = "<b>☝️ 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
+    L_BOT_MSG = " <b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌 (𝐏ʀɪᴠᴀᴛᴇ)</b>"
+    L_LL_MSG = "<b>🔗 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
 
     M_TYPE = "┠ <b>𝐓ʏᴘᴇ: </b>{Mimetype}\n"
     M_SUBFOLD = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs: </b>{Folder}\n"
@@ -280,13 +280,17 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
 # USER Setting --> user_setting.py
     USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
         
-┎<b> 𝐍ᴀᴍᴇ :</b> {NAME} ( <code>{ID}</code> )
+┎<b> 𝐍ᴀᴍᴇ :</b> {NAME}
+┠<b> 𝐈𝐃:</b> <code>{Id}</code>
 ┠<b> 𝐔sᴇʀɴᴀᴍᴇ :</b> {USERNAME}
 ┠<b> 𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
 ┖<b> 𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
 
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
-• <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ"""
+• <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ
+
+━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+"""
 
     UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
@@ -296,7 +300,10 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
 ┠<b> 𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
 ┠<b> 𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
 ┠<b> 𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
-┖<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>"""
+┖<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
+
+━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+"""
 
     MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
@@ -307,7 +314,10 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
 ┠<b> 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
 ┠<b> 𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
 ┠<b> 𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
-┖<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ"""
+┖<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
+
+━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+"""
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs 𝐟ᴏʀ {NAME}</u></b>
 
@@ -322,4 +332,7 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
-┖<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>"""
+┖<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
+
+━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━
+"""
