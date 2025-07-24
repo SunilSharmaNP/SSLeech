@@ -161,7 +161,7 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     SIZE = "┎ <b>📦 𝐒ɪᴢᴇ: </b>{Size}\n"
     ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ: </b>{Time}\n"
     MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ: </b>{Mode}\n"
-    lce = "\n━━━✦❘༻ <b>𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
+    lce = "\n━━━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━━━"
 
     # ----- LEECH -------
     L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs: </b>{Files}\n"
@@ -195,10 +195,10 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
 
     # def get_readable_message(): ---> bot_utilis.py
     ####--------OVERALL MSG HEADER----------
-    STATUS_NAME = "<b>🎥𝐓ɪᴛᴛʟᴇ: </b><code> {Name}</code>"
+    STATUS_NAME = "<b>🎥𝐓ɪᴛᴛʟᴇ: </b><code> {Name}</code>\n"
 
     #####---------PROGRESSIVE STATUS-------
-    mm = "┏━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┓"
+    mm = "\n┏━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┓"
     BAR = "\n┃ {Bar}"
     PROCESSED = "\n┠ <b>⚡𝐏ʀᴏᴄᴇssᴇᴅ:</b> {Processed}"
     STATUS = '\n┠ <b>🪄𝐒ᴛᴀᴛᴜs:</b> <a href="{Url}">{Status}</a>'
@@ -227,10 +227,10 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     ID = "\n┠ <b>🆔 𝐈𝐃:</b> <code>{Id}</code>"
     BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ:</b> {Btsel}"
     CANCEL = "\n┠ {Cancel}\n"
-    mn = "┗━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┛"
+    mn = "┗━━━༻ « <a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a> » ༺━━━┛\n"
 
     ####------FOOTER--------
-    FOOTER = "┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs</i></b>\n"
+    FOOTER = "\n┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs</i></b>\n"
     TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}\n"
     BOT_TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>𝐀ᴠʟ:</b> {Free}\n"
     Cpu = "┠ <b> 𝐂ᴘᴜ:</b> {cpu}% | "
@@ -253,23 +253,23 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     # ---------------------
 
     # async def countNode(_, message): ----> gd_count.py
-COUNT_MSG = "<b>𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
-COUNT_NAME = "<b><i>{COUNT_NAME}</i></b>\n┃\n"
-COUNT_SIZE = "┠ <b>𝐒ɪᴢᴇ: </b>{COUNT_SIZE}\n"
-COUNT_TYPE = "┠ <b>𝐓ʏᴘᴇ: </b>{COUNT_TYPE}\n"
-COUNT_SUB = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs: </b>{COUNT_SUB}\n"
-COUNT_FILE = "┠ <b>𝐅ɪʟᴇs: </b>{COUNT_FILE}\n"
-COUNT_CC = "┖ <b>𝐁ʏ: </b>{COUNT_CC}\n"
+    COUNT_MSG = "<b>𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
+    COUNT_NAME = "<b><i>{COUNT_NAME}</i></b>\n┃\n"
+    COUNT_SIZE = "┠ <b>𝐒ɪᴢᴇ: </b>{COUNT_SIZE}\n"
+    COUNT_TYPE = "┠ <b>𝐓ʏᴘᴇ: </b>{COUNT_TYPE}\n"
+    COUNT_SUB = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs: </b>{COUNT_SUB}\n"
+    COUNT_FILE = "┠ <b>𝐅ɪʟᴇs: </b>{COUNT_FILE}\n"
+    COUNT_CC = "┖ <b>𝐁ʏ: </b>{COUNT_CC}\n"
 # ---------------------
 
 # LIST ---> gd_list.py
-LIST_SEARCHING = "<b>𝐒ᴇᴀʀᴄʜɪɴɢ 𝐟ᴏʀ <i>{NAME}</i></b>"
-LIST_FOUND = "<b>𝐅ᴏᴜɴᴅ {NO} ʀᴇsᴜʟᴛ 𝐟ᴏʀ <i>{NAME}</i></b>"
-LIST_NOT_FOUND = "𝐍ᴏ ʀᴇsᴜʟᴛ 𝐟ᴏᴜɴᴅ 𝐟ᴏʀ <i>{NAME}</i>"
+    LIST_SEARCHING = "<b>𝐒ᴇᴀʀᴄʜɪɴɢ 𝐟ᴏʀ <i>{NAME}</i></b>"
+    LIST_FOUND = "<b>𝐅ᴏᴜɴᴅ {NO} ʀᴇsᴜʟᴛ 𝐟ᴏʀ <i>{NAME}</i></b>"
+    LIST_NOT_FOUND = "𝐍ᴏ ʀᴇsᴜʟᴛ 𝐟ᴏᴜɴᴅ 𝐟ᴏʀ <i>{NAME}</i>"
 # ---------------------
 
 # async def mirror_status(_, message): ----> status.py
-NO_ACTIVE_DL = """<i>𝐍ᴏ 𝐀ᴄᴛɪᴠᴇ 𝐃ᴏᴡɴʟᴏᴀᴅs!</i>
+    NO_ACTIVE_DL = """<i>𝐍ᴏ 𝐀ᴄᴛɪᴠᴇ 𝐃ᴏᴡɴʟᴏᴀᴅs!</i>
  
 ⌬ <b><i>𝐁ᴏᴛ 𝐒ᴛᴀᴛs</i></b>
 ┠ <b>CPU:</b> {cpu}% | <b>F:</b> {free} [{free_p}%]
@@ -278,7 +278,7 @@ NO_ACTIVE_DL = """<i>𝐍ᴏ 𝐀ᴄᴛɪᴠᴇ 𝐃ᴏᴡɴʟᴏᴀᴅs!</i>
 # ---------------------
 
 # USER Setting --> user_setting.py
-USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
+    USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
         
 ┎<b> 𝐍ᴀᴍᴇ :</b> {NAME} ( <code>{ID}</code> )
 ┠<b> 𝐔sᴇʀɴᴀᴍᴇ :</b> {USERNAME}
@@ -288,7 +288,7 @@ USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
 • <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ"""
 
-UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
+    UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
 ┎<b> 𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
 ┠<b> 𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
@@ -298,7 +298,7 @@ UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u
 ┠<b> 𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
 ┖<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>"""
 
-MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
+    MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
 ┎<b> 𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
 ┠<b> 𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
@@ -309,7 +309,7 @@ MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAM
 ┠<b> 𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
 ┖<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ"""
 
-LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs 𝐟ᴏʀ {NAME}</u></b>
+    LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs 𝐟ᴏʀ {NAME}</u></b>
 
 ┎<b> 𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
