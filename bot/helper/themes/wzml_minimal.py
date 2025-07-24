@@ -211,16 +211,16 @@ sᴛᴀʀᴛ ᴜsɪɴɢ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ ᴀɴᴅ ᴇɴᴊᴏʏ ❤️<
     LEECHERS = "\n┠<b>☘️𝐋ᴇᴇᴄʜᴇʀs:</b> {Leechers}"
 
     ####--------𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
-SEED_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
-SEED_SPEED = "\n┠ <b>𝐒ᴘᴇᴇᴅ: </b> {Speed} | "
-UPLOADED = "<b>𝐔ᴘʟᴏᴀᴅᴇᴅ: </b> {Upload}"
-RATIO = "\n┠ <b>𝐑ᴀᴛɪᴏ: </b> {Ratio} | "
-TIME = "<b>𝐓ɪᴍᴇ: </b> {Time}"
-SEED_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
+    SEED_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
+    SEED_SPEED = "\n┠ <b>𝐒ᴘᴇᴇᴅ: </b> {Speed} | "
+    UPLOADED = "<b>𝐔ᴘʟᴏᴀᴅᴇᴅ: </b> {Upload}"
+    RATIO = "\n┠ <b>𝐑ᴀᴛɪᴏ: </b> {Ratio} | "
+    TIME = "<b>𝐓ɪᴍᴇ: </b> {Time}"
+    SEED_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
 ####--------𝐍ᴏɴ-𝐏ʀᴏɢʀᴇssɪᴠᴇ + 𝐍ᴏɴ 𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
-STATUS_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
-NON_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
+    STATUS_SIZE = "\n┠ <b>𝐒ɪᴢᴇ: </b>{Size}"
+    NON_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
     ####--------OVERALL MSG FOOTER----------
     USER = "\n┠ <b>👤 𝐔sᴇʀ:</b> <code>{User}</code>"
