@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 from datetime import datetime
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
@@ -154,6 +153,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
     name = from_user.mention(style="html")
     buttons = ButtonMaker()
     thumbpath = f"Thumbnails/{user_id}.jpg"
+    # Aeon-MLTB कोड से प्रेरित
+    layout_pic = config_dict.get('USER_SET_PIC')
     rclone_path = f"rclone/{user_id}.conf"
     user_dict = user_data.get(user_id, {})
     if key is None:
@@ -639,16 +640,19 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton("Back", f"userset {user_id} back {edit_type}", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
-    return text, button
+    return text, button, layout_pic
 
 
 async def update_user_settings(
     query, key=None, edit_type=None, edit_mode=None, msg=None, sdirect=False
 ):
-    msg, button = await get_user_settings(
+    # get_user_settings से फोटो भी प्राप्त करें
+    text, button, photo = await get_user_settings(
         msg.from_user if sdirect else query.from_user, key, edit_type, edit_mode
     )
-    await editMessage(query if sdirect else query.message, msg, button)
+    # editMessage को बताएं कि फोटो को नहीं बदलना है (None पास करके)
+    # Pyrogram अपने आप समझ जाएगा कि केवल कैप्शन बदलना है।
+    await editMessage(query if sdirect else query.message, text, button)
 
 
 async def user_settings(client, message):
@@ -704,9 +708,10 @@ async def user_settings(client, message):
     else:
         from_user = message.from_user
         handler_dict[from_user.id] = False
-        msg, button = await get_user_settings(from_user)
-        # यहाँ बदलाव किया गया है
-        await sendMessage(message, msg, button, photo=config_dict.get("USER_SET_PIC"))
+        # अब get_user_settings तीन चीजें लौटाएगा
+        msg, button, photo = await get_user_settings(from_user)
+        # sendMessage को फोटो के साथ कॉल करें
+        await sendMessage(message, msg, button, photo=photo)
 
 
 async def set_custom(client, message, pre_event, key, direct=False):
