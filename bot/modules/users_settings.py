@@ -700,11 +700,16 @@ async def user_settings(client, message):
 ➲ <b>Leech User Dump :</b>
     /cmd -s ldump""",
         )
-    else:
+        else:
         from_user = message.from_user
         handler_dict[from_user.id] = False
         msg, button = await get_user_settings(from_user)
-        await sendMessage(message, msg, button, "IMAGES")
+
+        # अपनी फिक्स्ड थंबनेल का पाथ यहाँ डालें
+        fixed_thumb_path = "IMAGES/settings_thumb.jpg"
+
+        # मैसेज को अपनी फिक्स्ड तस्वीर के कैप्शन के रूप में भेजें
+        await sendMessage(message, msg, button, fixed_thumb_path)
 
 
 async def set_custom(client, message, pre_event, key, direct=False):
