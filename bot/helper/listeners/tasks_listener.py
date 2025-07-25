@@ -609,10 +609,6 @@ class MirrorLeechListener:
         user_id = self.message.from_user.id
         name, _ = await format_filename(name, user_id, isMirror=not self.isLeech)
         user_dict = user_data.get(user_id, {})
-        # --- मुख्य बदलाव: स्थायी तस्वीर का तर्क ---
-        thumb = user_dict.get('thumb')
-        final_photo = thumb if thumb and await aiopath.exists(thumb) else config_dict.get('USER_SET_PIC') or self.random_pic
-    # --- बदलाव समाप्त ---
         msg = BotTheme(
             "NAME",
             Name=(
