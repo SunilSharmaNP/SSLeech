@@ -11,7 +11,7 @@ TG_PROXY = (
     {}
 )  # {"scheme": ”socks5”, "hostname": ””, "port": 1234, "username": ”user”, "password": ”pass”}
 USER_SESSION_STRING = ""
-CMD_SUFFIX = ""
+CMD_SUFFIX = "2"
 AUTHORIZED_CHATS = ""
 SUDO_USERS = ""
 STATUS_LIMIT = 10
@@ -22,7 +22,7 @@ STREAMWISH_API = ""
 EXCLUDED_EXTENSIONS = ""
 INCOMPLETE_TASK_NOTIFIER = False
 YT_DLP_OPTIONS = ""
-USE_SERVICE_ACCOUNTS = False
+USE_SERVICE_ACCOUNTS = True
 NAME_SWAP = ""
 FFMPEG_CMDS = {}
 UPLOAD_PATHS = {}
@@ -43,8 +43,8 @@ DISABLE_SEED = False
 DISABLE_FF_MODE = False
 
 # Telegraph
-AUTHOR_NAME = "WZML-X"
-AUTHOR_URL = "https://t.me/WZML_X"
+AUTHOR_NAME = "SS Bots"
+AUTHOR_URL = "https://t.me/SSBotsUpdates"
 
 # Task Limits
 DIRECT_LIMIT = 0
@@ -103,13 +103,13 @@ TIMEZONE = "Asia/Kolkata"
 
 # GDrive Tools
 GDRIVE_ID = ""
-GD_DESP = "Uploaded with WZ Bot"
+GD_DESP = "Uploaded with SS Bot"
 IS_TEAM_DRIVE = False
 STOP_DUPLICATE = False
 INDEX_URL = ""
 
 # YT Tools
-YT_DESP = "Uploaded to YouTube by WZML-X bot"
+YT_DESP = "Uploaded to YouTube by SSBots"
 YT_TAGS = ["telegram", "bot", "youtube"]  # or as a comma-separated string
 YT_CATEGORY_ID = 22
 YT_PRIVACY_STATUS = "unlisted"
@@ -150,7 +150,7 @@ USENET_SERVERS = [
 ]
 
 # Update
-UPSTREAM_REPO = ""
+UPSTREAM_REPO = "https://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@github.com/SunilSharmaNP/SSLeech"
 UPSTREAM_BRANCH = "master"
 UPDATE_PKGS = True
 
@@ -165,7 +165,7 @@ LEECH_PREFIX = ""
 LEECH_SUFFIX = ""
 LEECH_FONT = ""
 LEECH_CAPTION = ""
-THUMBNAIL_LAYOUT = ""
+THUMBNAIL_LAYOUT = "https://i.ibb.co/99qT2tyf/settings-thumb-jpg.jpg"
 
 # Log Channels
 LEECH_DUMP_CHAT = ""
@@ -174,8 +174,8 @@ MIRROR_LOG_ID = ""
 
 # qBittorrent/Aria2c
 TORRENT_TIMEOUT = 0
-BASE_URL = ""
-BASE_URL_PORT = 0
+BASE_URL = "http://65.21.128.94:9053"
+BASE_URL_PORT = 9053
 WEB_PINCODE = True
 
 # Queueing system
