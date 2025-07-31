@@ -200,7 +200,7 @@ async def _mirror_leech(
         except Exception:
             await sendMessage(
                 message,
-                "Reply to text file or tg message that have links seperated by new line!",
+                "𝐑ᴇᴘʟʏ ᴛᴏ ᴛᴇxᴛ ғɪʟᴇ ᴏʀ ᴛɢ ᴍᴇssᴀɢᴇ ᴛʜᴀᴛ ʜᴀᴠᴇ ʟɪɴᴋs sᴇᴘᴇʀᴀᴛᴇᴅ ʙʏ ɴᴇᴡ ʟɪɴᴇ!",
             )
             return
         b_msg = input_list[:1]
@@ -278,7 +278,7 @@ async def _mirror_leech(
                 )
         except Exception as e:
             LOGGER.info(format_exc())
-            await sendMessage(message, f"<b>ERROR:</b> <i>{e}</i>")
+            await sendMessage(message, f"<b>𝐄ʀʀᴏʀ:</b> <i>{e}</i>")
             await delete_links(message)
             return
 
@@ -352,7 +352,7 @@ async def _mirror_leech(
         content_type = await get_content_type(link)
         if content_type is None or re_match(r"text/html|text/plain", content_type):
             process_msg = await sendMessage(
-                message, f"<i><b>Processing:</b></i> <code>{link}</code>"
+                message, f"<i><b>𝐏ʀᴏᴄᴇssɪɴɢ:</b></i> <code>{link}</code>"
             )
             try:
                 if not is_magnet(link) and (ussr or pssw):
@@ -361,14 +361,14 @@ async def _mirror_leech(
                 if isinstance(link, tuple):
                     link, headers = link
                 elif isinstance(link, str):
-                    LOGGER.info(f"Generated link: {link}")
+                    LOGGER.info(f"𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐋ɪɴᴋ: {link}")
                     await editMessage(
                         process_msg,
-                        f"<i><b>Generated link:</b></i> <code>{link}</code>",
+                        f"<i><b>𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐋ɪɴᴋ:</b></i> <code>{link}</code>",
                     )
             except DirectDownloadLinkException as e:
                 e = str(e)
-                if "This link requires a password!" not in e:
+                if "𝐓ʜɪs 𝐋ɪɴᴋ 𝐑ᴇǫᴜɪʀᴇs 𝐀 𝐏ᴀssᴡᴏʀᴅ!" not in e:
                     LOGGER.info(e)
                 if str(e).startswith("ERROR:"):
                     await editMessage(process_msg, str(e))
@@ -409,9 +409,9 @@ async def _mirror_leech(
             if drive_id and not await sync_to_async(
                 GoogleDriveHelper().getFolderData, drive_id
             ):
-                return await sendMessage(message, "Google Drive ID validation failed!!")
+                return await sendMessage(message, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ 𝐈ᴅ 𝐕ᴀʟɪᴅᴀᴛɪᴏɴ 𝐅ᴀɪʟᴇᴅ‼")
         if up == "gd" and not config_dict["GDRIVE_ID"] and not drive_id:
-            await sendMessage(message, "GDRIVE_ID not Provided!")
+            await sendMessage(message, "𝐆𝐃𝐑𝐈𝐕𝐄_𝐈𝐃 ɴᴏᴛ 𝐏ʀᴏᴠɪᴅᴇᴅ!")
             return
         elif not up:
             await sendMessage(message, "No RClone Destination!")
@@ -427,7 +427,7 @@ async def _mirror_leech(
                 await delete_links(message)
                 return
         if up != "gd" and up != "ddl" and not is_rclone_path(up):
-            await sendMessage(message, "Wrong Rclone Upload Destination!")
+            await sendMessage(message, "𝐖ʀᴏɴɢ 𝐑ᴄʟᴏɴᴇ 𝐔ᴘʟᴏᴀᴅ 𝐃ᴇsᴛɪɴᴀᴛɪᴏɴ!")
             await delete_links(message)
             return
     else:
@@ -532,7 +532,7 @@ async def wzmlxcb(_, query):
     user_id = query.from_user.id
     data = query.data.split()
     if user_id != int(data[1]):
-        return await query.answer(text="Not Yours!", show_alert=True)
+        return await query.answer(text="𝐍ᴏᴛ 𝐘ᴏᴜʀs!", show_alert=True)
     elif data[2] == "logdisplay":
         await query.answer()
         async with aiopen("log.txt", "r") as f:
@@ -551,10 +551,10 @@ async def wzmlxcb(_, query):
                 if ind == len(logFileLines):
                     break
                 ind += 1
-            startLine = f"<b>Showing Last {ind} Lines from log.txt:</b> \n\n----------<b>START LOG</b>----------\n\n"
-            endLine = "\n----------<b>END LOG</b>----------"
+            startLine = f"<b>𝐒ʜᴏᴡɪɴɢ 𝐋ᴀsᴛ {ind} 𝐋ɪɴᴇs ғʀᴏᴍ ʟᴏɢ.ᴛxᴛ:</b> \n\n----------<b>𝐒ᴛᴀʀᴛ 𝐋ᴏɢ</b>----------\n\n"
+            endLine = "\n----------<b>𝐄ɴᴅ 𝐋ᴏɢ</b>----------"
             btn = ButtonMaker()
-            btn.ibutton("Cʟᴏsᴇ", f"wzmlx {user_id} close")
+            btn.ibutton("𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
             await sendMessage(
                 message, startLine + escape(Loglines) + endLine, btn.build_menu(1)
             )
@@ -574,33 +574,33 @@ async def wzmlxcb(_, query):
         if resp["status"] == 201:
             btn = ButtonMaker()
             btn.ubutton(
-                "📨 Web Paste (SB)", f"https://spaceb.in/{resp['payload']['id']}"
+                "📨 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (𝐒ʙ)", f"https://spaceb.in/{resp['payload']['id']}"
             )
             await editReplyMarkup(message, btn.build_menu(1))
         else:
-            LOGGER.error(f"Web Paste Failed : {str(err)}")
+            LOGGER.error(f"𝐖ᴇʙ 𝐏ᴀsᴛᴇ 𝐅ᴀɪʟᴇᴅ : {str(err)}")
     elif data[2] == "botpm":
         await query.answer(url=f"https://t.me/{bot_name}?start=wzmlx")
     elif data[2] == "help":
         await query.answer()
         btn = ButtonMaker()
-        btn.ibutton("Cʟᴏsᴇ", f"wzmlx {user_id} close")
+        btn.ibutton("𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
         if data[3] == "CLONE":
             await editMessage(message, CLONE_HELP_MESSAGE[1], btn.build_menu(1))
         elif data[3] == "MIRROR":
             if len(data) == 4:
                 msg = MIRROR_HELP_MESSAGE[1][:4000]
-                btn.ibutton("Nᴇxᴛ Pᴀɢᴇ", f"wzmlx {user_id} help MIRROR readmore")
+                btn.ibutton("𝐍ᴇxᴛ 𝐏ᴀɢᴇ", f"wzmlx {user_id} help MIRROR readmore")
             else:
                 msg = MIRROR_HELP_MESSAGE[1][4000:]
-                btn.ibutton("Pʀᴇ Pᴀɢᴇ", f"wzmlx {user_id} help MIRROR")
+                btn.ibutton("𝐏ʀᴇ 𝐏ᴀɢᴇ", f"wzmlx {user_id} help MIRROR")
             await editMessage(message, msg, btn.build_menu(2))
         if data[3] == "YT":
             await editMessage(message, YT_HELP_MESSAGE[1], btn.build_menu(1))
     elif data[2] == "guide":
         btn = ButtonMaker()
-        btn.ibutton("Bᴀᴄᴋ", f"wzmlx {user_id} guide home")
-        btn.ibutton("Cʟᴏsᴇ", f"wzmlx {user_id} close")
+        btn.ibutton("𝐁ᴀᴄᴋ", f"wzmlx {user_id} guide home")
+        btn.ibutton("𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
         if data[3] == "basic":
             await editMessage(message, help_string[0], btn.build_menu(2))
         elif data[3] == "users":
@@ -609,18 +609,18 @@ async def wzmlxcb(_, query):
             await editMessage(message, help_string[3], btn.build_menu(2))
         elif data[3] == "admin":
             if not await CustomFilters.sudo("", query):
-                return await query.answer("Not Sudo or Owner!", show_alert=True)
+                return await query.answer("𝐍ᴏᴛ 𝐒ᴜᴅᴏ ᴏʀ 𝐎ᴡɴᴇʀ!", show_alert=True)
             await editMessage(message, help_string[2], btn.build_menu(2))
         else:
             buttons = ButtonMaker()
-            buttons.ibutton("Basic", f"wzmlx {user_id} guide basic")
-            buttons.ibutton("Users", f"wzmlx {user_id} guide users")
-            buttons.ibutton("Mics", f"wzmlx {user_id} guide miscs")
-            buttons.ibutton("Owner & Sudos", f"wzmlx {user_id} guide admin")
-            buttons.ibutton("Close", f"wzmlx {user_id} close")
+            buttons.ibutton("𝐁ᴀsɪᴄ", f"wzmlx {user_id} guide basic")
+            buttons.ibutton("𝐔sᴇʀs", f"wzmlx {user_id} guide users")
+            buttons.ibutton("𝐌ɪᴄs", f"wzmlx {user_id} guide miscs")
+            buttons.ibutton("𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs", f"wzmlx {user_id} guide admin")
+            buttons.ibutton("𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
             await editMessage(
                 message,
-                "㊂ <b><i>Help Guide Menu!</i></b>\n\n<b>NOTE: <i>Click on any CMD to see more minor detalis.</i></b>",
+                "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀɪʟs.</i></b>",
                 buttons.build_menu(2),
             )
         await query.answer()
@@ -634,7 +634,6 @@ async def wzmlxcb(_, query):
             await deleteMessage(message.reply_to_message)
             if message.reply_to_message.reply_to_message:
                 await deleteMessage(message.reply_to_message.reply_to_message)
-
 
 async def mirror(client, message):
     _mirror_leech(client, message)
