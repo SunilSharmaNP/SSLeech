@@ -22,11 +22,11 @@ async def save_message(_, query):
                     else None
                 ),
             )
-            await query.answer("Message/Media Successfully Saved !", show_alert=True)
+            await query.answer("𝐌ᴇssᴀɢᴇ/𝐌ᴇᴅɪᴀ 𝐒ᴜᴄᴄᴇssғᴜʟʟʏ 𝐒ᴀᴠᴇᴅ !", show_alert=True)
         except Exception:
             if user_dict.get("save_mode"):
                 await query.answer(
-                    "Make Bot as Admin and give Post Permissions and Try Again",
+                    "𝐌ᴀᴋᴇ 𝐁ᴏᴛ ᴀs 𝐀ᴅᴍɪɴ ᴀɴᴅ ɢɪᴠᴇ 𝐏ᴏsᴛ 𝐏ᴇʀᴍɪssɪᴏɴs ᴀɴᴅ 𝐓ʀʏ 𝐀ɢᴀɪɴ",
                     show_alert=True,
                 )
             else:
