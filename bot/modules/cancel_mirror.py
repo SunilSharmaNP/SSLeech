@@ -30,18 +30,18 @@ async def cancel_mirror(_, message):
         gid = cmd_data[0]
         dl = await getDownloadByGid(gid)
         if dl is None:
-            await sendMessage(message, f"GID: <code>{gid}</code> Not Found.")
+            await sendMessage(message, f"𝐆ɪᴅ: <code>{gid}</code> 𝐍ᴏᴛ 𝐅ᴏᴜɴᴅ.")
             return
     elif reply_to_id := message.reply_to_message_id:
         async with download_dict_lock:
             dl = download_dict.get(reply_to_id, None)
         if dl is None:
-            await sendMessage(message, "This is not an active task!")
+            await sendMessage(message, "𝐓ʜɪs ɪs ɴᴏᴛ ᴀɴ ᴀᴄᴛɪᴠᴇ ᴛᴀsᴋ!")
             return
     elif len(msg) == 1:
         msg = (
-            "Reply to an active Command message which was used to start the download"
-            f" or send <code>/{BotCommands.CancelMirror}_GID</code> to cancel it!"
+            "𝐑ᴇᴘʟʏ ᴛᴏ ᴀɴ ᴀᴄᴛɪᴠᴇ 𝐂ᴏᴍᴍᴀɴᴅ ᴍᴇssᴀɢᴇ ᴡʜɪᴄʜ ᴡᴀs ᴜsᴇᴅ ᴛᴏ sᴛᴀʀᴛ ᴛʜᴇ ᴅᴏᴡɴʟᴏᴀᴅ"
+            f" ᴏʀ sᴇɴᴅ <code>/{BotCommands.CancelMirror}_GID</code> ᴛᴏ ᴄᴀɴᴄᴇʟ ɪᴛ!"
         )
         await sendMessage(message, msg)
         return
@@ -50,7 +50,7 @@ async def cancel_mirror(_, message):
         and dl.message.from_user.id != user_id
         and (user_id not in user_data or not user_data[user_id].get("is_sudo"))
     ):
-        await sendMessage(message, "This task is not for you!")
+        await sendMessage(message, "𝐓ʜɪs ᴛᴀsᴋ ɪs ɴᴏᴛ ғᴏʀ ʏᴏᴜ!")
         return
     obj = dl.download()
     await obj.cancel_download()
@@ -102,7 +102,7 @@ async def cancel_all_update(_, query):
     else:
         res = await cancel_all(data[1])
         if not res:
-            await sendMessage(reply_to, f"No matching tasks for {data[1]}!")
+            await sendMessage(reply_to, f"𝐍ᴏ ᴍᴀᴛᴄʜɪɴɢ ᴛᴀsᴋs ғᴏʀ {data[1]}!")
 
 
 bot.add_handler(
