@@ -49,13 +49,13 @@ async def change_category(client, message):
     if gid := args["link"]:
         dl = await getDownloadByGid(gid)
         if not dl:
-            await sendMessage(message, f"GID: <code>{gid}</code> Not Found.")
+            await sendMessage(message, f"𝐆ɪᴅ: <code>{gid}</code> 𝐍ᴏᴛ 𝐅ᴏᴜɴᴅ.")
             return
     if reply_to := message.reply_to_message:
         async with download_dict_lock:
             dl = download_dict.get(reply_to.id, None)
         if not dl:
-            await sendMessage(message, "This is not an active task!")
+            await sendMessage(message, "𝐓ʜɪs ɪs ɴᴏᴛ ᴀɴ ᴀᴄᴛɪᴠᴇ ᴛᴀsᴋ!")
             return
     if not dl:
         await sendMessage(message, CATEGORY_HELP_MESSAGE)
@@ -64,7 +64,7 @@ async def change_category(client, message):
         not await CustomFilters.sudo(client, message)
         and dl.message.from_user.id != user_id
     ):
-        await sendMessage(message, "This task is not for you!")
+        await sendMessage(message, "𝐓ʜɪs ᴛᴀsᴋ ɪs ɴᴏᴛ ғᴏʀ ʏᴏᴜ!")
         return
     if dl.status() not in [
         MirrorStatus.STATUS_DOWNLOADING,
@@ -73,7 +73,7 @@ async def change_category(client, message):
     ]:
         await sendMessage(
             message,
-            f"Task should be on {MirrorStatus.STATUS_DOWNLOADING} or {MirrorStatus.STATUS_PAUSED} or {MirrorStatus.STATUS_QUEUEDL}",
+            f"𝐓ᴀsᴋ sʜᴏᴜʟᴅ ʙᴇ ᴏɴ {MirrorStatus.STATUS_DOWNLOADING} ᴏʀ {MirrorStatus.STATUS_PAUSED} ᴏʀ {MirrorStatus.STATUS_QUEUEDL}",
         )
         return
     listener = dl.listener() if dl and hasattr(dl, "listener") else None
@@ -83,26 +83,26 @@ async def change_category(client, message):
         if is_cancelled:
             return
         if not index_link and not drive_id:
-            return await sendMessage(message, "Time out")
-        msg = "<b>Task has been Updated Successfully!</b>"
+            return await sendMessage(message, "𝐓ɪᴍᴇ ᴏᴜᴛ")
+        msg = "<b>𝐓ᴀsᴋ ʜᴀs ʙᴇᴇɴ 𝐔ᴘᴅᴀᴛᴇᴅ 𝐒ᴜᴄᴄᴇssғᴜʟʟʏ!</b>"
         if drive_id:
             if not (
                 folder_name := await sync_to_async(
                     GoogleDriveHelper().getFolderData, drive_id
                 )
             ):
-                return await sendMessage(message, "Google Drive id validation failed!!")
+                return await sendMessage(message, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ ɪᴅ ᴠᴀʟɪᴅᴀᴛɪᴏɴ ғᴀɪʟᴇᴅ!!")
             if listener.drive_id and listener.drive_id == drive_id:
-                msg += f"\n\n<b>Folder name</b> : {folder_name} Already selected"
+                msg += f"\n\n<b>𝐅ᴏʟᴅᴇʀ ɴᴀᴍᴇ</b> : {folder_name} 𝐀ʟʀᴇᴀᴅʏ sᴇʟᴇᴄᴛᴇᴅ"
             else:
-                msg += f"\n\n<b>Folder name</b> : {folder_name}"
+                msg += f"\n\n<b>𝐅ᴏʟᴅᴇʀ ɴᴀᴍᴇ</b> : {folder_name}"
             listener.drive_id = drive_id
         if index_link:
             listener.index_link = index_link
-            msg += f"\n\n<b>Index Link</b> : <code>{index_link}</code>"
+            msg += f"\n\n<b>𝐈ɴᴅᴇx 𝐋ɪɴᴋ</b> : <code>{index_link}</code>"
         return await sendMessage(message, msg)
     else:
-        await sendMessage(message, "Can not change Category for this task!")
+        await sendMessage(message, "𝐂ᴀɴ ɴᴏᴛ ᴄʜᴀɴɢᴇ 𝐂ᴀᴛᴇɢᴏʀʏ ғᴏʀ ᴛʜɪs ᴛᴀsᴋ!")
 
 
 @new_task
@@ -111,9 +111,9 @@ async def confirm_category(client, query):
     data = query.data.split(maxsplit=3)
     msg_id = int(data[2])
     if msg_id not in bot_cache:
-        return await editMessage(query.message, "<b>Old Task</b>")
+        return await editMessage(query.message, "<b>𝐎ʟᴅ 𝐓ᴀsᴋ</b>")
     elif user_id != int(data[1]) and not await CustomFilters.sudo(client, query):
-        return await query.answer(text="This task is not for you!", show_alert=True)
+        return await query.answer(text="𝐓ʜɪs ᴛᴀsᴋ ɪs ɴᴏᴛ ғᴏʀ ʏᴏᴜ!", show_alert=True)
     elif data[3] == "sdone":
         bot_cache[msg_id][2] = True
         return
@@ -139,15 +139,15 @@ async def confirm_category(client, query):
                 f'{"✅️" if cat_name == _name else ""} {_name}',
                 f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
-    buttons.ibutton("Cancel", f"scat {user_id} {msg_id} scancel", "footer")
+    buttons.ibutton("𝐂ᴀɴᴄᴇʟ", f"scat {user_id} {msg_id} scancel", "footer")
     buttons.ibutton(
-        f"Done ({get_readable_time(60 - (time() - bot_cache[msg_id][4]))})",
+        f"𝐃ᴏɴᴇ ({get_readable_time(60 - (time() - bot_cache[msg_id][4]))})",
         f"scat {user_id} {msg_id} sdone",
         "footer",
     )
     await editMessage(
         query.message,
-        f"<b>Select the category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
+        f"<b>𝐒ᴇʟᴇᴄᴛ 𝐓ʜᴇ 𝐂ᴀᴛᴇɢᴏʀʏ 𝐖ʜᴇʀᴇ 𝐘ᴏᴜ 𝐖ᴀɴᴛ 𝐓ᴏ 𝐔ᴘʟᴏᴀᴅ</b>\n\n<i><b>𝐔ᴘʟᴏᴀᴅ 𝐂ᴀᴛᴇɢᴏʀʏ:</b></i> <code>{cat_name}</code>\n\n<b>𝐓ɪᴍᴇᴏᴜᴛ:</b> 60 sᴇᴄ",
         buttons.build_menu(3),
     )
 
@@ -158,9 +158,9 @@ async def confirm_dump(client, query):
     data = query.data.split(maxsplit=3)
     msg_id = int(data[2])
     if msg_id not in bot_cache:
-        return await editMessage(query.message, "<b>Old Task</b>")
+        return await editMessage(query.message, "<b>𝐎ʟᴅ 𝐓ᴀsᴋ</b>")
     elif user_id != int(data[1]) and not await CustomFilters.sudo(client, query):
-        return await query.answer(text="This task is not for you!", show_alert=True)
+        return await query.answer(text="𝐓ʜɪs ᴛᴀsᴋ ɪs ɴᴏᴛ ғᴏʀ ʏᴏᴜ!", show_alert=True)
     elif data[3] == "ddone":
         bot_cache[msg_id][1] = True
         return
@@ -179,19 +179,18 @@ async def confirm_dump(client, query):
                 f'{"✅️" if upall or cat_name == _name else ""} {_name}',
                 f"dcat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
-    buttons.ibutton("Upload in All", f"dcat {user_id} {msg_id} All", "header")
-    buttons.ibutton("Cancel", f"dcat {user_id} {msg_id} dcancel", "footer")
+    buttons.ibutton("𝐔ᴘʟᴏᴀᴅ ɪɴ 𝐀ʟʟ", f"dcat {user_id} {msg_id} All", "header")
+    buttons.ibutton("𝐂ᴀɴᴄᴇʟ", f"dcat {user_id} {msg_id} dcancel", "footer")
     buttons.ibutton(
-        f"Done ({get_readable_time(60 - (time() - bot_cache[msg_id][3]))})",
+        f"𝐃ᴏɴᴇ ({get_readable_time(60 - (time() - bot_cache[msg_id][3]))})",
         f"dcat {user_id} {msg_id} ddone",
         "footer",
     )
     await editMessage(
         query.message,
-        f"<b>Select the category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
+        f"<b>𝐒ᴇʟᴇᴄᴛ ᴛʜᴇ ᴄᴀᴛᴇɢᴏʀʏ ᴡʜᴇʀᴇ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴜᴘʟᴏᴀᴅ</b>\n\n<i><b>𝐔ᴘʟᴏᴀᴅ 𝐂ᴀᴛᴇɢᴏʀʏ:</b></i> <code>{cat_name}</code>\n\n<b>𝐓ɪᴍᴇᴏᴜᴛ:</b> 60 sᴇᴄ",
         buttons.build_menu(3),
     )
-
 
 bot.add_handler(
     MessageHandler(
