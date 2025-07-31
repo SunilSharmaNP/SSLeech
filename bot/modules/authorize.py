@@ -28,23 +28,23 @@ async def authorize(client, message):
     else:
         id_ = message.chat.id
     if id_ in user_data and user_data[id_].get("is_auth"):
-        msg = "Already Authorized!"
+        msg = "𝐀ʟʀᴇᴀᴅʏ 𝐀ᴜᴛʜᴏʀɪᴢᴇᴅ!"
         if tid_:
             if tid_ not in (tids_ := user_data[id_].get("topic_ids", [])):
                 tids_.append(tid_)
                 update_user_ldata(id_, "topic_ids", tids_)
                 if DATABASE_URL:
                     await DbManger().update_user_data(id_)
-                msg = "Topic Authorized!"
+                msg = "𝐓ᴏᴘɪᴄ 𝐀ᴜᴛʜᴏʀɪᴢᴇᴅ!"
             else:
-                msg = "Topic Already Authorized!"
+                msg = "𝐓ᴏᴘɪᴄ 𝐀ʟʀᴇᴀᴅʏ 𝐀ᴜᴛʜᴏʀɪᴢᴇᴅ!"
     else:
         update_user_ldata(id_, "is_auth", True)
         if tid_:
             update_user_ldata(id_, "topic_ids", [tid_])
-            msg = "Topic Authorized!"
+            msg = "𝐓ᴏᴘɪᴄ 𝐀ᴜᴛʜᴏʀɪᴢᴇᴅ!"
         else:
-            msg = "Authorized"
+            msg = "𝐀ᴜᴛʜᴏʀɪᴢᴇᴅ"
         if DATABASE_URL:
             await DbManger().update_user_data(id_)
     await sendMessage(message, msg)
@@ -80,9 +80,9 @@ async def unauthorize(client, message):
             update_user_ldata(id_, "is_auth", False)
         if DATABASE_URL:
             await DbManger().update_user_data(id_)
-        msg = "Unauthorized"
+        msg = "𝐔ɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ"
     else:
-        msg = "Already Unauthorized!"
+        msg = "𝐀ʟʀᴇᴀᴅʏ 𝐔ɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ!"
     await sendMessage(message, msg)
 
 
@@ -95,14 +95,14 @@ async def addSudo(client, message):
         id_ = reply_to.from_user.id
     if id_:
         if id_ in user_data and user_data[id_].get("is_sudo"):
-            msg = "Already Sudo!"
+            msg = "𝐀ʟʀᴇᴀᴅʏ 𝐒ᴜᴅᴏ!"
         else:
             update_user_ldata(id_, "is_sudo", True)
             if DATABASE_URL:
                 await DbManger().update_user_data(id_)
-            msg = "Promoted as Sudo"
+            msg = "𝐏ʀᴏᴍᴏᴛᴇᴅ ᴀs 𝐒ᴜᴅᴏ"
     else:
-        msg = "<i>Give User's ID or Reply to User's message of whom you want to Promote as Sudo</i>"
+        msg = "<i>𝐆ɪᴠᴇ 𝐔sᴇʀ's 𝐈ᴅ ᴏʀ 𝐑ᴇᴘʟʏ ᴛᴏ 𝐔sᴇʀ's ᴍᴇssᴀɢᴇ ᴏғ ᴡʜᴏᴍ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ 𝐏ʀᴏᴍᴏᴛᴇ ᴀs 𝐒ᴜᴅᴏ</i>"
     await sendMessage(message, msg)
 
 
@@ -115,14 +115,14 @@ async def removeSudo(client, message):
         id_ = reply_to.from_user.id
     if id_:
         if id_ in user_data and not user_data[id_].get("is_sudo"):
-            msg = "Not a Sudo User, Already Demoted"
+            msg = "𝐍ᴏᴛ ᴀ 𝐒ᴜᴅᴏ 𝐔sᴇʀ, 𝐀ʟʀᴇᴀᴅʏ 𝐃ᴇᴍᴏᴛᴇᴅ"
         else:
             update_user_ldata(id_, "is_sudo", False)
             if DATABASE_URL:
                 await DbManger().update_user_data(id_)
-            msg = "Demoted"
+            msg = "𝐃ᴇᴍᴏᴛᴇᴅ"
     else:
-        msg = "<i>Give User's ID or Reply to User's message of whom you want to Demote</i>"
+        msg = "<i>𝐆ɪᴠᴇ 𝐔sᴇʀ's 𝐈ᴅ ᴏʀ 𝐑ᴇᴘʟʏ ᴛᴏ 𝐔sᴇʀ's ᴍᴇssᴀɢᴇ ᴏғ ᴡʜᴏᴍ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ 𝐃ᴇᴍᴏᴛᴇ</i>"
     await sendMessage(message, msg)
 
 
@@ -135,14 +135,14 @@ async def addBlackList(_, message):
         id_ = reply_to.from_user.id
     if id_:
         if id_ in user_data and user_data[id_].get("is_blacklist"):
-            msg = "User Already BlackListed!"
+            msg = "𝐔sᴇʀ 𝐀ʟʀᴇᴀᴅʏ 𝐁ʟᴀᴄᴋʟɪsᴛᴇᴅ!"
         else:
             update_user_ldata(id_, "is_blacklist", True)
             if DATABASE_URL:
                 await DbManger().update_user_data(id_)
-            msg = "User BlackListed"
+            msg = "𝐔sᴇʀ 𝐁ʟᴀᴄᴋʟɪsᴛᴇᴅ"
     else:
-        msg = "Give ID or Reply To message of whom you want to blacklist."
+        msg = "𝐆ɪᴠᴇ 𝐈ᴅ ᴏʀ 𝐑ᴇᴘʟʏ 𝐓ᴏ ᴍᴇssᴀɢᴇ ᴏғ ᴡʜᴏᴍ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙʟᴀᴄᴋʟɪsᴛ."
     await sendMessage(message, msg)
 
 
@@ -155,19 +155,19 @@ async def rmBlackList(_, message):
         id_ = reply_to.from_user.id
     if id_:
         if id_ in user_data and not user_data[id_].get("is_blacklist"):
-            msg = "<i>User Already Freed</i>"
+            msg = "<i>𝐔sᴇʀ 𝐀ʟʀᴇᴀᴅʏ 𝐅ʀᴇᴇᴅ</i>"
         else:
             update_user_ldata(id_, "is_blacklist", False)
             if DATABASE_URL:
                 await DbManger().update_user_data(id_)
-            msg = "<i>User Set Free as Bird!</i>"
+            msg = "<i>𝐔sᴇʀ 𝐒ᴇᴛ 𝐅ʀᴇᴇ 𝐀s 𝐁ɪʀᴅ!</i>"
     else:
-        msg = "Give ID or Reply To message of whom you want to remove from blacklisted"
+        msg = "𝐆ɪᴠᴇ 𝐈ᴅ 𝐎ʀ 𝐑ᴇᴘʟʏ 𝐓ᴏ 𝐌ᴇssᴀɢᴇ 𝐎ғ 𝐖ʜᴏᴍ 𝐘ᴏᴜ 𝐖ᴀɴᴛ 𝐓ᴏ 𝐑ᴇᴍᴏᴠᴇ 𝐅ʀᴏᴍ 𝐁ʟᴀᴄᴋʟɪsᴛᴇᴅ"
     await sendMessage(message, msg)
 
 
 async def black_listed(_, message):
-    await sendMessage(message, "<i>BlackListed Detected, Restricted from Bot</i>")
+    await sendMessage(message, "<i>𝐁ʟᴀᴄᴋʟɪsᴛᴇᴅ 𝐃ᴇᴛᴇᴄᴛᴇᴅ, 𝐑ᴇsᴛʀɪᴄᴛᴇᴅ 𝐅ʀᴏᴍ 𝐁ᴏᴛ</i>")
 
 
 bot.add_handler(
