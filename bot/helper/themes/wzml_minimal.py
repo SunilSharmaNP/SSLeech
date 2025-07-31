@@ -156,11 +156,11 @@ class WZMLStyle:
     PM_START = "➲ <b><u>𝐓ᴀsᴋ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ:</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
     L_LOG_START = "➲ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┠ <b>𝐔sᴇʀ :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ :</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><code> {Name}</code>\n\n"
+    NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
     SIZE = "┎ <b>📦 𝐒ɪᴢᴇ : </b>{Size}\n"
     ELAPSE = "┠ <b>⏱️ 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
     MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ : </b>{Mode}\n"
-    CREDIT = "━✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
+    CREDIT = "━✦❘༻ <b><a href=https://t.me/SSBotsUpdates> 𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
 
     # ----- LEECH -------
     L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
@@ -241,7 +241,7 @@ class WZMLStyle:
 
     ###--------BUTTONS-------
     PREVIOUS = "⫷"
-    REFRESH = "📄 ᴘᴀɢᴇs\n{Page}"
+    REFRESH = "📄ᴘᴀɢᴇ\n{Page}"
     NEXT = "⫸"
     # ---------------------
 
@@ -287,7 +287,7 @@ class WZMLStyle:
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
 • <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ
 
-✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
+✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
@@ -300,7 +300,7 @@ class WZMLStyle:
 ┠<b> 𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
 ┖<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
 
-✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
+✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
@@ -314,7 +314,7 @@ class WZMLStyle:
 ┠<b> 𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
 ┖<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
 
-✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
+✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs 𝐟ᴏʀ {NAME}</u></b>
@@ -332,5 +332,5 @@ class WZMLStyle:
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
 ┖<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
 
-✦❘༻ <b>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ :<a href=https://t.me/SSBotsUpdates> 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
+✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
