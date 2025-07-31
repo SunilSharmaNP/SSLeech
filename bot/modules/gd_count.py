@@ -45,7 +45,7 @@ async def countNode(_, message):
         msg += BotTheme("COUNT_CC", COUNT_CC=tag)
     else:
         msg = (
-            "Send Gdrive link along with command or by replying to the link by command"
+            "𝐒ᴇɴᴅ 𝐆ᴅʀɪᴠᴇ ʟɪɴᴋ ᴀʟᴏɴɢ ᴡɪᴛʜ ᴄᴏᴍᴍᴀɴᴅ ᴏʀ ʙʏ ʀᴇᴘʟʏɪɴɢ ᴛᴏ ᴛʜᴇ ʟɪɴᴋ ʙʏ ᴄᴏᴍᴍᴀɴᴅ"
         )
     await sendMessage(message, msg, photo="IMAGES")
 
