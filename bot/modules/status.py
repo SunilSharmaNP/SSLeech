@@ -79,14 +79,14 @@ async def status_pages(_, query):
             and (curr := (time() - refresh_status[user_id])) < 7
         ):
             return await query.answer(
-                f"Already Refreshed! Try after {get_readable_time(7 - curr)}",
+                f"𝐀ʟʀᴇᴀᴅʏ 𝐑ᴇғʀᴇsʜᴇᴅ! 𝐓ʀʏ 𝐀ғᴛᴇʀ {get_readable_time(7 - curr)}",
                 show_alert=True,
             )
         else:
             refresh_status[user_id] = time()
         await editMessage(
             query.message,
-            f"{(await user_info(user_id)).mention(style='html')}, <i>Refreshing Status...</i>",
+            f"{(await user_info(user_id)).mention(style='html')}, <i>𝐑ᴇғʀᴇsʜɪɴɢ 𝐒ᴛᴀᴛᴜs...</i>",
         )
         await sleep(1.5)
         await update_all_messages(True)
