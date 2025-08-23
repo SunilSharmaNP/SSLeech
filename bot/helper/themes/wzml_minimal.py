@@ -167,7 +167,7 @@ class WZMLStyle:
     L_CORRUPTED_FILES = "┠ <b>🛑 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs : </b>{Corrupt}\n"
     L_CC = "┖ <b>✨ 𝐁ʏ : </b>{Tag}\n\n"
     PM_BOT_MSG = "<b>☝️ 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
-    L_BOT_MSG = "<b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌 (𝐏ʀɪᴠᴀᴛᴇ)</b>"
+    L_BOT_MSG = "<b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌</b>"
     L_LL_MSG = "<b>🔗 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
 
     M_TYPE = "┠ <b>𝐓ʏᴘᴇ : </b>{Mimetype}\n"
@@ -175,7 +175,7 @@ class WZMLStyle:
     TOTAL_FILES = "┠ <b>𝐅ɪʟᴇs : </b>{Files}\n"
     RCPATH = "┠ <b>𝐏ᴀᴛʜ : </b><code>{RCpath}</code>\n"
     M_CC = "┖ <b>𝐁ʏ : </b>{Tag}\n\n"
-    M_BOT_MSG = "➲ <b><i>𝐋ɪɴᴋ(s) ʜᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏ᴍ (𝐏ʀɪᴠᴀᴛᴇ)</i></b>"
+    M_BOT_MSG = "➲ <b><i>𝐋ɪɴᴋ(s) 𝐇𝐚𝐯𝐞 𝐛ᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏ᴍ </i></b>"
     # ----- BUTTONS -------
     CLOUD_LINK = "☁️ 𝐂ʟᴏᴜᴅ 𝐋ɪɴᴋ"
     SAVE_MSG = "📨 𝐒ᴀᴠᴇ 𝐌ᴇssᴀɢᴇ"
@@ -210,16 +210,16 @@ class WZMLStyle:
     LEECHERS = "\n┠<b>☘️ 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
 
     ####--------𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
-    SEED_SIZE = "\n┠ <b>𝐒ɪᴢᴇ : </b>{Size}"
-    SEED_SPEED = "\n┠ <b>𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
-    UPLOADED = "<b>𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
-    RATIO = "\n┠ <b>𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
-    TIME = "<b>𝐓ɪᴍᴇ : </b> {Time}"
-    SEED_ENGINE = "\n ┠ <b>𝐄ɴɢɪɴᴇ:</b> {Engine}"
+    SEED_SIZE = "\n┠ <b>📦 𝐒ɪᴢᴇ : </b>{Size}"
+    SEED_SPEED = "\n┠ <b>🚀 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
+    UPLOADED = "<b>☁️ 𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
+    RATIO = "\n┠ <b>📊 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
+    TIME = "<b>⏳ 𝐓ɪᴍᴇ : </b> {Time}"
+    SEED_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
-####--------𝐍ᴏɴ-𝐏ʀᴏɢʀᴇssɪᴠᴇ + 𝐍ᴏɴ 𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
-    STATUS_SIZE = "\n┠ <b>𝐒ɪᴢᴇ : </b>{Size}"
-    NON_ENGINE = "\n┠ <b>𝐄ɴɢɪɴᴇ :</b> {Engine}"
+    ####--------𝐍ᴏɴ-𝐏ʀᴏɢʀᴇssɪᴠᴇ + 𝐍ᴏɴ 𝐒𝐄𝐄𝐃𝐈𝐍𝐆----------
+    STATUS_SIZE = "\n┠ <b>📦 𝐒ɪᴢᴇ : </b>{Size}"
+    NON_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ :</b> {Engine}"
 
     ####--------OVERALL MSG FOOTER----------
     USER = "\n┠ <b>👤 𝐔sᴇʀ :</b> <code>{User}</code>"
@@ -230,18 +230,19 @@ class WZMLStyle:
 
     ####------FOOTER--------
     FOOTER = "┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
-    TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}\n"
-    BOT_TASKS = "┠ <b>𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>𝐀ᴠʟ:</b> {Free}\n"
-    Cpu = "┠ <b> 𝐂ᴘᴜ:</b> {cpu}% | "
-    FREE = "<b>𝐅:</b> {free} [{free_p}%]"
-    Ram = "\n┠ <b> 𝐑ᴀᴍ:</b> {ram}% | "
-    uptime = "<b>𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
-    DL = "\n┖ <b> 𝐃ʟ:</b> {DL}/s | "
-    UL = "<b>𝐔ʟ:</b> {UL}/s"
+    TASKS = "┠ <b>📝 𝐓ᴀsᴋs:</b> {Tasks}\n"
+    BOT_TASKS = "┠ <b>📝 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>🟢 𝐀ᴠʟ:</b> {Free}\n"
+    Cpu = "┠ <b>💻 𝐂ᴘᴜ:</b> {cpu}% | "
+    FREE = "<b>📂 𝐅:</b> {free} [{free_p}%]"
+    Ram = "\n┠ <b>🧠 𝐑ᴀᴍ:</b> {ram}% | "
+    uptime = "<b>⏳ 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
+    DL = "\n┖ <b>📥 𝐃ʟ:</b> {DL}/s | "
+    UL = "<b>📤 𝐔ʟ:</b> {UL}/s"
+
 
     ###--------BUTTONS-------
     PREVIOUS = "⫷"
-    REFRESH = "📄ᴘᴀɢᴇ\n{Page}"
+    REFRESH = "📑𝐏ᴀɢᴇ\n{Page}"
     NEXT = "⫸"
     # ---------------------
 
@@ -252,13 +253,14 @@ class WZMLStyle:
     # ---------------------
 
     # async def countNode(_, message): ----> gd_count.py
-    COUNT_MSG = "<b>𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
-    COUNT_NAME = "<b><i>{COUNT_NAME}</i></b>\n┃\n"
-    COUNT_SIZE = "┠ <b>𝐒ɪᴢᴇ: </b>{COUNT_SIZE}\n"
-    COUNT_TYPE = "┠ <b>𝐓ʏᴘᴇ: </b>{COUNT_TYPE}\n"
-    COUNT_SUB = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs: </b>{COUNT_SUB}\n"
-    COUNT_FILE = "┠ <b>𝐅ɪʟᴇs: </b>{COUNT_FILE}\n"
-    COUNT_CC = "┖ <b>𝐁ʏ: </b>{COUNT_CC}\n"
+    COUNT_MSG = "<b>🔎 𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
+    COUNT_NAME = "📂 <b><i>{COUNT_NAME}</i></b>\n┃\n"
+    COUNT_SIZE = "┠ 📏 <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
+    COUNT_TYPE = "┠ 🗂 <b>𝐓ʏᴘᴇ:</b> {COUNT_TYPE}\n"
+    COUNT_SUB = "┠ 📁 <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs:</b> {COUNT_SUB}\n"
+    COUNT_FILE = "┠ 📄 <b>𝐅ɪʟᴇs:</b> {COUNT_FILE}\n"
+    COUNT_CC = "┖ 👤 <b>𝐁ʏ:</b> {COUNT_CC}\n"
+
 # ---------------------
 
 # LIST ---> gd_list.py
@@ -317,7 +319,7 @@ class WZMLStyle:
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
-    LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs 𝐟ᴏʀ {NAME}</u></b>
+    LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
 ┎<b> 𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
