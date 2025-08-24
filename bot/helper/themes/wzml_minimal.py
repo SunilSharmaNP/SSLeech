@@ -230,14 +230,14 @@ class WZMLStyle:
 
     ####------FOOTER--------
     FOOTER = "┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
-    TASKS = "┠ <b>📝 𝐓ᴀsᴋs:</b> {Tasks}\n"
-    BOT_TASKS = "┠ <b>📝 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>🟢 𝐀ᴠʟ:</b> {Free}\n"
-    Cpu = "┠ <b>💻 𝐂ᴘᴜ:</b> {cpu}% | "
-    FREE = "<b>📂 𝐅:</b> {free} [{free_p}%]"
-    Ram = "\n┠ <b>🧠 𝐑ᴀᴍ:</b> {ram}% | "
-    uptime = "<b>⏳ 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
-    DL = "\n┖ <b>📥 𝐃ʟ:</b> {DL}/s | "
-    UL = "<b>📤 𝐔ʟ:</b> {UL}/s"
+    TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}\n"
+    BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>🟢 𝐀ᴠʟ:</b> {Free}\n"
+    Cpu = "┠ <b> 𝐂ᴘᴜ:</b> {cpu}% | "
+    FREE = "<b> 𝐅:</b> {free} [{free_p}%]"
+    Ram = "\n┠ <b> 𝐑ᴀᴍ:</b> {ram}% | "
+    uptime = "<b> 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
+    DL = "\n┖ <b> 𝐃ʟ:</b> {DL}/s | "
+    UL = "<b> 𝐔ʟ:</b> {UL}/s"
 
 
     ###--------BUTTONS-------
