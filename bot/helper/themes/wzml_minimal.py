@@ -218,7 +218,7 @@ class WZMLStyle:
 
     ###--------BUTTONS-------
     PREVIOUS = '⫷'
-    REFRESH = 'ᴘᴀɢᴇs\n{Page}'
+    REFRESH = 'ᴘᴀɢᴇ\n{Page}'
     NEXT = '⫸'
     # ---------------------
 
