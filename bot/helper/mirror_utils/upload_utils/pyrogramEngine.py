@@ -25,6 +25,7 @@ from tenacity import (
 from re import match as re_match, sub as re_sub
 from natsort import natsorted
 from aioshutil import copy
+
 from bot import (
     config_dict,
     user_data,
@@ -64,7 +65,11 @@ from bot.helper.ext_utils.leech_utils import (
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
 
+# Global dictionary to store user photo_id for cover images (similar to your bot's user_data)
+cover_image_data = {}
+
 class TgUploader:
+
     def __init__(self, name=None, path=None, listener=None):
         self.name = name
         self.__last_uploaded = 0
@@ -94,11 +99,106 @@ class TgUploader:
         self.__user_id = listener.message.from_user.id
         self.__leechmsg = {}
         self.__leech_utils = self.__listener.leech_utils
+        # Initialize photo_id for cover image functionality
+        self.__photo_id = self.__get_user_photo_id()
 
-        # 🔥 NEW: Automatic Video Cover Variables
-        self.__uploaded_video_file_id = None
-        self.__user_thumbnail_photo_id = None
-        self.__auto_cover_enabled = True  # Automatic cover for all users
+    def __get_user_photo_id(self):
+        """Get user's photo_id from saved data (like your bot's user_data)"""
+        try:
+            # Check if user has saved photo_id in global data
+            if self.__user_id in cover_image_data and "photo_id" in cover_image_data[self.__user_id]:
+                return cover_image_data[self.__user_id]["photo_id"]
+            
+            # Check if user has photo_id stored in user_data (from thumbnail uploads)
+            user_dict = user_data.get(self.__user_id, {})
+            if "photo_id" in user_dict:
+                return user_dict["photo_id"]
+            
+            return None
+        except Exception as e:
+            LOGGER.error(f"Error getting photo_id: {e}")
+            return None
+
+    async def set_user_photo_id(self, photo_id):
+        """Set user's photo_id for cover image (like your photo_handler)"""
+        try:
+            # Store in global cover_image_data
+            if self.__user_id not in cover_image_data:
+                cover_image_data[self.__user_id] = {}
+            cover_image_data[self.__user_id]["photo_id"] = photo_id
+            
+            # Also store in user_data for persistence
+            if self.__user_id not in user_data:
+                user_data[self.__user_id] = {}
+            user_data[self.__user_id]["photo_id"] = photo_id
+            
+            self.__photo_id = photo_id
+            LOGGER.info(f"✅ Photo ID set for user {self.__user_id}: {photo_id}")
+        except Exception as e:
+            LOGGER.error(f"Error setting photo_id: {e}")
+
+    async def remove_user_photo_id(self):
+        """Remove user's photo_id (like your remover function)"""
+        try:
+            if self.__user_id in cover_image_data:
+                cover_image_data.pop(self.__user_id, None)
+            
+            if self.__user_id in user_data and "photo_id" in user_data[self.__user_id]:
+                del user_data[self.__user_id]["photo_id"]
+            
+            self.__photo_id = None
+            LOGGER.info(f"✅ Photo ID removed for user {self.__user_id}")
+            return True
+        except Exception as e:
+            LOGGER.error(f"Error removing photo_id: {e}")
+            return False
+
+    async def __apply_video_cover(self, sent_video_msg):
+        """Apply cover image to video using InputMediaVideo (like your video_handler)"""
+        try:
+            if not self.__photo_id:
+                LOGGER.info("No photo_id available for cover image")
+                return sent_video_msg
+                
+            if not hasattr(sent_video_msg, 'video') or not sent_video_msg.video:
+                LOGGER.info("Message doesn't contain video, skipping cover application")
+                return sent_video_msg
+                
+            LOGGER.info(f"🔄 Adding Cover Please Wait... Video ID: {sent_video_msg.video.file_id}, Photo ID: {self.__photo_id}")
+            
+            # Get original video details
+            video_file_id = sent_video_msg.video.file_id
+            original_caption = sent_video_msg.caption or ""
+            original_markup = sent_video_msg.reply_markup
+            
+            # Create InputMediaVideo with cover parameter (using your exact logic)
+            media = InputMediaVideo(
+                media=video_file_id,
+                caption=original_caption,
+                supports_streaming=True,
+                cover=self.__photo_id  # This is the key parameter from your bot
+            )
+            
+            # Edit the message with the video that has cover (like your bot)
+            try:
+                edited_msg = await self.__client.edit_message_media(
+                    chat_id=sent_video_msg.chat.id,
+                    message_id=sent_video_msg.message_id,
+                    media=media,
+                    reply_markup=original_markup
+                )
+                
+                LOGGER.info("✅ Cover image applied successfully to video")
+                return edited_msg
+                
+            except Exception as edit_error:
+                LOGGER.error(f"Failed to edit message with cover: {edit_error}")
+                # If edit fails, return original message
+                return sent_video_msg
+            
+        except Exception as e:
+            LOGGER.error(f"❌ Failed to apply cover image: {e}")
+            return sent_video_msg
 
     async def get_custom_thumb(self, thumb):
         if is_telegram_link(thumb):
@@ -112,6 +212,13 @@ class TgUploader:
                 return None
             _client = bot if client == "bot" else user
             photo_dir = await _client.download_media(msg)
+            
+            # Store photo_id for cover image functionality (like your photo_handler)
+            if msg.photo:
+                photo_id = msg.photo[-1].file_id
+                await self.set_user_photo_id(photo_id)
+                LOGGER.info(f"✅ New Thumbnail Saved with photo_id: {photo_id}")
+                
         elif is_url(thumb):
             photo_dir = await download_image_url(thumb)
         else:
@@ -128,69 +235,6 @@ class TgUploader:
             await aioremove(photo_dir)
             return des_dir
         return None
-
-    # 🔥 NEW: Automatic thumbnail to photo_id converter
-    async def __get_auto_thumbnail_photo_id(self):
-        """Automatically convert user's thumbnail to photo_id for cover"""
-        try:
-            # Check if user has thumbnail set
-            if not await aiopath.exists(self.__thumb):
-                LOGGER.info(f"No thumbnail found for user {self.__user_id}")
-                return None
-
-            LOGGER.info(f"🔄 Converting thumbnail to photo_id for user: {self.__user_id}")
-
-            # Upload thumbnail temporarily to get photo_id
-            temp_msg = await self.__client.send_photo(
-                chat_id=self.__user_id,
-                photo=self.__thumb,
-                caption="🔄 Processing cover image... (This message will be deleted)"
-            )
-
-            # Extract photo_id from largest photo size
-            photo_id = temp_msg.photo[-1].file_id
-
-            # Delete temporary message immediately
-            await deleteMessage(temp_msg)
-
-            LOGGER.info(f"✅ Thumbnail converted to photo_id: {photo_id[:20]}...")
-            return photo_id
-
-        except Exception as e:
-            LOGGER.error(f"❌ Failed to convert thumbnail to photo_id: {e}")
-            return None
-
-    # 🔥 NEW: Apply automatic cover to video
-    async def __apply_auto_video_cover(self, video_file_id, caption, buttons):
-        """Automatically apply thumbnail as video cover"""
-        try:
-            if not self.__user_thumbnail_photo_id:
-                return None
-
-            LOGGER.info(f"🎬 Auto-applying cover to video: {video_file_id[:20]}...")
-
-            # Create InputMediaVideo with automatic cover
-            media = InputMediaVideo(
-                media=video_file_id,
-                caption=f"🎥 Auto Cover Applied\n{caption}" if caption else "🎥 Auto Cover Applied",
-                supports_streaming=True,
-                thumb=self.__user_thumbnail_photo_id
-            )
-
-            # Edit message with cover applied
-            edited_msg = await self.__client.edit_message_media(
-                chat_id=self.__sent_msg.chat.id,
-                message_id=self.__sent_msg.id,
-                media=media,
-                reply_markup=buttons
-            )
-
-            LOGGER.info("✅ Auto video cover applied successfully")
-            return edited_msg
-
-        except Exception as e:
-            LOGGER.error(f"❌ Auto cover application failed: {e}")
-            return None
 
     async def __buttons(self, up_path, is_video=False):
         buttons = ButtonMaker()
@@ -255,6 +299,7 @@ class TgUploader:
         except Exception as err:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in BotPM:\n{str(err)}")
+
         try:
             if len(self.__leechmsg) > 1 and not self.__listener.excep_chat:
                 for chat_id, msg in list(self.__leechmsg.items())[1:]:
@@ -265,6 +310,7 @@ class TgUploader:
                         message_id=self.__sent_msg.id,
                         reply_to_message_id=msg.id,
                     )
+                    # Layer 161 Needed for Topics !
                     if config_dict["CLEAN_LOG_MSG"] and msg.text:
                         await deleteMessage(msg)
                     if leech_copy and self.__has_buttons:
@@ -272,6 +318,7 @@ class TgUploader:
         except Exception as err:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in Leech Log [ {chat_id} ]:\n{str(err)}")
+
         try:
             if self.__upload_dest:
                 for channel_id in self.__upload_dest:
@@ -340,15 +387,6 @@ class TgUploader:
         )
         if not await aiopath.exists(self.__thumb):
             self.__thumb = None
-
-        # 🔥 NEW: Initialize automatic cover system
-        if self.__auto_cover_enabled and self.__thumb:
-            LOGGER.info(f"🎬 Initializing auto cover for user: {self.__user_id}")
-            self.__user_thumbnail_photo_id = await self.__get_auto_thumbnail_photo_id()
-            if self.__user_thumbnail_photo_id:
-                LOGGER.info(f"✅ Auto cover ready for user: {self.__user_id}")
-            else:
-                LOGGER.warning(f"⚠️ Auto cover failed for user: {self.__user_id}")
 
     async def __msg_to_reply(self):
         msg_link = self.__listener.message.link if self.__listener.isSuperGroup else ""
@@ -446,74 +484,231 @@ class TgUploader:
             rlist.append(input_media)
         return rlist
 
-    async def __switching_client(self):
-        LOGGER.info(
-            f'Uploading Media {">" if self.__prm_media else "<"} 2GB by {"User" if self.__prm_media else "Bot"} Client'
-        )
-        self.__client = user if (self.__prm_media and IS_PREMIUM_USER) else bot
-
-    async def __send_media_group(self, subkey, key, msgs):
-        msgs_list = await msgs[0].reply_to_message.reply_media_group(
-            media=self.__get_input_media(subkey, key),
-            quote=True,
-            disable_notification=True,
-        )
-        for msg in msgs:
-            if msg.link in self.__msgs_dict:
-                del self.__msgs_dict[msg.link]
-            await deleteMessage(msg)
-        del self.__media_dict[key][subkey]
-        if self.__listener.isSuperGroup or config_dict["LEECH_LOG_ID"]:
-            for m in msgs_list:
-                self.__msgs_dict[m.link] = m.caption
-        self.__sent_msg = msgs_list[-1]
+    async def __send_media_group(self, subkey, key, msgs, btn):
+        msgs_list = self.__get_input_media(subkey, key)
         try:
-            if self.__bot_pm and (
-                self.__leechmsg
-                and not self.__listener.excep_chat
-                or self.__listener.isSuperGroup
-            ):
-                await bot.copy_media_group(
-                    chat_id=self.__user_id,
-                    from_chat_id=self.__sent_msg.chat.id,
-                    message_id=self.__sent_msg.id,
+            if self.__prm_media and IS_PREMIUM_USER:
+                self.__sent_msg = await user.send_media_group(
+                    chat_id=self.__sent_msg.chat.id,
+                    media=msgs_list,
+                    disable_notification=True,
                 )
+            else:
+                self.__sent_msg = await self.__client.send_media_group(
+                    chat_id=self.__sent_msg.chat.id,
+                    media=msgs_list,
+                    disable_notification=True,
+                )
+        except FloodWait as f:
+            LOGGER.warning(f"FloodWait: Waiting {f.value} seconds...")
+            await sleep(f.value)
         except Exception as err:
             if not self.__is_cancelled:
-                LOGGER.error(f"Failed To Send in Bot PM:\n{str(err)}")
+                await self.__listener.onUploadError(str(err))
+                return
+        if btn and msgs:
+            await editReplyMarkup(self.__sent_msg[-1], btn)
+        if msgs:
+            try:
+                await sleep(1)
+                if self.__prm_media and IS_PREMIUM_USER:
+                    await user.send_message(
+                        chat_id=self.__sent_msg[0].chat.id,
+                        text=msgs,
+                        disable_web_page_preview=True,
+                        reply_to_message_id=self.__sent_msg[-1].id,
+                        reply_markup=btn,
+                    )
+                else:
+                    await self.__client.send_message(
+                        chat_id=self.__sent_msg[0].chat.id,
+                        text=msgs,
+                        disable_web_page_preview=True,
+                        reply_to_message_id=self.__sent_msg[-1].id,
+                        reply_markup=btn,
+                    )
+            except Exception:
+                pass
+        await self.__copy_file()
+
+    @retry(
+        wait=wait_exponential(multiplier=2, min=4, max=8),
+        stop=stop_after_attempt(3),
+        retry=retry_if_exception_type(Exception),
+    )
+    async def __send_msg(self, key, btn=None, spath="", cap_mono="", mssg=""):
         try:
-            if self.__upload_dest:
-                for channel_id in self.__upload_dest:
-                    if dump_chat := (await chat_info(channel_id)):
-                        try:
-                            await bot.copy_media_group(
-                                chat_id=dump_chat.id,
-                                from_chat_id=self.__sent_msg.chat.id,
-                                message_id=self.__sent_msg.id,
-                            )
-                        except (ChannelInvalid, PeerIdInvalid) as e:
-                            LOGGER.error(f"{e.NAME}: {e.MESSAGE} for {channel_id}")
-                            continue
+            if self.__prm_media and IS_PREMIUM_USER:
+                if self.__as_doc:
+                    self.__sent_msg = await user.send_document(
+                        chat_id=self.__sent_msg.chat.id,
+                        document=self.__up_path,
+                        thumb=self.__thumb,
+                        caption=cap_mono,
+                        disable_notification=True,
+                        progress=self.__upload_progress,
+                        reply_markup=btn,
+                    )
+                else:
+                    file_type = await get_document_type(self.__up_path)
+                    if file_type == "video":
+                        # MAIN UPLOAD TO TELEGRAM SERVER - VIDEO
+                        sent_video = await user.send_video(
+                            chat_id=self.__sent_msg.chat.id,
+                            video=self.__up_path,
+                            duration=self.__leech_utils.get("duration", 0),
+                            width=self.__leech_utils.get("width", 0),
+                            height=self.__leech_utils.get("height", 0),
+                            thumb=self.__thumb,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                            supports_streaming=True,
+                        )
+                        
+                        # APPLY COVER IMAGE AFTER TELEGRAM SERVER UPLOAD (Your requirement)
+                        self.__sent_msg = await self.__apply_video_cover(sent_video)
+                        
+                    elif file_type == "audio":
+                        self.__sent_msg = await user.send_audio(
+                            chat_id=self.__sent_msg.chat.id,
+                            audio=self.__up_path,
+                            duration=self.__leech_utils.get("duration", 0),
+                            performer=self.__leech_utils.get("artist", ""),
+                            title=self.__leech_utils.get("title", ""),
+                            thumb=self.__thumb,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                        )
+                    elif file_type == "photo":
+                        self.__sent_msg = await user.send_photo(
+                            chat_id=self.__sent_msg.chat.id,
+                            photo=self.__up_path,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                        )
+                    else:
+                        self.__sent_msg = await user.send_document(
+                            chat_id=self.__sent_msg.chat.id,
+                            document=self.__up_path,
+                            thumb=self.__thumb,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                        )
+            else:
+                if self.__as_doc:
+                    self.__sent_msg = await self.__client.send_document(
+                        chat_id=self.__sent_msg.chat.id,
+                        document=self.__up_path,
+                        thumb=self.__thumb,
+                        caption=cap_mono,
+                        disable_notification=True,
+                        progress=self.__upload_progress,
+                        reply_markup=btn,
+                    )
+                else:
+                    file_type = await get_document_type(self.__up_path)
+                    if file_type == "video":
+                        # MAIN UPLOAD TO TELEGRAM SERVER - VIDEO
+                        sent_video = await self.__client.send_video(
+                            chat_id=self.__sent_msg.chat.id,
+                            video=self.__up_path,
+                            duration=self.__leech_utils.get("duration", 0),
+                            width=self.__leech_utils.get("width", 0),
+                            height=self.__leech_utils.get("height", 0),
+                            thumb=self.__thumb,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                            supports_streaming=True,
+                        )
+                        
+                        # APPLY COVER IMAGE AFTER TELEGRAM SERVER UPLOAD (Your requirement)
+                        self.__sent_msg = await self.__apply_video_cover(sent_video)
+                        
+                    elif file_type == "audio":
+                        self.__sent_msg = await self.__client.send_audio(
+                            chat_id=self.__sent_msg.chat.id,
+                            audio=self.__up_path,
+                            duration=self.__leech_utils.get("duration", 0),
+                            performer=self.__leech_utils.get("artist", ""),
+                            title=self.__leech_utils.get("title", ""),
+                            thumb=self.__thumb,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                        )
+                    elif file_type == "photo":
+                        self.__sent_msg = await self.__client.send_photo(
+                            chat_id=self.__sent_msg.chat.id,
+                            photo=self.__up_path,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                        )
+                    else:
+                        self.__sent_msg = await self.__client.send_document(
+                            chat_id=self.__sent_msg.chat.id,
+                            document=self.__up_path,
+                            thumb=self.__thumb,
+                            caption=cap_mono,
+                            disable_notification=True,
+                            progress=self.__upload_progress,
+                            reply_markup=btn,
+                        )
+        except FloodWait as f:
+            LOGGER.warning(f"FloodWait: Waiting {f.value} seconds...")
+            await sleep(f.value)
         except Exception as err:
             if not self.__is_cancelled:
-                LOGGER.error(f"Failed To Send in User Dump:\n{str(err)}")
+                err_type = "RPCError: " if isinstance(err, RPCError) else ""
+                LOGGER.error(f"{err_type}{err}")
+                await self.__listener.onUploadError(f"{err_type}{err}")
+                return
+        if self.__sent_msg and mssg:
+            try:
+                if self.__prm_media and IS_PREMIUM_USER:
+                    await user.send_message(
+                        chat_id=self.__sent_msg.chat.id,
+                        text=mssg,
+                        disable_web_page_preview=True,
+                        reply_to_message_id=self.__sent_msg.id,
+                    )
+                else:
+                    await self.__client.send_message(
+                        chat_id=self.__sent_msg.chat.id,
+                        text=mssg,
+                        disable_web_page_preview=True,
+                        reply_to_message_id=self.__sent_msg.id,
+                    )
+            except Exception:
+                pass
+
+        await self.__copy_file()
 
     async def upload(self, o_files, m_size, size):
         await self.__user_settings()
-        res = await self.__msg_to_reply()
-        if not res:
+        if not await self.__msg_to_reply():
             return
-        isDeleted = False
-        for dirpath, _, files in sorted(await sync_to_async(walk, self.__path)):
+        for dirpath, subfolders, files in sorted(walk(self.__path)):
             if dirpath.endswith("/yt-dlp-thumb"):
                 continue
             for file_ in natsorted(files):
                 self.__up_path = ospath.join(dirpath, file_)
-                if file_.lower().endswith(tuple(GLOBAL_EXTENSION_FILTER)):
-                    await aioremove(self.__up_path)
+                if self.__up_path in GLOBAL_EXTENSION_FILTER:
                     continue
                 try:
-                    f_size = await aiopath.getsize(self.__up_path)
+                    f_size = ospath.getsize(self.__up_path)
                     if self.__listener.seed and file_ in o_files and f_size in m_size:
                         continue
                     self.__total_files += 1
@@ -525,346 +720,67 @@ class TgUploader:
                         continue
                     if self.__is_cancelled:
                         return
-                    self.__prm_media = True if f_size > 2097152000 else False
                     cap_mono, file_ = await self.__prepare_file(file_, dirpath)
                     if self.__last_msg_in_group:
-                        group_lists = [
-                            x for v in self.__media_dict.values() for x in v.keys()
-                        ]
+                        group_lists = [x for v in self.__media_dict.values() for x in v.keys()]
+                        match = re_match(r".+(?=\.0*\d+$)|.+(?=\.part\d+\..+)", file_)
                         if (
-                            match := re_match(
-                                r".+(?=\.0*\d+$)|.+(?=\.part\d+\..+)", self.__up_path
-                            )
-                        ) and match.group(0) not in group_lists:
-                            for key, value in list(self.__media_dict.items()):
-                                for subkey, msgs in list(value.items()):
-                                    if len(msgs) > 1:
-                                        await self.__send_media_group(subkey, key, msgs)
-                        self.__last_msg_in_group = False
+                            match
+                            and match.group(0).lower() in group_lists
+                        ) or (
+                            file_.lower() in group_lists
+                        ):
+                            for key, value in self.__media_dict.items():
+                                for subkey, msgs in value.items():
+                                    if (
+                                        match
+                                        and match.group(0).lower() == subkey
+                                    ) or file_.lower() == subkey:
+                                        if self.__sent_msg in msgs:
+                                            msgs.remove(self.__sent_msg)
+                                        if len(msgs) > 1:
+                                            await self.__send_media_group(
+                                                subkey, key, cap_mono, await self.__buttons(self.__up_path, is_video=(key == "videos"))
+                                            )
+                                        else:
+                                            await editReplyMarkup(
+                                                msgs[0], await self.__buttons(self.__up_path, is_video=(key == "videos"))
+                                            )
+                                            await self.__copy_file()
+                                        break
+                                else:
+                                    continue
+                                break
+                            continue
+                    self.__last_msg_in_group = False
                     self.__last_uploaded = 0
-                    await self.__switching_client()
-                    await self.__upload_file(cap_mono, file_)
-                    if (
-                        self.__leechmsg
-                        and not isDeleted
-                        and config_dict["CLEAN_LOG_MSG"]
-                    ):
-                        await deleteMessage(list(self.__leechmsg.values())[0])
-                        isDeleted = True
-                    if self.__is_cancelled:
-                        return
-                    if not self.__is_corrupted and (
-                        self.__listener.isSuperGroup or config_dict["LEECH_LOG_ID"]
-                    ):
-                        self.__msgs_dict[self.__sent_msg.link] = file_
-                    await sleep(1)
+                    await self.__send_msg(file_, await self.__buttons(self.__up_path, is_video=await get_document_type(self.__up_path) == "video"), cap_mono=cap_mono)
                 except Exception as err:
                     if isinstance(err, RetryError):
-                        LOGGER.info(
-                            f"Total Attempts: {err.last_attempt.attempt_number}"
-                        )
+                        LOGGER.info(f"Total Attempts: {err.last_attempt.attempt_number}")
+                        err = err.last_attempt.exception()
+                    err_type = "RPCError: " if isinstance(err, RPCError) else ""
+                    LOGGER.error(f"{err_type}{err}. Path: {self.__up_path}")
+                    if "Telegram says: [400" in str(err) and ("VIDEO_FILE_INVALID" in str(err) or "PHOTO_INVALID_DIMENSIONS" in str(err)):
+                        await self.__send_msg(file_, await self.__buttons(self.__up_path), cap_mono=cap_mono)
+                        continue
+                    elif "telegram says: [400" in str(err).lower() and "file reference expired" in str(err).lower():
+                        LOGGER.error(f"File reference expired. Retrying... Path: {self.__up_path}")
+                        continue
                     else:
-                        LOGGER.error(f"{format_exc()}. Path: {self.__up_path}")
-                    if self.__is_cancelled:
-                        return
-                    continue
-                finally:
-                    if (
-                        not self.__is_cancelled
-                        and await aiopath.exists(self.__up_path)
-                        and (
-                            not self.__listener.seed
-                            or self.__listener.newDir
-                            or dirpath.endswith("/splited_files_mltb")
-                            or "/copied_mltb/" in self.__up_path
-                        )
-                    ):
-                        await aioremove(self.__up_path)
-        for key, value in list(self.__media_dict.items()):
-            for subkey, msgs in list(value.items()):
-                if len(msgs) > 1:
-                    await self.__send_media_group(subkey, key, msgs)
-        if self.__is_cancelled:
-            return
+                        self.__corrupted += 1
+                        if self.__is_cancelled:
+                            return
+                        continue
         if self.__listener.seed and not self.__listener.newDir:
             await clean_unwanted(self.__path)
         if self.__total_files == 0:
-            await self.__listener.onUploadError(
-                "No files to upload. In case you have filled EXTENSION_FILTER, then check if all files have those extensions or not."
-            )
+            await self.__listener.onUploadError("No files to upload.")
             return
         if self.__total_files <= self.__corrupted:
-            await self.__listener.onUploadError(
-                "Files Corrupted or unable to upload. Check logs!"
-            )
-            return
-        if self.__retry_error:
-            await self.__listener.onUploadError(
-                "Unknown Error Occurred. Check logs & Contact Bot Owner!"
-            )
+            await self.__listener.onUploadError("Files Corrupted or unable to upload. Check logs!")
             return
         LOGGER.info(f"Leech Completed: {self.name}")
         await self.__listener.onUploadComplete(
-            None,
-            size,
-            self.__msgs_dict,
-            self.__total_files,
-            self.__corrupted,
-            self.name,
+            None, size, self.__total_files, self.__corrupted, self.name
         )
-
-    @retry(
-        wait=wait_exponential(multiplier=2, min=4, max=8),
-        stop=stop_after_attempt(3),
-        retry=retry_if_exception_type(Exception),
-    )
-    async def __upload_file(self, cap_mono, file, force_document=False):
-        if self.__thumb is not None and not await aiopath.exists(self.__thumb):
-            self.__thumb = None
-        thumb = self.__thumb
-        self.__is_corrupted = False
-        try:
-            is_video, is_audio, is_image = await get_document_type(self.__up_path)
-            if self.__leech_utils["thumb"]:
-                thumb = await self.get_custom_thumb(self.__leech_utils["thumb"])
-            if not is_image and thumb is None:
-                file_name = ospath.splitext(file)[0]
-                thumb_path = f"{self.__path}/yt-dlp-thumb/{file_name}.jpg"
-                if await aiopath.isfile(thumb_path):
-                    thumb = thumb_path
-            elif is_audio and not is_video:
-                thumb = await get_audio_thumb(self.__up_path)
-            if (
-                self.__as_doc
-                or force_document
-                or (not is_video and not is_audio and not is_image)
-            ):
-                key = "documents"
-                if is_video and thumb is None:
-                    thumb = await take_ss(self.__up_path, None)
-                if self.__is_cancelled:
-                    return
-                buttons = await self.__buttons(self.__up_path, is_video)
-                nrml_media = await self.__client.send_document(
-                    chat_id=self.__sent_msg.chat.id,
-                    reply_to_message_id=self.__sent_msg.id,
-                    document=self.__up_path,
-                    thumb=thumb,
-                    caption=cap_mono,
-                    force_document=True,
-                    disable_notification=True,
-                    progress=self.__upload_progress,
-                    reply_markup=buttons,
-                )
-                if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
-                    try:
-                        self.__sent_msg = await bot.copy_message(
-                            nrml_media.chat.id,
-                            nrml_media.chat.id,
-                            nrml_media.id,
-                            reply_to_message_id=self.__sent_msg.id,
-                            reply_markup=buttons,
-                        )
-                        if self.__sent_msg:
-                            await deleteMessage(nrml_media)
-                    except Exception:
-                        self.__sent_msg = nrml_media
-                else:
-                    self.__sent_msg = nrml_media
-            elif is_video:
-                key = "videos"
-                duration = (await get_media_info(self.__up_path))[0]
-                if thumb is None:
-                    thumb = await take_ss(self.__up_path, duration)
-                if thumb is not None:
-                    with Image.open(thumb) as img:
-                        width, height = img.size
-                else:
-                    width = 480
-                    height = 320
-                if not self.__up_path.upper().endswith(("MKV", "MP4")):
-                    dirpath, file_ = self.__up_path.rsplit("/", 1)
-                    if (
-                        self.__listener.seed
-                        and not self.__listener.newDir
-                        and not dirpath.endswith("/splited_files_mltb")
-                    ):
-                        dirpath = f"{dirpath}/copied_mltb"
-                        await makedirs(dirpath, exist_ok=True)
-                        new_path = ospath.join(
-                            dirpath, f"{ospath.splitext(file_)[0]}.mp4"
-                        )
-                        self.__up_path = await copy(self.__up_path, new_path)
-                    else:
-                        new_path = f"{ospath.splitext(self.__up_path)[0]}.mp4"
-                        await aiorename(self.__up_path, new_path)
-                        self.__up_path = new_path
-                if self.__is_cancelled:
-                    return
-                buttons = await self.__buttons(self.__up_path, is_video)
-
-                # 🔥 STEP 1: Upload video to Telegram servers first
-                LOGGER.info(f"📹 Uploading video to Telegram servers...")
-                nrml_media = await self.__client.send_video(
-                    chat_id=self.__sent_msg.chat.id,
-                    reply_to_message_id=self.__sent_msg.id,
-                    video=self.__up_path,
-                    caption=cap_mono,
-                    duration=duration,
-                    width=width,
-                    height=height,
-                    thumb=thumb,
-                    supports_streaming=True,
-                    disable_notification=True,
-                    progress=self.__upload_progress,
-                    reply_markup=buttons,
-                )
-
-                # 🔥 STEP 2: Store video file_id after successful upload
-                if nrml_media and nrml_media.video:
-                    self.__uploaded_video_file_id = nrml_media.video.file_id
-                    LOGGER.info(f"✅ Video uploaded successfully, file_id: {self.__uploaded_video_file_id[:20]}...")
-
-                # Handle premium media copy logic
-                if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
-                    try:
-                        self.__sent_msg = await bot.copy_message(
-                            nrml_media.chat.id,
-                            nrml_media.chat.id,
-                            nrml_media.id,
-                            reply_to_message_id=self.__sent_msg.id,
-                            reply_markup=buttons,
-                        )
-                        if self.__sent_msg:
-                            await deleteMessage(nrml_media)
-                    except Exception:
-                        self.__sent_msg = nrml_media
-                else:
-                    self.__sent_msg = nrml_media
-
-                # 🔥 STEP 3: AUTOMATIC COVER APPLICATION
-                # This happens AFTER successful upload and BEFORE final send
-                if (self.__auto_cover_enabled and 
-                    self.__user_thumbnail_photo_id and 
-                    self.__uploaded_video_file_id and 
-                    self.__sent_msg):
-
-                    LOGGER.info("🎬 AUTO-APPLYING thumbnail as video cover...")
-
-                    # Apply automatic cover using thumbnail
-                    covered_msg = await self.__apply_auto_video_cover(
-                        self.__uploaded_video_file_id, 
-                        cap_mono, 
-                        buttons
-                    )
-
-                    # Update sent_msg reference if cover applied successfully
-                    if covered_msg:
-                        self.__sent_msg = covered_msg
-                        LOGGER.info("🎥 ✅ AUTO COVER APPLIED - Video sent with thumbnail as cover!")
-                    else:
-                        LOGGER.warning("⚠️ Auto cover failed - Sending original video")
-
-            elif is_audio:
-                key = "audios"
-                duration, artist, title = await get_media_info(self.__up_path)
-                if self.__is_cancelled:
-                    return
-                self.__sent_msg = await self.__client.send_audio(
-                    chat_id=self.__sent_msg.chat.id,
-                    reply_to_message_id=self.__sent_msg.id,
-                    audio=self.__up_path,
-                    caption=cap_mono,
-                    duration=duration,
-                    performer=artist,
-                    title=title,
-                    thumb=thumb,
-                    disable_notification=True,
-                    progress=self.__upload_progress,
-                    reply_markup=await self.__buttons(self.__up_path),
-                )
-            else:
-                key = "photos"
-                if self.__is_cancelled:
-                    return
-                self.__sent_msg = await self.__client.send_photo(
-                    chat_id=self.__sent_msg.chat.id,
-                    reply_to_message_id=self.__sent_msg.id,
-                    photo=self.__up_path,
-                    caption=cap_mono,
-                    disable_notification=True,
-                    progress=self.__upload_progress,
-                    reply_markup=await self.__buttons(self.__up_path),
-                )
-            if (
-                not self.__is_cancelled
-                and self.__media_group
-                and (self.__sent_msg.video or self.__sent_msg.document)
-            ):
-                key = "documents" if self.__sent_msg.document else "videos"
-                if match := re_match(
-                    r".+(?=\.0*\d+$)|.+(?=\.part\d+\..+)", self.__up_path
-                ):
-                    pname = match.group(0)
-                    if pname in self.__media_dict[key].keys():
-                        self.__media_dict[key][pname].append(self.__sent_msg)
-                    else:
-                        self.__media_dict[key][pname] = [self.__sent_msg]
-                    msgs = self.__media_dict[key][pname]
-                    if len(msgs) == 10:
-                        await self.__send_media_group(pname, key, msgs)
-                    else:
-                        self.__last_msg_in_group = True
-            if self.__sent_msg:
-                await self.__copy_file()
-            if (
-                self.__thumb is None
-                and thumb is not None
-                and await aiopath.exists(thumb)
-            ):
-                await aioremove(thumb)
-            if (
-                (dir_name := ospath.dirname(thumb))
-                and dir_name != "Thumbnails"
-                and await aiopath.exists(dir_name)
-            ):
-                await rmdir(dir_name)
-            self.__retry_error = False
-        except FloodWait as f:
-            LOGGER.warning(str(f))
-            await sleep(f.value)
-        except Exception as err:
-            self.__retry_error = True
-            if (
-                self.__thumb is None
-                and thumb is not None
-                and await aiopath.exists(thumb)
-            ):
-                await aioremove(thumb)
-            if (
-                (dir_name := ospath.dirname(thumb))
-                and dir_name != "Thumbnails"
-                and await aiopath.exists(dir_name)
-            ):
-                await rmdir(dir_name)
-            LOGGER.error(f"{format_exc()}. Path: {self.__up_path}")
-            if "Telegram says: [400" in str(err) and key != "documents":
-                LOGGER.error(f"Retrying As Document. Path: {self.__up_path}")
-                return await self.__upload_file(cap_mono, file, True)
-            raise err
-
-    @property
-    def speed(self):
-        try:
-            return self.__processed_bytes / (time() - self.__start_time)
-        except Exception:
-            return 0
-
-    @property
-    def processed_bytes(self):
-        return self.__processed_bytes
-
-    async def cancel_download(self):
-        self.__is_cancelled = True
-        LOGGER.info(f"Cancelling Upload: {self.name}")
-        await self.__listener.onUploadError("Your Upload has been Stopped!")
