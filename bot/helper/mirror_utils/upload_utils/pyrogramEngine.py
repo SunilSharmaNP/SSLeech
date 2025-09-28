@@ -25,7 +25,6 @@ from tenacity import (
 from re import match as re_match, sub as re_sub
 from natsort import natsorted
 from aioshutil import copy
-
 from bot import (
     config_dict,
     user_data,
@@ -65,58 +64,7 @@ from bot.helper.ext_utils.leech_utils import (
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
 
-# Global dictionary to store user photo_id for cover images
-cover_image_data = {}
-
-# 🚀 NEW: Global functions for handling cover image functionality
-async def handle_photo_message(message):
-    """Handle direct photo messages for cover image functionality"""
-    try:
-        user_id = message.from_user.id
-        if message.photo:
-            photo_id = message.photo[-1].file_id
-            
-            # Store photo_id in global cover_image_data
-            if user_id not in cover_image_data:
-                cover_image_data[user_id] = {}
-            cover_image_data[user_id]["photo_id"] = photo_id
-            
-            LOGGER.info(f"📷 Photo ID saved for user {user_id}: {photo_id}")
-            
-            # Send confirmation message
-            await message.reply_text(
-                "✅ New Thumbnail Saved for Cover Image.", 
-                reply_to_message_id=message.id
-            )
-            return True
-    except Exception as e:
-        LOGGER.error(f"Error handling photo message: {e}")
-        return False
-
-async def remove_user_cover_image(message):
-    """Remove user's saved cover image"""
-    try:
-        user_id = message.from_user.id
-        if user_id in cover_image_data:
-            cover_image_data.pop(user_id, None)
-            await message.reply_text(
-                "✅ Thumbnail Removed.", 
-                reply_to_message_id=message.id
-            )
-            LOGGER.info(f"📷 Cover image removed for user {user_id}")
-            return True
-        else:
-            await message.reply_text(
-                "⚠️ First Add A Thumbnail.", 
-                reply_to_message_id=message.id
-            )
-            return False
-    except Exception as e:
-        LOGGER.error(f"Error removing cover image: {e}")
-        return False
-
 class TgUploader:
-
     def __init__(self, name=None, path=None, listener=None):
         self.name = name
         self.__last_uploaded = 0
@@ -146,76 +94,11 @@ class TgUploader:
         self.__user_id = listener.message.from_user.id
         self.__leechmsg = {}
         self.__leech_utils = self.__listener.leech_utils
-        # Store photo_id for cover image functionality
-        self.__photo_id = self.__get_user_photo_id()
 
-    def __get_user_photo_id(self):
-        """Get user's photo_id from thumbnail file or saved data"""
-        try:
-            # First check if user has saved photo_id in global data
-            if self.__user_id in cover_image_data and "photo_id" in cover_image_data[self.__user_id]:
-                photo_id = cover_image_data[self.__user_id]["photo_id"]
-                LOGGER.info(f"📷 Found saved photo_id for user {self.__user_id}: {photo_id}")
-                return photo_id
-            
-            # If user has thumbnail file, we'll use it as photo_id source
-            # This will be set when user uploads thumbnail
-            LOGGER.info(f"📷 No photo_id found for user {self.__user_id}")
-            return None
-        except Exception as e:
-            LOGGER.error(f"Error getting photo_id: {e}")
-            return None
-
-    async def set_user_photo_id(self, photo_id):
-        """Set user's photo_id for cover image"""
-        try:
-            if self.__user_id not in cover_image_data:
-                cover_image_data[self.__user_id] = {}
-            cover_image_data[self.__user_id]["photo_id"] = photo_id
-            self.__photo_id = photo_id
-            LOGGER.info(f"📷 Photo ID set for user {self.__user_id}: {photo_id}")
-        except Exception as e:
-            LOGGER.error(f"Error setting photo_id: {e}")
-
-    async def __apply_video_cover(self, video_file_id, caption, reply_markup=None):
-        """Apply cover image to video using InputMediaVideo"""
-        try:
-            if not self.__photo_id:
-                LOGGER.info("📷 No photo_id available for cover image")
-                return False
-                
-            LOGGER.info(f"🎬 Applying cover to video. Video ID: {video_file_id}, Photo ID: {self.__photo_id}")
-            
-            # Create InputMediaVideo with cover parameter (use 'thumb' for pyrogram)
-            media = InputMediaVideo(
-                media=video_file_id,
-                caption=caption,
-                thumb=self.__photo_id  # Using thumb parameter for cover in pyrogram
-            )
-            
-            # Send a temporary message that we'll edit with the media
-            temp_msg = await self.__client.send_message(
-                chat_id=self.__sent_msg.chat.id,
-                text="🔄 Adding Cover Please Wait...",
-                reply_to_message_id=self.__sent_msg.id
-            )
-            
-            # Edit the message with the video that has cover
-            edited_msg = await self.__client.edit_message_media(
-                chat_id=temp_msg.chat.id,
-                message_id=temp_msg.message_id,
-                media=media,
-                reply_markup=reply_markup
-            )
-            
-            # Update the sent message reference
-            self.__sent_msg = edited_msg
-            LOGGER.info("✅ Cover image applied successfully to video")
-            return True
-            
-        except Exception as e:
-            LOGGER.error(f"❌ Failed to apply cover image: {e}")
-            return False
+        # 🔥 NEW: Automatic Video Cover Variables
+        self.__uploaded_video_file_id = None
+        self.__user_thumbnail_photo_id = None
+        self.__auto_cover_enabled = True  # Automatic cover for all users
 
     async def get_custom_thumb(self, thumb):
         if is_telegram_link(thumb):
@@ -229,13 +112,6 @@ class TgUploader:
                 return None
             _client = bot if client == "bot" else user
             photo_dir = await _client.download_media(msg)
-            
-            # Store photo_id for cover image functionality
-            if msg.photo:
-                photo_id = msg.photo[-1].file_id
-                await self.set_user_photo_id(photo_id)
-                LOGGER.info(f"📷 Photo ID extracted from custom thumb: {photo_id}")
-                
         elif is_url(thumb):
             photo_dir = await download_image_url(thumb)
         else:
@@ -252,6 +128,69 @@ class TgUploader:
             await aioremove(photo_dir)
             return des_dir
         return None
+
+    # 🔥 NEW: Automatic thumbnail to photo_id converter
+    async def __get_auto_thumbnail_photo_id(self):
+        """Automatically convert user's thumbnail to photo_id for cover"""
+        try:
+            # Check if user has thumbnail set
+            if not await aiopath.exists(self.__thumb):
+                LOGGER.info(f"No thumbnail found for user {self.__user_id}")
+                return None
+
+            LOGGER.info(f"🔄 Converting thumbnail to photo_id for user: {self.__user_id}")
+
+            # Upload thumbnail temporarily to get photo_id
+            temp_msg = await self.__client.send_photo(
+                chat_id=self.__user_id,
+                photo=self.__thumb,
+                caption="🔄 Processing cover image... (This message will be deleted)"
+            )
+
+            # Extract photo_id from largest photo size
+            photo_id = temp_msg.photo[-1].file_id
+
+            # Delete temporary message immediately
+            await deleteMessage(temp_msg)
+
+            LOGGER.info(f"✅ Thumbnail converted to photo_id: {photo_id[:20]}...")
+            return photo_id
+
+        except Exception as e:
+            LOGGER.error(f"❌ Failed to convert thumbnail to photo_id: {e}")
+            return None
+
+    # 🔥 NEW: Apply automatic cover to video
+    async def __apply_auto_video_cover(self, video_file_id, caption, buttons):
+        """Automatically apply thumbnail as video cover"""
+        try:
+            if not self.__user_thumbnail_photo_id:
+                return None
+
+            LOGGER.info(f"🎬 Auto-applying cover to video: {video_file_id[:20]}...")
+
+            # Create InputMediaVideo with automatic cover
+            media = InputMediaVideo(
+                media=video_file_id,
+                caption=f"🎥 Auto Cover Applied\n{caption}" if caption else "🎥 Auto Cover Applied",
+                supports_streaming=True,
+                thumb=self.__user_thumbnail_photo_id
+            )
+
+            # Edit message with cover applied
+            edited_msg = await self.__client.edit_message_media(
+                chat_id=self.__sent_msg.chat.id,
+                message_id=self.__sent_msg.id,
+                media=media,
+                reply_markup=buttons
+            )
+
+            LOGGER.info("✅ Auto video cover applied successfully")
+            return edited_msg
+
+        except Exception as e:
+            LOGGER.error(f"❌ Auto cover application failed: {e}")
+            return None
 
     async def __buttons(self, up_path, is_video=False):
         buttons = ButtonMaker()
@@ -316,7 +255,6 @@ class TgUploader:
         except Exception as err:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in BotPM:\n{str(err)}")
-
         try:
             if len(self.__leechmsg) > 1 and not self.__listener.excep_chat:
                 for chat_id, msg in list(self.__leechmsg.items())[1:]:
@@ -327,7 +265,6 @@ class TgUploader:
                         message_id=self.__sent_msg.id,
                         reply_to_message_id=msg.id,
                     )
-                    # Layer 161 Needed for Topics !
                     if config_dict["CLEAN_LOG_MSG"] and msg.text:
                         await deleteMessage(msg)
                     if leech_copy and self.__has_buttons:
@@ -335,7 +272,6 @@ class TgUploader:
         except Exception as err:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in Leech Log [ {chat_id} ]:\n{str(err)}")
-
         try:
             if self.__upload_dest:
                 for channel_id in self.__upload_dest:
@@ -404,6 +340,15 @@ class TgUploader:
         )
         if not await aiopath.exists(self.__thumb):
             self.__thumb = None
+
+        # 🔥 NEW: Initialize automatic cover system
+        if self.__auto_cover_enabled and self.__thumb:
+            LOGGER.info(f"🎬 Initializing auto cover for user: {self.__user_id}")
+            self.__user_thumbnail_photo_id = await self.__get_auto_thumbnail_photo_id()
+            if self.__user_thumbnail_photo_id:
+                LOGGER.info(f"✅ Auto cover ready for user: {self.__user_id}")
+            else:
+                LOGGER.warning(f"⚠️ Auto cover failed for user: {self.__user_id}")
 
     async def __msg_to_reply(self):
         msg_link = self.__listener.message.link if self.__listener.isSuperGroup else ""
@@ -595,7 +540,7 @@ class TgUploader:
                                 for subkey, msgs in list(value.items()):
                                     if len(msgs) > 1:
                                         await self.__send_media_group(subkey, key, msgs)
-                    self.__last_msg_in_group = False
+                        self.__last_msg_in_group = False
                     self.__last_uploaded = 0
                     await self.__switching_client()
                     await self.__upload_file(cap_mono, file_)
@@ -680,18 +625,15 @@ class TgUploader:
         self.__is_corrupted = False
         try:
             is_video, is_audio, is_image = await get_document_type(self.__up_path)
-
             if self.__leech_utils["thumb"]:
                 thumb = await self.get_custom_thumb(self.__leech_utils["thumb"])
-
             if not is_image and thumb is None:
                 file_name = ospath.splitext(file)[0]
                 thumb_path = f"{self.__path}/yt-dlp-thumb/{file_name}.jpg"
                 if await aiopath.isfile(thumb_path):
                     thumb = thumb_path
-                elif is_audio and not is_video:
-                    thumb = await get_audio_thumb(self.__up_path)
-
+            elif is_audio and not is_video:
+                thumb = await get_audio_thumb(self.__up_path)
             if (
                 self.__as_doc
                 or force_document
@@ -714,7 +656,6 @@ class TgUploader:
                     progress=self.__upload_progress,
                     reply_markup=buttons,
                 )
-
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
                     try:
                         self.__sent_msg = await bot.copy_message(
@@ -761,9 +702,9 @@ class TgUploader:
                 if self.__is_cancelled:
                     return
                 buttons = await self.__buttons(self.__up_path, is_video)
-                
-                # 🎯 ORIGINAL VIDEO UPLOAD TO TELEGRAM SERVER
-                LOGGER.info("📤 Starting video upload to Telegram server...")
+
+                # 🔥 STEP 1: Upload video to Telegram servers first
+                LOGGER.info(f"📹 Uploading video to Telegram servers...")
                 nrml_media = await self.__client.send_video(
                     chat_id=self.__sent_msg.chat.id,
                     reply_to_message_id=self.__sent_msg.id,
@@ -778,64 +719,52 @@ class TgUploader:
                     progress=self.__upload_progress,
                     reply_markup=buttons,
                 )
-                
-                # 🔥 VIDEO UPLOAD COMPLETE - NOW APPLY COVER IMAGE
-                LOGGER.info("📤 Video uploaded to Telegram server successfully")
-                
-                # Store the video file_id
-                video_file_id = nrml_media.video.file_id
-                LOGGER.info(f"🆔 Video File ID: {video_file_id}")
-                
-                # Refresh photo_id in case user added one during upload
-                self.__photo_id = self.__get_user_photo_id()
-                
-                # Apply cover image if photo_id is available
-                if self.__photo_id:
-                    LOGGER.info(f"🖼️ Applying cover image with Photo ID: {self.__photo_id}")
-                    cover_applied = await self.__apply_video_cover(
-                        video_file_id, 
+
+                # 🔥 STEP 2: Store video file_id after successful upload
+                if nrml_media and nrml_media.video:
+                    self.__uploaded_video_file_id = nrml_media.video.file_id
+                    LOGGER.info(f"✅ Video uploaded successfully, file_id: {self.__uploaded_video_file_id[:20]}...")
+
+                # Handle premium media copy logic
+                if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
+                    try:
+                        self.__sent_msg = await bot.copy_message(
+                            nrml_media.chat.id,
+                            nrml_media.chat.id,
+                            nrml_media.id,
+                            reply_to_message_id=self.__sent_msg.id,
+                            reply_markup=buttons,
+                        )
+                        if self.__sent_msg:
+                            await deleteMessage(nrml_media)
+                    except Exception:
+                        self.__sent_msg = nrml_media
+                else:
+                    self.__sent_msg = nrml_media
+
+                # 🔥 STEP 3: AUTOMATIC COVER APPLICATION
+                # This happens AFTER successful upload and BEFORE final send
+                if (self.__auto_cover_enabled and 
+                    self.__user_thumbnail_photo_id and 
+                    self.__uploaded_video_file_id and 
+                    self.__sent_msg):
+
+                    LOGGER.info("🎬 AUTO-APPLYING thumbnail as video cover...")
+
+                    # Apply automatic cover using thumbnail
+                    covered_msg = await self.__apply_auto_video_cover(
+                        self.__uploaded_video_file_id, 
                         cap_mono, 
                         buttons
                     )
-                    if cover_applied:
-                        LOGGER.info("✅ Cover image applied successfully!")
+
+                    # Update sent_msg reference if cover applied successfully
+                    if covered_msg:
+                        self.__sent_msg = covered_msg
+                        LOGGER.info("🎥 ✅ AUTO COVER APPLIED - Video sent with thumbnail as cover!")
                     else:
-                        LOGGER.warning("⚠️ Failed to apply cover image, using original video")
-                        # Use original video message if cover application failed
-                        if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
-                            try:
-                                self.__sent_msg = await bot.copy_message(
-                                    nrml_media.chat.id,
-                                    nrml_media.chat.id,
-                                    nrml_media.id,
-                                    reply_to_message_id=self.__sent_msg.id,
-                                    reply_markup=buttons,
-                                )
-                                if self.__sent_msg:
-                                    await deleteMessage(nrml_media)
-                            except Exception:
-                                self.__sent_msg = nrml_media
-                        else:
-                            self.__sent_msg = nrml_media
-                else:
-                    LOGGER.info("📷 No photo_id available, sending video without cover")
-                    # Use original video message
-                    if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
-                        try:
-                            self.__sent_msg = await bot.copy_message(
-                                nrml_media.chat.id,
-                                nrml_media.chat.id,
-                                nrml_media.id,
-                                reply_to_message_id=self.__sent_msg.id,
-                                reply_markup=buttons,
-                            )
-                            if self.__sent_msg:
-                                await deleteMessage(nrml_media)
-                        except Exception:
-                            self.__sent_msg = nrml_media
-                    else:
-                        self.__sent_msg = nrml_media
-                
+                        LOGGER.warning("⚠️ Auto cover failed - Sending original video")
+
             elif is_audio:
                 key = "audios"
                 duration, artist, title = await get_media_info(self.__up_path)
@@ -867,7 +796,6 @@ class TgUploader:
                     progress=self.__upload_progress,
                     reply_markup=await self.__buttons(self.__up_path),
                 )
-
             if (
                 not self.__is_cancelled
                 and self.__media_group
@@ -889,19 +817,18 @@ class TgUploader:
                         self.__last_msg_in_group = True
             if self.__sent_msg:
                 await self.__copy_file()
-
             if (
                 self.__thumb is None
                 and thumb is not None
                 and await aiopath.exists(thumb)
             ):
                 await aioremove(thumb)
-                if (
-                    (dir_name := ospath.dirname(thumb))
-                    and dir_name != "Thumbnails"
-                    and await aiopath.exists(dir_name)
-                ):
-                    await rmdir(dir_name)
+            if (
+                (dir_name := ospath.dirname(thumb))
+                and dir_name != "Thumbnails"
+                and await aiopath.exists(dir_name)
+            ):
+                await rmdir(dir_name)
             self.__retry_error = False
         except FloodWait as f:
             LOGGER.warning(str(f))
@@ -914,12 +841,12 @@ class TgUploader:
                 and await aiopath.exists(thumb)
             ):
                 await aioremove(thumb)
-                if (
-                    (dir_name := ospath.dirname(thumb))
-                    and dir_name != "Thumbnails"
-                    and await aiopath.exists(dir_name)
-                ):
-                    await rmdir(dir_name)
+            if (
+                (dir_name := ospath.dirname(thumb))
+                and dir_name != "Thumbnails"
+                and await aiopath.exists(dir_name)
+            ):
+                await rmdir(dir_name)
             LOGGER.error(f"{format_exc()}. Path: {self.__up_path}")
             if "Telegram says: [400" in str(err) and key != "documents":
                 LOGGER.error(f"Retrying As Document. Path: {self.__up_path}")
@@ -941,27 +868,3 @@ class TgUploader:
         self.__is_cancelled = True
         LOGGER.info(f"Cancelling Upload: {self.name}")
         await self.__listener.onUploadError("Your Upload has been Stopped!")
-
-
-# 🚀 Usage Instructions:
-"""
-To use this cover image functionality in your bot, add these handlers:
-
-1. Photo handler - captures photo_id when user sends photo:
-@bot.on_message(filters.photo & filters.private)
-async def photo_message_handler(client, message):
-    await handle_photo_message(message)
-
-2. Command handler - removes user's cover image:
-@bot.on_message(filters.command("removethumb") & filters.private)
-async def remove_thumb_handler(client, message):
-    await remove_user_cover_image(message)
-
-3. The cover image will be automatically applied to videos during upload
-   when the user has previously saved a photo using the photo handler.
-
-How it works:
-- User sends a photo → Photo ID gets saved
-- User uploads a video → Video gets uploaded with cover applied automatically
-- User can remove saved thumbnail using /removethumb command
-"""
