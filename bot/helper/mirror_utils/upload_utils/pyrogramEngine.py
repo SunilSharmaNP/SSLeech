@@ -15,6 +15,7 @@ from PIL import Image
 from pyrogram.types import InputMediaVideo, InputMediaDocument, InlineKeyboardMarkup
 from pyrogram.errors import FloodWait, RPCError, PeerIdInvalid, ChannelInvalid
 from asyncio import sleep
+import aiohttp
 from tenacity import (
     retry,
     wait_exponential,
@@ -156,7 +157,72 @@ class TgUploader:
             return buttons.build_menu(1)
         return None
 
+    async def __set_video_cover(self, video_msg, cover_path, caption=None, buttons=None):
+        """Set video cover image using Telegram Bot API"""
+        try:
+            if not video_msg or not video_msg.video:
+                return video_msg
+            
+            if not cover_path or not await aiopath.exists(cover_path):
+                LOGGER.info(f"No cover photo available for user: {self.__user_id}")
+                return video_msg
+            
+            LOGGER.info(f"🔄 Setting video cover for chat: {video_msg.chat.id}, msg: {video_msg.id}")
+            
+            bot_token = bot.bot_token if hasattr(bot, 'bot_token') else None
+            if not bot_token:
+                LOGGER.error("Bot token not found, cannot set cover")
+                return video_msg
+            
+            api_url = f"https://api.telegram.org/bot{bot_token}/editMessageMedia"
+            
+            form = aiohttp.FormData()
+            form.add_field('chat_id', str(video_msg.chat.id))
+            form.add_field('message_id', str(video_msg.id))
+            
+            media_json = {
+                "type": "video",
+                "media": video_msg.video.file_id,
+                "supports_streaming": True,
+            }
+            
+            if caption:
+                media_json["caption"] = caption
+                media_json["parse_mode"] = "HTML"
+            
+            media_json["cover"] = "attach://cover"
+            
+            import json
+            form.add_field('media', json.dumps(media_json))
+            
+            from aiofiles import open as aio_open
+            async with aio_open(cover_path, 'rb') as f:
+                cover_data = await f.read()
+                form.add_field('cover', cover_data, filename='cover.jpg', content_type='image/jpeg')
+            
+            if buttons:
+                form.add_field('reply_markup', json.dumps({"inline_keyboard": buttons.inline_keyboard}))
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(api_url, data=form) as resp:
+                    result = await resp.json()
+                    
+                    if result.get('ok'):
+                        LOGGER.info(f"✅ Video cover set successfully")
+                        return video_msg
+                    else:
+                        LOGGER.error(f"Failed to set cover: {result.get('description')}")
+                        return video_msg
+            
+        except Exception as e:
+            LOGGER.error(f"Error in __set_video_cover: {e}")
+            return video_msg
+
     async def __copy_file(self):
+        user_dict = user_data.get(self.__user_id, {})
+        has_cover = user_dict.get("thumb") and await aiopath.exists(self.__thumb)
+        is_video_msg = self.__sent_msg and self.__sent_msg.video
+        
         try:
             if self.__bot_pm and (
                 self.__leechmsg
@@ -173,6 +239,15 @@ class TgUploader:
                         else None
                     ),
                 )
+                
+                if copied and is_video_msg and has_cover:
+                    await self.__set_video_cover(
+                        copied, 
+                        self.__thumb, 
+                        copied.caption,
+                        copied.reply_markup
+                    )
+                
                 if copied and self.__has_buttons:
                     btn_markup = (
                         InlineKeyboardMarkup(BTN)
@@ -201,7 +276,15 @@ class TgUploader:
                         message_id=self.__sent_msg.id,
                         reply_to_message_id=msg.id,
                     )
-                    # Layer 161 Needed for Topics !
+                    
+                    if leech_copy and is_video_msg and has_cover:
+                        await self.__set_video_cover(
+                            leech_copy, 
+                            self.__thumb, 
+                            leech_copy.caption,
+                            leech_copy.reply_markup
+                        )
+                    
                     if config_dict["CLEAN_LOG_MSG"] and msg.text:
                         await deleteMessage(msg)
                     if leech_copy and self.__has_buttons:
@@ -220,6 +303,15 @@ class TgUploader:
                                 from_chat_id=self.__sent_msg.chat.id,
                                 message_id=self.__sent_msg.id,
                             )
+                            
+                            if dump_copy and is_video_msg and has_cover:
+                                await self.__set_video_cover(
+                                    dump_copy, 
+                                    self.__thumb, 
+                                    dump_copy.caption,
+                                    dump_copy.reply_markup
+                                )
+                            
                             if dump_copy and self.__has_buttons:
                                 btn_markup = (
                                     InlineKeyboardMarkup(BTN)
@@ -387,6 +479,20 @@ class TgUploader:
             quote=True,
             disable_notification=True,
         )
+        
+        user_dict = user_data.get(self.__user_id, {})
+        has_cover = user_dict.get("thumb") and await aiopath.exists(self.__thumb)
+        
+        if has_cover and key == "videos":
+            for msg_item in msgs_list:
+                if msg_item.video:
+                    await self.__set_video_cover(
+                        msg_item, 
+                        self.__thumb, 
+                        msg_item.caption,
+                        None
+                    )
+        
         for msg in msgs:
             if msg.link in self.__msgs_dict:
                 del self.__msgs_dict[msg.link]
@@ -396,30 +502,52 @@ class TgUploader:
             for m in msgs_list:
                 self.__msgs_dict[m.link] = m.caption
         self.__sent_msg = msgs_list[-1]
+        
         try:
             if self.__bot_pm and (
                 self.__leechmsg
                 and not self.__listener.excep_chat
                 or self.__listener.isSuperGroup
             ):
-                await bot.copy_media_group(
+                copied_group = await bot.copy_media_group(
                     chat_id=self.__user_id,
                     from_chat_id=self.__sent_msg.chat.id,
                     message_id=self.__sent_msg.id,
                 )
+                
+                if has_cover and key == "videos" and copied_group:
+                    for copied_msg in copied_group:
+                        if copied_msg.video:
+                            await self.__set_video_cover(
+                                copied_msg, 
+                                self.__thumb, 
+                                copied_msg.caption,
+                                None
+                            )
         except Exception as err:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in Bot PM:\n{str(err)}")
+        
         try:
             if self.__upload_dest:
                 for channel_id in self.__upload_dest:
                     if dump_chat := (await chat_info(channel_id)):
                         try:
-                            await bot.copy_media_group(
+                            dump_group = await bot.copy_media_group(
                                 chat_id=dump_chat.id,
                                 from_chat_id=self.__sent_msg.chat.id,
                                 message_id=self.__sent_msg.id,
                             )
+                            
+                            if has_cover and key == "videos" and dump_group:
+                                for dump_msg in dump_group:
+                                    if dump_msg.video:
+                                        await self.__set_video_cover(
+                                            dump_msg, 
+                                            self.__thumb, 
+                                            dump_msg.caption,
+                                            None
+                                        )
                         except (ChannelInvalid, PeerIdInvalid) as e:
                             LOGGER.error(f"{e.NAME}: {e.MESSAGE} for {channel_id}")
                             continue
@@ -635,6 +763,11 @@ class TgUploader:
                 if self.__is_cancelled:
                     return
                 buttons = await self.__buttons(self.__up_path, is_video)
+                
+                user_dict = user_data.get(self.__user_id, {})
+                if user_dict.get("thumb") and await aiopath.exists(self.__thumb):
+                    thumb = self.__thumb
+                
                 nrml_media = await self.__client.send_video(
                     chat_id=self.__sent_msg.chat.id,
                     reply_to_message_id=self.__sent_msg.id,
@@ -649,6 +782,11 @@ class TgUploader:
                     progress=self.__upload_progress,
                     reply_markup=buttons,
                 )
+                
+                user_dict = user_data.get(self.__user_id, {})
+                if user_dict.get("thumb") and await aiopath.exists(self.__thumb):
+                    await self.__set_video_cover(nrml_media, self.__thumb, cap_mono, buttons)
+                
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
                     try:
                         self.__sent_msg = await bot.copy_message(
