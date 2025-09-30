@@ -15,6 +15,7 @@ from PIL import Image
 from pyrogram.types import InputMediaVideo, InputMediaDocument, InlineKeyboardMarkup
 from pyrogram.errors import FloodWait, RPCError, PeerIdInvalid, ChannelInvalid
 from asyncio import sleep
+import aiohttp
 from tenacity import (
     retry,
     wait_exponential,
@@ -244,6 +245,75 @@ class TgUploader:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in User Dump:\n{str(err)}")
 
+    async def __set_video_cover(self, video_msg, cover_path, caption, buttons):
+        """Set video cover image using Telegram Bot API"""
+        try:
+            if not video_msg or not video_msg.video:
+                return video_msg
+            
+            if not cover_path or not await aiopath.exists(cover_path):
+                LOGGER.info(f"No cover photo available for user: {self.__user_id}")
+                return video_msg
+            
+            LOGGER.info(f"🔄 Setting video cover for user: {self.__user_id}")
+            
+            # Get bot token from Pyrogram client
+            bot_token = bot.bot_token if hasattr(bot, 'bot_token') else None
+            if not bot_token:
+                LOGGER.error("Bot token not found, cannot set cover")
+                return video_msg
+            
+            # Prepare API request data
+            api_url = f"https://api.telegram.org/bot{bot_token}/editMessageMedia"
+            
+            # Create multipart form data
+            form = aiohttp.FormData()
+            form.add_field('chat_id', str(video_msg.chat.id))
+            form.add_field('message_id', str(video_msg.id))
+            
+            # Create media JSON with cover
+            media_json = {
+                "type": "video",
+                "media": video_msg.video.file_id,
+                "supports_streaming": True,
+            }
+            
+            if caption:
+                media_json["caption"] = caption
+            
+            # Add cover file
+            media_json["cover"] = "attach://cover"
+            
+            import json
+            form.add_field('media', json.dumps(media_json))
+            
+            # Read and add cover file
+            from aiofiles import open as aio_open
+            async with aio_open(cover_path, 'rb') as f:
+                cover_data = await f.read()
+                form.add_field('cover', cover_data, filename='cover.jpg', content_type='image/jpeg')
+            
+            # Add reply markup if exists
+            if buttons:
+                form.add_field('reply_markup', json.dumps({"inline_keyboard": buttons.inline_keyboard}))
+            
+            # Make API request
+            async with aiohttp.ClientSession() as session:
+                async with session.post(api_url, data=form) as resp:
+                    result = await resp.json()
+                    
+                    if result.get('ok'):
+                        LOGGER.info(f"✅ Video cover set successfully for user: {self.__user_id}")
+                        # Return original message (cover is now set)
+                        return video_msg
+                    else:
+                        LOGGER.error(f"Failed to set cover: {result.get('description')}")
+                        return video_msg
+            
+        except Exception as e:
+            LOGGER.error(f"Error in __set_video_cover: {e}")
+            return video_msg
+
     async def __upload_progress(self, current, total):
         if self.__is_cancelled:
             if IS_PREMIUM_USER:
@@ -425,46 +495,6 @@ class TgUploader:
         except Exception as err:
             if not self.__is_cancelled:
                 LOGGER.error(f"Failed To Send in User Dump:\n{str(err)}")
-
-    async def __change_video_cover(self, video_msg, cover_photo, caption, buttons):
-        try:
-            if not video_msg or not video_msg.video:
-                return video_msg
-            
-            if not cover_photo or not await aiopath.exists(cover_photo):
-                LOGGER.info(f"No cover photo available for user: {self.__user_id}")
-                return video_msg
-            
-            LOGGER.info(f"🔄 Changing video cover for user: {self.__user_id}")
-            
-            video_file_id = video_msg.video.file_id
-            
-            media_with_cover = InputMediaVideo(
-                media=video_file_id,
-                caption=caption,
-                width=video_msg.video.width,
-                height=video_msg.video.height,
-                duration=video_msg.video.duration,
-                supports_streaming=True,
-                thumb=cover_photo
-            )
-            
-            try:
-                edited_msg = await self.__client.edit_message_media(
-                    chat_id=video_msg.chat.id,
-                    message_id=video_msg.id,
-                    media=media_with_cover,
-                    reply_markup=buttons
-                )
-                LOGGER.info(f"✅ Video cover changed successfully for user: {self.__user_id}")
-                return edited_msg
-            except Exception as e:
-                LOGGER.warning(f"Cover change failed: {e}")
-                return video_msg
-                
-        except Exception as e:
-            LOGGER.error(f"Error in __change_video_cover: {e}")
-            return video_msg
 
     async def upload(self, o_files, m_size, size):
         await self.__user_settings()
@@ -674,6 +704,11 @@ class TgUploader:
                 if self.__is_cancelled:
                     return
                 buttons = await self.__buttons(self.__up_path, is_video)
+                
+                user_dict = user_data.get(self.__user_id, {})
+                if user_dict.get("thumb") and await aiopath.exists(self.__thumb):
+                    thumb = self.__thumb
+                
                 nrml_media = await self.__client.send_video(
                     chat_id=self.__sent_msg.chat.id,
                     reply_to_message_id=self.__sent_msg.id,
@@ -689,14 +724,10 @@ class TgUploader:
                     reply_markup=buttons,
                 )
                 
+                # Set video cover if user has custom thumbnail
                 user_dict = user_data.get(self.__user_id, {})
                 if user_dict.get("thumb") and await aiopath.exists(self.__thumb):
-                    nrml_media = await self.__change_video_cover(
-                        nrml_media, 
-                        self.__thumb, 
-                        cap_mono, 
-                        buttons
-                    )
+                    await self.__set_video_cover(nrml_media, self.__thumb, cap_mono, buttons)
                 
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
                     try:
