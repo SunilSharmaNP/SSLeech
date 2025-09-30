@@ -478,7 +478,6 @@ class TgUploader:
             quote=True,
             disable_notification=True,
         )
-        )
         has_cover = self.__thumb and await aiopath.exists(self.__thumb)
         
         if has_cover and key == "videos":
