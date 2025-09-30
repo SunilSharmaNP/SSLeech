@@ -219,8 +219,7 @@ class TgUploader:
             return video_msg
 
     async def __copy_file(self):
-        user_dict = user_data.get(self.__user_id, {})
-        has_cover = user_dict.get("thumb") and await aiopath.exists(self.__thumb)
+        has_cover = self.__thumb and await aiopath.exists(self.__thumb)
         is_video_msg = self.__sent_msg and self.__sent_msg.video
         
         try:
@@ -479,9 +478,8 @@ class TgUploader:
             quote=True,
             disable_notification=True,
         )
-        
-        user_dict = user_data.get(self.__user_id, {})
-        has_cover = user_dict.get("thumb") and await aiopath.exists(self.__thumb)
+        )
+        has_cover = self.__thumb and await aiopath.exists(self.__thumb)
         
         if has_cover and key == "videos":
             for msg_item in msgs_list:
@@ -765,7 +763,7 @@ class TgUploader:
                 buttons = await self.__buttons(self.__up_path, is_video)
                 
                 user_dict = user_data.get(self.__user_id, {})
-                if user_dict.get("thumb") and await aiopath.exists(self.__thumb):
+                if self.__thumb and await aiopath.exists(self.__thumb):
                     thumb = self.__thumb
                 
                 nrml_media = await self.__client.send_video(
@@ -784,7 +782,7 @@ class TgUploader:
                 )
                 
                 user_dict = user_data.get(self.__user_id, {})
-                if user_dict.get("thumb") and await aiopath.exists(self.__thumb):
+                if self.__thumb and await aiopath.exists(self.__thumb):
                     await self.__set_video_cover(nrml_media, self.__thumb, cap_mono, buttons)
                 
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
