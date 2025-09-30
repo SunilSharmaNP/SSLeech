@@ -158,84 +158,84 @@ class TgUploader:
         return None
 
     async def __set_video_cover(self, video_msg, cover_path, caption=None, caption_entities=None, buttons=None):
-    """Set video cover image using Telegram Bot API"""
-    try:
-        if not video_msg or not video_msg.video:
-            return video_msg
-        
-        if not cover_path or not await aiopath.exists(cover_path):
-            LOGGER.info(f"No cover photo available for user: {self.__user_id}")
-            return video_msg
-        
-        LOGGER.info(f"🔄 Setting video cover for chat: {video_msg.chat.id}, msg: {video_msg.id}")
-        
-        bot_token = bot.bot_token if hasattr(bot, 'bot_token') else None
-        if not bot_token:
-            LOGGER.error("Bot token not found, cannot set cover")
-            return video_msg
-        
-        api_url = f"https://api.telegram.org/bot{bot_token}/editMessageMedia"
-        
-        form = aiohttp.FormData()
-        form.add_field('chat_id', str(video_msg.chat.id))
-        form.add_field('message_id', str(video_msg.id))
-        
-        media_json = {
-            "type": "video",
-            "media": video_msg.video.file_id,
-            "supports_streaming": True,
-        }
-        
-        if caption:
-            media_json["caption"] = caption
-            if caption_entities:
-                try:
-                    media_json["caption_entities"] = [
-                        {
-                            "type": entity.type.name.lower() if hasattr(entity.type, 'name') else str(entity.type).split('.')[-1].lower(),
-                            "offset": entity.offset,
-                            "length": entity.length,
-                            **({"url": entity.url} if hasattr(entity, 'url') and entity.url else {}),
-                            **({"user": {"id": entity.user.id}} if hasattr(entity, 'user') and entity.user else {}),
-                            **({"language": entity.language} if hasattr(entity, 'language') and entity.language else {})
-                        }
-                        for entity in caption_entities
-                    ]
-                except Exception as e:
-                    LOGGER.error(f"Caption entities error: {e}, using HTML")
-                    media_json["parse_mode"] = "HTML"
-            else:
-                media_json["parse_mode"] = "HTML"
-        
-        media_json["cover"] = "attach://cover"
-        
-        import json
-        form.add_field('media', json.dumps(media_json))
-        
-        from aiofiles import open as aio_open
-        async with aio_open(cover_path, 'rb') as f:
-            cover_data = await f.read()
-            form.add_field('cover', cover_data, filename='cover.jpg', content_type='image/jpeg')
-        
-        if buttons:
-            form.add_field('reply_markup', json.dumps({"inline_keyboard": buttons.inline_keyboard}))
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(api_url, data=form) as resp:
-                result = await resp.json()
-                
-                if result.get('ok'):
-                    LOGGER.info(f"✅ Video cover set successfully")
-                    return video_msg
+        """Set video cover image using Telegram Bot API"""
+        try:
+            if not video_msg or not video_msg.video:
+                return video_msg
+            
+            if not cover_path or not await aiopath.exists(cover_path):
+                LOGGER.info(f"No cover photo available for user: {self.__user_id}")
+                return video_msg
+            
+            LOGGER.info(f"🔄 Setting video cover for chat: {video_msg.chat.id}, msg: {video_msg.id}")
+            
+            bot_token = bot.bot_token if hasattr(bot, 'bot_token') else None
+            if not bot_token:
+                LOGGER.error("Bot token not found, cannot set cover")
+                return video_msg
+            
+            api_url = f"https://api.telegram.org/bot{bot_token}/editMessageMedia"
+            
+            form = aiohttp.FormData()
+            form.add_field('chat_id', str(video_msg.chat.id))
+            form.add_field('message_id', str(video_msg.id))
+            
+            media_json = {
+                "type": "video",
+                "media": video_msg.video.file_id,
+                "supports_streaming": True,
+            }
+            
+            if caption:
+                media_json["caption"] = caption
+                if caption_entities:
+                    try:
+                        media_json["caption_entities"] = [
+                            {
+                                "type": entity.type.name.lower() if hasattr(entity.type, 'name') else str(entity.type).split('.')[-1].lower(),
+                                "offset": entity.offset,
+                                "length": entity.length,
+                                **({"url": entity.url} if hasattr(entity, 'url') and entity.url else {}),
+                                **({"user": {"id": entity.user.id}} if hasattr(entity, 'user') and entity.user else {}),
+                                **({"language": entity.language} if hasattr(entity, 'language') and entity.language else {})
+                            }
+                            for entity in caption_entities
+                        ]
+                    except Exception as e:
+                        LOGGER.error(f"Caption entities error: {e}, using HTML")
+                        media_json["parse_mode"] = "HTML"
                 else:
-                    LOGGER.error(f"Failed to set cover: {result.get('description')}")
-                    return video_msg
-        
-    except Exception as e:
-        LOGGER.error(f"Error in __set_video_cover: {e}")
-        import traceback
-        LOGGER.error(traceback.format_exc())
-        return video_msg
+                    media_json["parse_mode"] = "HTML"
+            
+            media_json["cover"] = "attach://cover"
+            
+            import json
+            form.add_field('media', json.dumps(media_json))
+            
+            from aiofiles import open as aio_open
+            async with aio_open(cover_path, 'rb') as f:
+                cover_data = await f.read()
+                form.add_field('cover', cover_data, filename='cover.jpg', content_type='image/jpeg')
+            
+            if buttons:
+                form.add_field('reply_markup', json.dumps({"inline_keyboard": buttons.inline_keyboard}))
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(api_url, data=form) as resp:
+                    result = await resp.json()
+                    
+                    if result.get('ok'):
+                        LOGGER.info(f"✅ Video cover set successfully")
+                        return video_msg
+                    else:
+                        LOGGER.error(f"Failed to set cover: {result.get('description')}")
+                        return video_msg
+            
+        except Exception as e:
+            LOGGER.error(f"Error in __set_video_cover: {e}")
+            import traceback
+            LOGGER.error(traceback.format_exc())
+            return video_msg
 
     async def __copy_file(self):
         has_cover = self.__thumb and await aiopath.exists(self.__thumb)
