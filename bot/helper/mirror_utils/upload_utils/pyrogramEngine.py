@@ -157,7 +157,7 @@ class TgUploader:
             return buttons.build_menu(1)
         return None
 
-    async def __set_video_cover(self, video_msg, cover_path, caption=None, buttons=None):
+    async def __set_video_cover(self, video_msg, cover_path, caption=None, caption_entities=None, buttons=None):
         """Set video cover image using Telegram Bot API"""
         try:
             if not video_msg or not video_msg.video:
@@ -188,7 +188,20 @@ class TgUploader:
             
             if caption:
                 media_json["caption"] = caption
-                media_json["parse_mode"] = "HTML"
+                if caption_entities:
+                    media_json["caption_entities"] = [
+                        {
+                            "type": entity.type,
+                            "offset": entity.offset,
+                            "length": entity.length,
+                            **({"url": entity.url} if hasattr(entity, 'url') and entity.url else {}),
+                            **({"user": {"id": entity.user.id}} if hasattr(entity, 'user') and entity.user else {}),
+                            **({"language": entity.language} if hasattr(entity, 'language') and entity.language else {})
+                        }
+                        for entity in caption_entities
+                    ]
+                else:
+                    media_json["parse_mode"] = "HTML"
             
             media_json["cover"] = "attach://cover"
             
@@ -244,6 +257,7 @@ class TgUploader:
                         copied, 
                         self.__thumb, 
                         copied.caption,
+                        copied.caption_entities,  # ADD THIS LINE
                         copied.reply_markup
                     )
                 
@@ -281,6 +295,7 @@ class TgUploader:
                             leech_copy, 
                             self.__thumb, 
                             leech_copy.caption,
+                            leech_copy.caption_entities,  # ADD THIS LINE
                             leech_copy.reply_markup
                         )
                     
@@ -308,6 +323,7 @@ class TgUploader:
                                     dump_copy, 
                                     self.__thumb, 
                                     dump_copy.caption,
+                                    dump_copy.caption_entities,  # ADD THIS LINE
                                     dump_copy.reply_markup
                                 )
                             
