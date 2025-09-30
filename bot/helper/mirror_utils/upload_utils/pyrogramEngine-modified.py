@@ -77,6 +77,7 @@ class TgUploader:
         self.name = name
         self.__last_uploaded = 0
         self.__processed_bytes = 0
+        self.__cover_enabled = True
         self.__listener = listener
         self.__path = path
         self.__start_time = time()
