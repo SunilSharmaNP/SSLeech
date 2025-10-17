@@ -1,5 +1,25 @@
-
 #!/usr/bin/env python3
+import asyncio
+import uvloop
+from socket import setdefaulttimeout
+
+# ✅ Ensure uvloop is installed and event loop initialized
+try:
+    uvloop.install()
+except Exception as e:
+    print(f"[WARNING] uvloop installation failed: {e}")
+
+# ✅ Make sure an event loop exists before Pyrogram loads
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
+setdefaulttimeout(600)
+
+# ==============================
+# Other imports after event loop setup
+# ==============================
 from tzlocal import get_localzone
 from pytz import timezone
 from datetime import datetime
@@ -15,7 +35,6 @@ from subprocess import Popen, run as srun
 from os import remove as osremove, path as ospath, environ, getcwd
 from aria2p import API as ariaAPI, Client as ariaClient
 from qbittorrentapi import Client as qbClient
-from socket import setdefaulttimeout
 from logging import (
     getLogger,
     Formatter,
@@ -28,13 +47,8 @@ from logging import (
     info as log_info,
     warning as log_warning,
 )
-from uvloop import install
-
 # from faulthandler import enable as faulthandler_enable
 # faulthandler_enable()
-
-install()
-setdefaulttimeout(600)
 
 pyroutils.MIN_CHAT_ID = -999999999999
 pyroutils.MIN_CHANNEL_ID = -100999999999999
