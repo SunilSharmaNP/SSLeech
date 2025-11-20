@@ -247,27 +247,37 @@ def wztgClient(*args, **kwargs):
 
 PROXIES = [
     {
-        "scheme": "socks5",
-        "hostname": "sg1.surfingvpn.me",
-        "port": 1080,
-        "username": "surfing",
-        "password": "unlimited"
+        "scheme": "mtproto",
+        "hostname": "view-open-ai-cc.twofa-manager.co.uk",
+        "port": 8443,
+        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     },
     {
-        "scheme": "socks5",
-        "hostname": "sg2.surfingvpn.me",
-        "port": 1080,
-        "username": "surfing",
-        "password": "unlimited"
+        "scheme": "mtproto",
+        "hostname": "cloud-hosting.api.hosting-wpd.co.uk",
+        "port": 8443,
+        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     },
     {
-        "scheme": "socks5",
-        "hostname": "in1.surfingvpn.me",
-        "port": 1080,
-        "username": "surfing",
-        "password": "unlimited"
+        "scheme": "mtproto",
+        "hostname": "contact-us-direct.help-center-doe.co.uk",
+        "port": 8443,
+        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+        "scheme": "mtproto",
+        "hostname": "140.233.167.148",
+        "port": 443,
+        "secret": "EERighJJvXrFGRMCIMJdCQRueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+        "scheme": "mtproto",
+        "hostname": "valued-costumers.endpoint.hosting-wpd.co.uk",
+        "port": 8443,
+        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     }
 ]
+
 
 from pyrogram import Client
 import time
