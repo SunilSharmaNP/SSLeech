@@ -252,33 +252,21 @@ from pyrogram import Client
 PROXIES = [
     {
         "scheme": "mtproto",
-        "hostname": "view-open-ai-cc.twofa-manager.co.uk",
-        "port": 8443,
-        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    },
-    {
-        "scheme": "mtproto",
-        "hostname": "cloud-hosting.api.hosting-wpd.co.uk",
-        "port": 8443,
-        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    },
-    {
-        "scheme": "mtproto",
-        "hostname": "contact-us-direct.help-center-doe.co.uk",
-        "port": 8443,
-        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    },
-    {
-        "scheme": "mtproto",
-        "hostname": "140.233.167.148",
+        "hostname": "45.142.176.55",
         "port": 443,
-        "secret": "EERighJJvXrFGRMCIMJdCQRueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "secret": "ee342f746573742d6e65746375702d6765726d616e79"
     },
     {
         "scheme": "mtproto",
-        "hostname": "valued-costumers.endpoint.hosting-wpd.co.uk",
-        "port": 8443,
-        "secret": "eecBAgABAAfwAwOG4kw63QAAAARueWVrdGFuZXQuY29tZmFyYWthdi5jb212YW4ubmFqdmEuY29tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "hostname": "146.19.248.210",
+        "port": 443,
+        "secret": "ee6b6974616e2d6e65746c616e2d6e65746c616e64732d6f7074696d697a6564"
+    },
+    {
+        "scheme": "mtproto",
+        "hostname": "95.216.246.84",
+        "port": 443,
+        "secret": "ee66696e6c616e642d6e6f64652d7370656564"
     }
 ]
 
