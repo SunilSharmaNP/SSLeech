@@ -242,8 +242,12 @@ def wztgClient(*args, **kwargs):
 
 
 # ────────────────────────────────────────────
-# AUTO-FAILOVER PROXY SYSTEM (Proxy → No Proxy)
+# AUTO-FAILOVER + FASTEST-PROXY SYSTEM
 # ────────────────────────────────────────────
+
+import time
+import socket
+from pyrogram import Client
 
 PROXIES = [
     {
@@ -279,14 +283,21 @@ PROXIES = [
 ]
 
 
-from pyrogram import Client
-import time
+def quick_ping(host, port, timeout=0.3):
+    """TCP Ping to measure latency in milliseconds"""
+    try:
+        start = time.time()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((host, port))
+        sock.close()
+        return int((time.time() - start) * 1000)
+    except:
+        return None
+
 
 def test_proxy(proxy):
-    """
-    Fast proxy test: connect → disconnect (0.2 sec)
-    Proxy alive hoga to True return karega
-    """
+    """Very fast Pyrogram connection test"""
     try:
         c = Client(
             "proxy_test",
@@ -301,15 +312,31 @@ def test_proxy(proxy):
     except:
         return False
 
-def get_valid_proxy():
-    """
-    Proxy list me se jo alive hoga usko return karega
-    Agar koi alive nahi hoga to None return hoga
-    """
+
+def choose_fastest_proxy():
+    """Ping all proxies → sort by latency → return fastest working one"""
+    speed_list = []
+
     for p in PROXIES:
-        if test_proxy(p):
-            return p
+        ping = quick_ping(p["hostname"], p["port"])
+        if ping:
+            speed_list.append((ping, p))
+
+    # कोई ping detect नहीं हुआ → return None
+    if not speed_list:
+        return None
+
+    # सबसे कम latency वाला सबसे ऊपर आ जाएगा
+    speed_list.sort(key=lambda x: x[0])
+
+    # Sorted list check करो until first alive proxy found
+    for ping, proxy in speed_list:
+        if test_proxy(proxy):
+            log_info(f"🔥 FASTEST PROXY FOUND: {proxy['hostname']} ({ping} ms)")
+            return proxy
+
     return None
+
 
 
 # ────────────────────────────────────────────
@@ -324,7 +351,7 @@ if len(USER_SESSION_STRING) != 0:
     log_info("Checking proxies before creating USER client...")
 
     # Step 1: Check if any proxy is alive
-    SELECTED_PROXY = get_valid_proxy()
+    SELECTED_PROXY = choose_fastest_proxy()
 
     if SELECTED_PROXY:
         log_info(f"✅ Using working proxy: {SELECTED_PROXY['hostname']}")
