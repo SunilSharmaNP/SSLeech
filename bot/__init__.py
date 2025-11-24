@@ -245,7 +245,7 @@ def wztgClient(*args, **kwargs):
 # --------------------------------------------------------------------
 import socket
 
-SOCKS_HOST = "127.0.0.1"
+SOCKS_HOST = "172.17.0.1"
 SOCKS_PORT = 2080
 SOCKS_CHECK_INTERVAL = 5
 SOCKS_TIMEOUT = 0.6
