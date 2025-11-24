@@ -241,7 +241,7 @@ def wztgClient(*args, **kwargs):
     return tgClient(*args, **kwargs)
 
 # --------------------------------------------------------------------
-# SOCKS5 SETTINGS (LOCAL PROXY 127.0.0.1:2080)
+# SOCKS5 SETTINGS (LOCAL PROXY 172.17.0.1:2080)
 # --------------------------------------------------------------------
 import socket
 
@@ -260,16 +260,26 @@ def socks_alive():
     except:
         return False
 
+
 def build_proxy():
     return {"scheme": "socks5", "hostname": SOCKS_HOST, "port": SOCKS_PORT}
+
 
 IS_PREMIUM_USER = False
 user = None
 USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
 
+
 def start_user(proxy=None):
     global user, IS_PREMIUM_USER
     try:
+        # stop old client safely
+        if user:
+            try:
+                user.stop()
+            except:
+                pass
+
         kwargs = dict(
             name="user",
             api_id=TELEGRAM_API,
@@ -278,29 +288,41 @@ def start_user(proxy=None):
             parse_mode=enums.ParseMode.HTML,
             no_updates=True,
         )
+
         if proxy:
             kwargs["proxy"] = proxy
+
         c = wztgClient(**kwargs)
         c.start()
         user = c
         IS_PREMIUM_USER = bool(user.me.is_premium)
         return True
+
     except Exception as e:
         log_error(f"USER connect failed: {e}")
         return False
 
+
+
 def monitor_proxy():
-    last = None
+    last = socks_alive()  # IMPORTANT FIX
     while True:
         alive = socks_alive()
+
+        # proxy came back
         if alive and not last:
             log_info("SOCKS5 back → switching USER to proxy")
             start_user(build_proxy())
+
+        # proxy went down
         elif not alive and last:
             log_warning("SOCKS5 dead → switching USER to direct")
             start_user(None)
+
         last = alive
         sleep(SOCKS_CHECK_INTERVAL)
+
+
 
 # INITIAL USER CLIENT SETUP
 if USER_SESSION_STRING:
@@ -316,6 +338,7 @@ if USER_SESSION_STRING:
     Thread(target=monitor_proxy, daemon=True).start()
 else:
     log_warning("No USER_SESSION_STRING provided.")
+
 
 
 
