@@ -240,87 +240,83 @@ def wztgClient(*args, **kwargs):
         kwargs["max_concurrent_transmissions"] = 1000
     return tgClient(*args, **kwargs)
 
-# ────────────────────────────────────────────
-# SOCKS5 Proxy + Auto Fallback
-# ────────────────────────────────────────────
-
+# --------------------------------------------------------------------
+# SOCKS5 SETTINGS (LOCAL PROXY 127.0.0.1:2080)
+# --------------------------------------------------------------------
 import socket
-import time
-from pyrogram import Client
+
+SOCKS_HOST = "127.0.0.1"
+SOCKS_PORT = 2080
+SOCKS_CHECK_INTERVAL = 5
+SOCKS_TIMEOUT = 0.6
+
+def socks_alive():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(SOCKS_TIMEOUT)
+        s.connect((SOCKS_HOST, SOCKS_PORT))
+        s.close()
+        return True
+    except:
+        return False
+
+def build_proxy():
+    return {"scheme": "socks5", "hostname": SOCKS_HOST, "port": SOCKS_PORT}
 
 IS_PREMIUM_USER = False
-user = ""
+user = None
 USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
 
-# Your VPS SOCKS5 Proxy
-SOCKS5_PROXY = {
-    "scheme": "socks5",
-    "hostname": "89.58.49.207",
-    "port": 1080,
-    "username": None,
-    "password": None,
-}
-
-def ping_proxy(host, port, timeout=0.3):
+def start_user(proxy=None):
+    global user, IS_PREMIUM_USER
     try:
-        s = socket.socket()
-        s.settimeout(timeout)
-        start = time.time()
-        s.connect((host, port))
-        s.close()
-        return int((time.time() - start) * 1000)
-    except:
-        return None
-
-if len(USER_SESSION_STRING) != 0:
-    log_info("🔍 Checking SOCKS5 Proxy...")
-
-    latency = ping_proxy("89.58.49.207", 1080)
-
-    if latency:
-        log_info(f"⚡ SOCKS5 Proxy reachable — {latency} ms")
-        selected_proxy = SOCKS5_PROXY
-    else:
-        log_warning("⚠ Proxy unreachable — using NORMAL connection")
-        selected_proxy = None
-
-    try:
-        user = wztgClient(
-            "user",
-            TELEGRAM_API,
-            TELEGRAM_HASH,
+        kwargs = dict(
+            name="user",
+            api_id=TELEGRAM_API,
+            api_hash=TELEGRAM_HASH,
             session_string=USER_SESSION_STRING,
             parse_mode=enums.ParseMode.HTML,
             no_updates=True,
-            proxy=selected_proxy,
-        ).start()
-
-        IS_PREMIUM_USER = user.me.is_premium
-        log_info("✅ USER client connected successfully!")
-
+        )
+        if proxy:
+            kwargs["proxy"] = proxy
+        c = wztgClient(**kwargs)
+        c.start()
+        user = c
+        IS_PREMIUM_USER = bool(user.me.is_premium)
+        return True
     except Exception as e:
-        log_error(f"❌ Proxy failed: {e}")
-        log_warning("➡ Retrying WITHOUT proxy...")
+        log_error(f"USER connect failed: {e}")
+        return False
 
-        try:
+def monitor_proxy():
+    last = None
+    while True:
+        alive = socks_alive()
+        if alive and not last:
+            log_info("SOCKS5 back → switching USER to proxy")
+            start_user(build_proxy())
+        elif not alive and last:
+            log_warning("SOCKS5 dead → switching USER to direct")
+            start_user(None)
+        last = alive
+        sleep(SOCKS_CHECK_INTERVAL)
 
-            user = wztgClient(
-                "user",
-                TELEGRAM_API,
-                TELEGRAM_HASH,
-                session_string=USER_SESSION_STRING,
-                parse_mode=enums.ParseMode.HTML,
-                no_updates=True,
-                proxy=proxy_dict
-            ).start()
+# INITIAL USER CLIENT SETUP
+if USER_SESSION_STRING:
+    if socks_alive():
+        log_info("SOCKS available → connecting USER with proxy")
+        if not start_user(build_proxy()):
+            log_warning("Proxy connect failed → using direct")
+            start_user(None)
+    else:
+        log_warning("SOCKS not available → connecting USER direct")
+        start_user(None)
 
+    Thread(target=monitor_proxy, daemon=True).start()
+else:
+    log_warning("No USER_SESSION_STRING provided.")
 
-            IS_PREMIUM_USER = user.me.is_premium
-            log_info("✅ USER client connected WITHOUT proxy!")
-
-        except Exception as e:
-            log_error(f"❌ USER client could not connect: {e}")
-            user = ""
 
 
 MEGA_EMAIL = environ.get("MEGA_EMAIL", "")
