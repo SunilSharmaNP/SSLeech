@@ -240,114 +240,50 @@ def wztgClient(*args, **kwargs):
         kwargs["max_concurrent_transmissions"] = 1000
     return tgClient(*args, **kwargs)
 
-
 # ────────────────────────────────────────────
-# AUTO-FAILOVER + FASTEST-PROXY SYSTEM
+# SOCKS5 Proxy + Auto Fallback
 # ────────────────────────────────────────────
 
-import time
 import socket
+import time
 from pyrogram import Client
-
-PROXIES = [
-    {
-        "scheme": "mtproto",
-        "hostname": "45.142.176.55",
-        "port": 443,
-        "secret": "ee342f746573742d6e65746375702d6765726d616e79"
-    },
-    {
-        "scheme": "mtproto",
-        "hostname": "146.19.248.210",
-        "port": 443,
-        "secret": "ee6b6974616e2d6e65746c616e2d6e65746c616e64732d6f7074696d697a6564"
-    },
-    {
-        "scheme": "mtproto",
-        "hostname": "95.216.246.84",
-        "port": 443,
-        "secret": "ee66696e6c616e642d6e6f64652d7370656564"
-    }
-]
-
-
-def quick_ping(host, port, timeout=0.3):
-    """TCP Ping to measure latency in milliseconds"""
-    try:
-        start = time.time()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
-        sock.connect((host, port))
-        sock.close()
-        return int((time.time() - start) * 1000)
-    except:
-        return None
-
-
-def test_proxy(proxy):
-    """Very fast Pyrogram connection test"""
-    try:
-        c = Client(
-            "proxy_test",
-            TELEGRAM_API,
-            TELEGRAM_HASH,
-            proxy=proxy,
-            no_updates=True
-        )
-        c.connect()
-        c.disconnect()
-        return True
-    except:
-        return False
-
-
-def choose_fastest_proxy():
-    """Ping all proxies → sort by latency → return fastest working one"""
-    speed_list = []
-
-    for p in PROXIES:
-        ping = quick_ping(p["hostname"], p["port"])
-        if ping:
-            speed_list.append((ping, p))
-
-    # कोई ping detect नहीं हुआ → return None
-    if not speed_list:
-        return None
-
-    # सबसे कम latency वाला सबसे ऊपर आ जाएगा
-    speed_list.sort(key=lambda x: x[0])
-
-    # Sorted list check करो until first alive proxy found
-    for ping, proxy in speed_list:
-        if test_proxy(proxy):
-            log_info(f"🔥 FASTEST PROXY FOUND: {proxy['hostname']} ({ping} ms)")
-            return proxy
-
-    return None
-
-
-
-# ────────────────────────────────────────────
-# USER CLIENT CREATION (Proxy + Auto-Fallback)
-# ────────────────────────────────────────────
 
 IS_PREMIUM_USER = False
 user = ""
 USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
 
+# Your VPS SOCKS5 Proxy
+SOCKS5_PROXY = {
+    "scheme": "socks5",
+    "hostname": "89.58.49.207",
+    "port": 1080,
+    "username": None,
+    "password": None,
+}
+
+def ping_proxy(host, port, timeout=0.3):
+    try:
+        s = socket.socket()
+        s.settimeout(timeout)
+        start = time.time()
+        s.connect((host, port))
+        s.close()
+        return int((time.time() - start) * 1000)
+    except:
+        return None
+
 if len(USER_SESSION_STRING) != 0:
-    log_info("Checking proxies before creating USER client...")
+    log_info("🔍 Checking SOCKS5 Proxy...")
 
-    # Step 1: Check if any proxy is alive
-    SELECTED_PROXY = choose_fastest_proxy()
+    latency = ping_proxy("89.58.49.207", 1080)
 
-    if SELECTED_PROXY:
-        log_info(f"✅ Using working proxy: {SELECTED_PROXY['hostname']}")
+    if latency:
+        log_info(f"⚡ SOCKS5 Proxy reachable — {latency} ms")
+        selected_proxy = SOCKS5_PROXY
     else:
-        log_warning("⚠ No proxy alive — connecting without proxy")
-        SELECTED_PROXY = None
+        log_warning("⚠ Proxy unreachable — using NORMAL connection")
+        selected_proxy = None
 
-    # Step 2: Try connecting with proxy
     try:
         user = wztgClient(
             "user",
@@ -356,17 +292,16 @@ if len(USER_SESSION_STRING) != 0:
             session_string=USER_SESSION_STRING,
             parse_mode=enums.ParseMode.HTML,
             no_updates=True,
-            proxy=SELECTED_PROXY
+            proxy=selected_proxy,
         ).start()
 
         IS_PREMIUM_USER = user.me.is_premium
         log_info("✅ USER client connected successfully!")
 
     except Exception as e:
-        log_error(f"❌ Proxy connection failed: {e}")
-        log_warning("➡ Switching to NORMAL (NO PROXY) connection...")
+        log_error(f"❌ Proxy failed: {e}")
+        log_warning("➡ Retrying WITHOUT proxy...")
 
-        # Step 3: Try connecting without proxy
         try:
             user = wztgClient(
                 "user",
@@ -375,14 +310,14 @@ if len(USER_SESSION_STRING) != 0:
                 session_string=USER_SESSION_STRING,
                 parse_mode=enums.ParseMode.HTML,
                 no_updates=True,
-                proxy=None
+                proxy=None,
             ).start()
 
             IS_PREMIUM_USER = user.me.is_premium
             log_info("✅ USER client connected WITHOUT proxy!")
 
-        except Exception as ee:
-            log_error(f"❌ USER client failed without proxy also: {ee}")
+        except Exception as e:
+            log_error(f"❌ USER client could not connect: {e}")
             user = ""
 
 
