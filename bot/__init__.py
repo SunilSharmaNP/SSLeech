@@ -303,6 +303,7 @@ if len(USER_SESSION_STRING) != 0:
         log_warning("➡ Retrying WITHOUT proxy...")
 
         try:
+
             user = wztgClient(
                 "user",
                 TELEGRAM_API,
@@ -310,8 +311,9 @@ if len(USER_SESSION_STRING) != 0:
                 session_string=USER_SESSION_STRING,
                 parse_mode=enums.ParseMode.HTML,
                 no_updates=True,
-                proxy=None,
+                proxy=proxy_dict
             ).start()
+
 
             IS_PREMIUM_USER = user.me.is_premium
             log_info("✅ USER client connected WITHOUT proxy!")
