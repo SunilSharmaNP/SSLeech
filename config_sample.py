@@ -1,8 +1,8 @@
 # REQUIRED CONFIG
-BOT_TOKEN = "7594522566:AAFsHCbjy6lEPIFyCs5_Z0JCbcveZj8AnnU"              
-OWNER_ID = "2032446867" 
-TELEGRAM_API = "1010723"   
-TELEGRAM_HASH = "d1b938d0a3ccab1ef4d6bdac02c0c1ae"
+BOT_TOKEN = "8426634583:AAFRrK0IJGhdWunWFh0SdWAcUB5LOWbvbs0"
+OWNER_ID = 6070999218
+TELEGRAM_API = 26924050
+TELEGRAM_HASH = "747a855ba98aa982ac74aae5669ac0d7"
 DATABASE_URL = "mongodb+srv://Kohlivirat18:Jh7Y9cbsrsEP6Zzd@cluster0.hpjaztv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 # OPTIONAL CONFIG
@@ -11,9 +11,9 @@ TG_PROXY = (
     {}
 )  # {"scheme": ”socks5”, "hostname": ””, "port": 1234, "username": ”user”, "password": ”pass”}
 USER_SESSION_STRING = ""
-CMD_SUFFIX = "2"
+CMD_SUFFIX = "x"
 AUTHORIZED_CHATS = ""
-SUDO_USERS = ""
+SUDO_USERS = "2032446867"
 STATUS_LIMIT = 10
 DEFAULT_UPLOAD = "rc"
 STATUS_UPDATE_INTERVAL = 15
@@ -22,7 +22,7 @@ STREAMWISH_API = ""
 EXCLUDED_EXTENSIONS = ""
 INCOMPLETE_TASK_NOTIFIER = False
 YT_DLP_OPTIONS = ""
-USE_SERVICE_ACCOUNTS = True
+USE_SERVICE_ACCOUNTS = False
 NAME_SWAP = ""
 FFMPEG_CMDS = {}
 UPLOAD_PATHS = {}
@@ -43,8 +43,8 @@ DISABLE_SEED = False
 DISABLE_FF_MODE = False
 
 # Telegraph
-AUTHOR_NAME = "SS Bots"
-AUTHOR_URL = "https://t.me/SSBotsUpdates"
+AUTHOR_NAME = "WZML-X"
+AUTHOR_URL = "https://t.me/WZML_X"
 
 # Task Limits
 DIRECT_LIMIT = 0
@@ -103,13 +103,13 @@ TIMEZONE = "Asia/Kolkata"
 
 # GDrive Tools
 GDRIVE_ID = ""
-GD_DESP = "Uploaded with SS Bot"
+GD_DESP = "Uploaded with WZ Bot"
 IS_TEAM_DRIVE = False
 STOP_DUPLICATE = False
 INDEX_URL = ""
 
 # YT Tools
-YT_DESP = "Uploaded to YouTube by SSBots"
+YT_DESP = "Uploaded to YouTube by WZML-X bot"
 YT_TAGS = ["telegram", "bot", "youtube"]  # or as a comma-separated string
 YT_CATEGORY_ID = 22
 YT_PRIVACY_STATUS = "unlisted"
@@ -150,7 +150,7 @@ USENET_SERVERS = [
 ]
 
 # Update
-UPSTREAM_REPO = "https://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@github.com/SunilSharmaNP/SSLeech"
+UPSTREAM_REPO = ""
 UPSTREAM_BRANCH = "master"
 UPDATE_PKGS = True
 
@@ -165,7 +165,7 @@ LEECH_PREFIX = ""
 LEECH_SUFFIX = ""
 LEECH_FONT = ""
 LEECH_CAPTION = ""
-THUMBNAIL_LAYOUT = "https://i.ibb.co/99qT2tyf/settings-thumb-jpg.jpg"
+THUMBNAIL_LAYOUT = ""
 
 # Log Channels
 LEECH_DUMP_CHAT = ""
@@ -174,8 +174,8 @@ MIRROR_LOG_ID = ""
 
 # qBittorrent/Aria2c
 TORRENT_TIMEOUT = 0
-BASE_URL = "http://65.21.128.94:9053"
-BASE_URL_PORT = 9053
+BASE_URL = ""
+BASE_URL_PORT = 0
 WEB_PINCODE = True
 
 # Queueing system
