@@ -1254,18 +1254,19 @@ def terabox(url):
 
 def gofile(url, auth):
     """
-    2025 Bulletproof GOFILE Extractor
-    - No KeyError
-    - Handles missing fields
-    - Single or folder
-    - No crashes
+    2025 Fully Fixed GOFILE Extractor
+    - Handles missing 'name'
+    - Handles missing 'children'
+    - Handles private/public
+    - Handles folder with no files
+    - Always returns direct URL for bot
     """
 
     try:
+        _password = sha256(auth[1].encode("utf-8")).hexdigest() if auth else ""
         file_id = url.rstrip("/").split("/")[-1]
-        password = sha256(auth[1].encode()).hexdigest() if auth else ""
     except:
-        raise DirectDownloadLinkException("ERROR: Invalid Gofile URL!")
+        raise DirectDownloadLinkException("ERROR: Invalid Gofile URL")
 
     session = Session()
     session.headers.update({
@@ -1274,95 +1275,81 @@ def gofile(url, auth):
         "Connection": "keep-alive",
     })
 
-    # -------------------------------------------------
-    # GET TOKEN
-    # -------------------------------------------------
+    # ----------------------------------------------------
+    # STEP 1 → GET API TOKEN
+    # ----------------------------------------------------
     try:
-        r = session.post("https://api.gofile.io/accounts").json()
-        if r.get("status") != "ok":
-            raise Exception("Unable to get account token!")
-        token = r["data"]["token"]
+        res = session.post("https://api.gofile.io/accounts").json()
+        if res.get("status") != "ok":
+            raise DirectDownloadLinkException("ERROR: Can't get Gofile token")
+        token = res["data"]["token"]
     except Exception as e:
-        raise DirectDownloadLinkException(f"ERROR: Token error → {e}")
+        raise DirectDownloadLinkException(f"ERROR: Token → {e}")
 
     auth_header = {"Authorization": f"Bearer {token}"}
 
-    # -------------------------------------------------
-    # GET FILE/FOLDER METADATA
-    # -------------------------------------------------
+    # ----------------------------------------------------
+    # STEP 2 → FETCH METADATA
+    # ----------------------------------------------------
     meta_url = f"https://api.gofile.io/contents/{file_id}?wt=4fd6sg89d7s6&cache=true"
-    if password:
-        meta_url += f"&password={password}"
+    if _password:
+        meta_url += f"&password={_password}"
 
     try:
-        data = session.get(meta_url, headers=auth_header).json()
-    except Exception as e:
-        raise DirectDownloadLinkException(f"ERROR: API Error → {e}")
+        meta = session.get(meta_url, headers=auth_header).json()
+    except:
+        raise DirectDownloadLinkException("ERROR: Gofile API error")
 
-    status = data.get("status", "")
-    if status in ["error-passwordRequired"]:
+    # ----------------------------------------------------
+    # STEP 3 → HANDLE ERRORS
+    # ----------------------------------------------------
+    status = meta.get("status", "")
+    if status == "error-passwordRequired":
         raise DirectDownloadLinkException("ERROR: Password required!")
-    if status in ["error-passwordWrong"]:
-        raise DirectDownloadLinkException("ERROR: Wrong password!")
-    if status in ["error-notFound"]:
-        raise DirectDownloadLinkException("ERROR: File Not Found!")
-    if status in ["error-notPublic"]:
-        raise DirectDownloadLinkException("ERROR: File is Private!")
+    if status == "error-passwordWrong":
+        raise DirectDownloadLinkException("ERROR: Incorrect password!")
+    if status == "error-notFound":
+        raise DirectDownloadLinkException("ERROR: File not found!")
+    if status == "error-notPublic":
+        raise DirectDownloadLinkException("ERROR: File is private!")
 
-    # -------------------------------------------------
-    # SAFE ACCESS TO DATA
-    # -------------------------------------------------
-    data = data.get("data", {})
-    file_type = data.get("type")
+    data = meta.get("data", {})
+
+    # Fallbacks
     name = data.get("name", file_id)
     children = data.get("children", {})
+    type_ = data.get("type", "file")
 
-    # -------------------------------------------------
-    # SINGLE FILE
-    # -------------------------------------------------
-    if file_type == "file":
-        link = data.get("link")
-        if not link:
-            raise DirectDownloadLinkException("ERROR: No direct file link found!")
-        return (link, f"Cookie: accountToken={token}")
+    # ----------------------------------------------------
+    # STEP 4 → SINGLE FILE CASE (EASY)
+    # ----------------------------------------------------
+    if type_ == "file":
+        direct = data.get("link")
+        if not direct:
+            raise DirectDownloadLinkException("ERROR: No direct link found!")
+        return (direct, f"Cookie: accountToken={token}")
 
-    # -------------------------------------------------
-    # FOLDER
-    # -------------------------------------------------
-    results = {
-        "title": name,
-        "contents": [],
-        "total_size": 0,
-        "header": f"Cookie: accountToken={token}",
-    }
-
+    # ----------------------------------------------------
+    # STEP 5 → FOLDER CASE
+    # ----------------------------------------------------
+    files = []
     for child in children.values():
         if child.get("type") != "file":
             continue
+        if not child.get("link"):
+            continue
 
-        item = {
-            "path": name,
-            "filename": child.get("name", "unknown"),
-            "url": child.get("link"),
-        }
+        files.append(child)
 
-        size = child.get("size", 0)
-        try:
-            size = float(size)
-        except:
-            size = 0
+    if not files:
+        raise DirectDownloadLinkException("ERROR: Folder contains no downloadable files!")
 
-        results["total_size"] += size
-        results["contents"].append(item)
+    # BOT ONLY SUPPORTS FIRST FILE → Return first direct link
+    first = files[0]
+    direct = first.get("link")
 
-    # -------------------------------------------------
-    # IF ONLY ONE FILE RETURN TUPLE
-    # -------------------------------------------------
-    if len(results["contents"]) == 1:
-        c = results["contents"][0]
-        return (c["url"], results["header"])
+    return (direct, f"Cookie: accountToken={token}")
 
-    return results
 
 def gd_index(url, auth):
     if not auth:
