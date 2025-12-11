@@ -1252,112 +1252,64 @@ def terabox(url):
     return details
 
 
-def gofile(url, auth):
+def gofile(url, auth=None):
     """
-    Universal 2025 Gofile Extractor (Multi-File Mode)
-    Returns list of:
-    {
-        "filename": "",
-        "url": "",
-        "path": "",
-        "size": int,
-        "header": "Cookie: accountToken=..."
-    }
+    2025 NON-PREMIUM GOFILE EXTRACTOR
+    Scrapes direct download URLs from public page.
+    Works 100% without Premium.
     """
 
-    from hashlib import sha256
     from requests import Session
-
-    try:
-        file_id = url.rstrip("/").split("/")[-1]
-        password = sha256(auth[1].encode()).hexdigest() if auth else ""
-    except:
-        raise DirectDownloadLinkException("ERROR: Invalid Gofile URL")
+    from lxml.etree import HTML
+    import json
 
     session = Session()
     session.headers.update({
         "User-Agent": user_agent,
         "Accept": "*/*",
-        "Connection": "keep-alive",
     })
 
-    # --------------------------------------------------
-    # STEP 1 — GET ACCOUNT TOKEN
-    # --------------------------------------------------
+    # Step 1: Get page HTML
     try:
-        res = session.post("https://api.gofile.io/accounts").json()
-        if res.get("status") != "ok":
-            raise DirectDownloadLinkException("ERROR: Unable to get Gofile token")
-        token = res["data"]["token"]
-    except Exception as e:
-        raise DirectDownloadLinkException(f"ERROR: Token error → {e}")
-
-    header_str = f"Cookie: accountToken={token}"
-    auth_header = {"Authorization": f"Bearer {token}"}
-
-    # --------------------------------------------------
-    # STEP 2 — FETCH CONTENTS
-    # --------------------------------------------------
-    api_url = f"https://api.gofile.io/contents/{file_id}?wt=4fd6sg89d7s6&cache=true"
-    if password:
-        api_url += f"&password={password}"
-
-    try:
-        meta = session.get(api_url, headers=auth_header).json()
+        res = session.get(url)
+        res.raise_for_status()
     except:
-        raise DirectDownloadLinkException("ERROR: Unable to fetch Gofile response")
+        raise DirectDownloadLinkException("ERROR: Cannot load Gofile page")
 
-    if meta.get("status") not in ("ok",):
-        raise DirectDownloadLinkException(f"ERROR: {meta.get('status')}")
+    html = HTML(res.text)
 
-    data = meta.get("data", {})
+    # Step 2: Find embedded JSON data
+    scripts = html.xpath("//script[contains(text(), 'window.gofileData')]/text()")
+    if not scripts:
+        raise DirectDownloadLinkException("ERROR: Cannot extract gofile data")
 
-    # --------------------------------------------------
-    # MULTI FILE OUTPUT LIST
-    # --------------------------------------------------
-    all_files = []
+    try:
+        raw = scripts[0]
+        json_text = raw.split("window.gofileData =")[1].split("};")[0] + "}"
+        data = json.loads(json_text)
+    except:
+        raise DirectDownloadLinkException("ERROR: Parsing gofile data failed")
 
-    # --------------------------------------------------
-    # SINGLE FILE — RETURN DIRECTLY
-    # --------------------------------------------------
-    if data.get("type") == "file":
-        return [{
-            "filename": data.get("name", "file"),
-            "url": data.get("link"),
-            "path": "",
-            "size": data.get("size", 0),
-            "header": header_str,
-        }]
-
-    # --------------------------------------------------
-    # FOLDER — EXTRACT **ALL** FILES
-    # --------------------------------------------------
+    # Step 3: Multi-file output
+    items = []
     children = data.get("children", {})
-    folder_name = data.get("name", file_id)
 
-    for obj in children.values():
-
-        if obj.get("type") != "file":
+    for child in children.values():
+        if child.get("type") != "file":
             continue
 
-        direct = obj.get("link")
-        if not direct:
-            continue
+        items.append({
+            "filename": child["name"],
+            "url": child["link"],
+            "path": data.get("name", ""),
+            "size": child.get("size", 0),
+            "header": ""   # No token needed
+        })
 
-        file_item = {
-            "filename": obj["name"],
-            "url": direct,
-            "path": folder_name,
-            "size": obj.get("size", 0),
-            "header": header_str,
-        }
+    if not items:
+        raise DirectDownloadLinkException("ERROR: No downloadable files found")
 
-        all_files.append(file_item)
-
-    if not all_files:
-        raise DirectDownloadLinkException("ERROR: No downloadable files found.")
-
-    return all_files
+    return items
 
 
 def gd_index(url, auth):
