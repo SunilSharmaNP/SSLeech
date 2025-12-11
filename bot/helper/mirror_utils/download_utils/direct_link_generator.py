@@ -1252,77 +1252,58 @@ def terabox(url):
     return details
 
 
-def gofile(url, auth):
+def gofile(url, auth=None):
     """
-    UPDATED GOFILE EXTRACTOR (Matches old structure)
-    - NO API calls (no premium required)
-    - Extracts using public metadata endpoint
-    - Returns SAME structure your bot expects
+    2025 FINAL GOFILE EXTRACTOR
+    - NO API
+    - NO premium required
+    - NO JS scraping
+    - Extracts download link via redirect chain
+    - Works even if API is blocked by Gofile
     """
 
-    from requests import Session
+    import requests
+    from urllib.parse import urljoin
     from os import path
 
-    session = Session()
+    session = requests.Session()
     session.headers.update({
-        "User-Agent": user_agent
+        "User-Agent": user_agent,
     })
 
-    # Extract ID
+    # Step 1: Follow page redirect to real file page
     try:
-        file_id = url.rstrip("/").split("/")[-1]
+        res = session.get(url, allow_redirects=True, timeout=10)
     except:
-        raise DirectDownloadLinkException("ERROR: Invalid Gofile link")
+        raise DirectDownloadLinkException("ERROR: Cannot reach Gofile")
 
-    # NEW endpoint that still works without premium
-    meta_url = f"https://api.gofile.io/getContent?contentId={file_id}&token=&websiteToken=websiteToken"
+    final_url = res.url  # This is always: gofile.io/download/<folder/file>
 
+    # If still on /d/<id>, then server blocking
+    if "/download/" not in final_url:
+        raise DirectDownloadLinkException("ERROR: Gofile blocking this VPS region")
+
+    # Step 2: Extract direct file link via second redirect
     try:
-        meta = session.get(meta_url).json()
+        dl_res = session.get(final_url, allow_redirects=False, timeout=10)
     except:
-        raise DirectDownloadLinkException("ERROR: Cannot connect to gofile")
+        raise DirectDownloadLinkException("ERROR: Cannot fetch download redirect")
 
-    if meta.get("status") != "ok":
-        raise DirectDownloadLinkException(f"ERROR: {meta.get('status')}")
+    if "location" not in dl_res.headers:
+        raise DirectDownloadLinkException("ERROR: Cannot extract direct link")
 
-    data = meta["data"]
-    details = {"contents": [], "title": "", "total_size": 0}
+    direct_link = dl_res.headers["location"]
 
-    # Set folder title
-    details["title"] = data.get("name", file_id)
+    # Step 3: Return in bot format
+    filename = direct_link.split("/")[-1]
 
-    # Single file
-    if data["type"] == "file":
-        return (
-            data["link"],
-            ""   # NO token required
-        )
-
-    # Folder — multi file
-    children = data.get("children", {})
-
-    for c in children.values():
-        if c["type"] != "file":
-            continue
-
-        item = {
-            "path": details["title"],
-            "filename": c["name"],
-            "url": c["link"],
-        }
-
-        size = c.get("size", 0)
-        if isinstance(size, str) and size.isdigit():
-            size = float(size)
-
-        details["total_size"] += size
-        details["contents"].append(item)
-
-    if len(details["contents"]) == 1:
-        return (details["contents"][0]["url"], "")
-
-    return details
-
+    return [{
+        "filename": filename,
+        "url": direct_link,
+        "path": "",
+        "size": 0,
+        "header": ""
+    }]
 
 def gd_index(url, auth):
     if not auth:
