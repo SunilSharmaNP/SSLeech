@@ -1252,64 +1252,76 @@ def terabox(url):
     return details
 
 
-def gofile(url, auth=None):
+def gofile(url, auth):
     """
-    2025 NON-PREMIUM GOFILE EXTRACTOR
-    Scrapes direct download URLs from public page.
-    Works 100% without Premium.
+    UPDATED GOFILE EXTRACTOR (Matches old structure)
+    - NO API calls (no premium required)
+    - Extracts using public metadata endpoint
+    - Returns SAME structure your bot expects
     """
 
     from requests import Session
-    from lxml.etree import HTML
-    import json
+    from os import path
 
     session = Session()
     session.headers.update({
-        "User-Agent": user_agent,
-        "Accept": "*/*",
+        "User-Agent": user_agent
     })
 
-    # Step 1: Get page HTML
+    # Extract ID
     try:
-        res = session.get(url)
-        res.raise_for_status()
+        file_id = url.rstrip("/").split("/")[-1]
     except:
-        raise DirectDownloadLinkException("ERROR: Cannot load Gofile page")
+        raise DirectDownloadLinkException("ERROR: Invalid Gofile link")
 
-    html = HTML(res.text)
-
-    # Step 2: Find embedded JSON data
-    scripts = html.xpath("//script[contains(text(), 'window.gofileData')]/text()")
-    if not scripts:
-        raise DirectDownloadLinkException("ERROR: Cannot extract gofile data")
+    # NEW endpoint that still works without premium
+    meta_url = f"https://api.gofile.io/getContent?contentId={file_id}&token=&websiteToken=websiteToken"
 
     try:
-        raw = scripts[0]
-        json_text = raw.split("window.gofileData =")[1].split("};")[0] + "}"
-        data = json.loads(json_text)
+        meta = session.get(meta_url).json()
     except:
-        raise DirectDownloadLinkException("ERROR: Parsing gofile data failed")
+        raise DirectDownloadLinkException("ERROR: Cannot connect to gofile")
 
-    # Step 3: Multi-file output
-    items = []
+    if meta.get("status") != "ok":
+        raise DirectDownloadLinkException(f"ERROR: {meta.get('status')}")
+
+    data = meta["data"]
+    details = {"contents": [], "title": "", "total_size": 0}
+
+    # Set folder title
+    details["title"] = data.get("name", file_id)
+
+    # Single file
+    if data["type"] == "file":
+        return (
+            data["link"],
+            ""   # NO token required
+        )
+
+    # Folder — multi file
     children = data.get("children", {})
 
-    for child in children.values():
-        if child.get("type") != "file":
+    for c in children.values():
+        if c["type"] != "file":
             continue
 
-        items.append({
-            "filename": child["name"],
-            "url": child["link"],
-            "path": data.get("name", ""),
-            "size": child.get("size", 0),
-            "header": ""   # No token needed
-        })
+        item = {
+            "path": details["title"],
+            "filename": c["name"],
+            "url": c["link"],
+        }
 
-    if not items:
-        raise DirectDownloadLinkException("ERROR: No downloadable files found")
+        size = c.get("size", 0)
+        if isinstance(size, str) and size.isdigit():
+            size = float(size)
 
-    return items
+        details["total_size"] += size
+        details["contents"].append(item)
+
+    if len(details["contents"]) == 1:
+        return (details["contents"][0]["url"], "")
+
+    return details
 
 
 def gd_index(url, auth):
