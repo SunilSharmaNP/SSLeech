@@ -1254,17 +1254,23 @@ def terabox(url):
 
 def gofile(url, auth):
     """
-    2025 Fully Fixed GOFILE Extractor
-    - Handles missing 'name'
-    - Handles missing 'children'
-    - Handles private/public
-    - Handles folder with no files
-    - Always returns direct URL for bot
+    Universal 2025 Gofile Extractor (Multi-File Mode)
+    Returns list of:
+    {
+        "filename": "",
+        "url": "",
+        "path": "",
+        "size": int,
+        "header": "Cookie: accountToken=..."
+    }
     """
 
+    from hashlib import sha256
+    from requests import Session
+
     try:
-        _password = sha256(auth[1].encode("utf-8")).hexdigest() if auth else ""
         file_id = url.rstrip("/").split("/")[-1]
+        password = sha256(auth[1].encode()).hexdigest() if auth else ""
     except:
         raise DirectDownloadLinkException("ERROR: Invalid Gofile URL")
 
@@ -1275,80 +1281,83 @@ def gofile(url, auth):
         "Connection": "keep-alive",
     })
 
-    # ----------------------------------------------------
-    # STEP 1 → GET API TOKEN
-    # ----------------------------------------------------
+    # --------------------------------------------------
+    # STEP 1 — GET ACCOUNT TOKEN
+    # --------------------------------------------------
     try:
         res = session.post("https://api.gofile.io/accounts").json()
         if res.get("status") != "ok":
-            raise DirectDownloadLinkException("ERROR: Can't get Gofile token")
+            raise DirectDownloadLinkException("ERROR: Unable to get Gofile token")
         token = res["data"]["token"]
     except Exception as e:
-        raise DirectDownloadLinkException(f"ERROR: Token → {e}")
+        raise DirectDownloadLinkException(f"ERROR: Token error → {e}")
 
+    header_str = f"Cookie: accountToken={token}"
     auth_header = {"Authorization": f"Bearer {token}"}
 
-    # ----------------------------------------------------
-    # STEP 2 → FETCH METADATA
-    # ----------------------------------------------------
-    meta_url = f"https://api.gofile.io/contents/{file_id}?wt=4fd6sg89d7s6&cache=true"
-    if _password:
-        meta_url += f"&password={_password}"
+    # --------------------------------------------------
+    # STEP 2 — FETCH CONTENTS
+    # --------------------------------------------------
+    api_url = f"https://api.gofile.io/contents/{file_id}?wt=4fd6sg89d7s6&cache=true"
+    if password:
+        api_url += f"&password={password}"
 
     try:
-        meta = session.get(meta_url, headers=auth_header).json()
+        meta = session.get(api_url, headers=auth_header).json()
     except:
-        raise DirectDownloadLinkException("ERROR: Gofile API error")
+        raise DirectDownloadLinkException("ERROR: Unable to fetch Gofile response")
 
-    # ----------------------------------------------------
-    # STEP 3 → HANDLE ERRORS
-    # ----------------------------------------------------
-    status = meta.get("status", "")
-    if status == "error-passwordRequired":
-        raise DirectDownloadLinkException("ERROR: Password required!")
-    if status == "error-passwordWrong":
-        raise DirectDownloadLinkException("ERROR: Incorrect password!")
-    if status == "error-notFound":
-        raise DirectDownloadLinkException("ERROR: File not found!")
-    if status == "error-notPublic":
-        raise DirectDownloadLinkException("ERROR: File is private!")
+    if meta.get("status") not in ("ok",):
+        raise DirectDownloadLinkException(f"ERROR: {meta.get('status')}")
 
     data = meta.get("data", {})
 
-    # Fallbacks
-    name = data.get("name", file_id)
+    # --------------------------------------------------
+    # MULTI FILE OUTPUT LIST
+    # --------------------------------------------------
+    all_files = []
+
+    # --------------------------------------------------
+    # SINGLE FILE — RETURN DIRECTLY
+    # --------------------------------------------------
+    if data.get("type") == "file":
+        return [{
+            "filename": data.get("name", "file"),
+            "url": data.get("link"),
+            "path": "",
+            "size": data.get("size", 0),
+            "header": header_str,
+        }]
+
+    # --------------------------------------------------
+    # FOLDER — EXTRACT **ALL** FILES
+    # --------------------------------------------------
     children = data.get("children", {})
-    type_ = data.get("type", "file")
+    folder_name = data.get("name", file_id)
 
-    # ----------------------------------------------------
-    # STEP 4 → SINGLE FILE CASE (EASY)
-    # ----------------------------------------------------
-    if type_ == "file":
-        direct = data.get("link")
+    for obj in children.values():
+
+        if obj.get("type") != "file":
+            continue
+
+        direct = obj.get("link")
         if not direct:
-            raise DirectDownloadLinkException("ERROR: No direct link found!")
-        return (direct, f"Cookie: accountToken={token}")
-
-    # ----------------------------------------------------
-    # STEP 5 → FOLDER CASE
-    # ----------------------------------------------------
-    files = []
-    for child in children.values():
-        if child.get("type") != "file":
-            continue
-        if not child.get("link"):
             continue
 
-        files.append(child)
+        file_item = {
+            "filename": obj["name"],
+            "url": direct,
+            "path": folder_name,
+            "size": obj.get("size", 0),
+            "header": header_str,
+        }
 
-    if not files:
-        raise DirectDownloadLinkException("ERROR: Folder contains no downloadable files!")
+        all_files.append(file_item)
 
-    # BOT ONLY SUPPORTS FIRST FILE → Return first direct link
-    first = files[0]
-    direct = first.get("link")
+    if not all_files:
+        raise DirectDownloadLinkException("ERROR: No downloadable files found.")
 
-    return (direct, f"Cookie: accountToken={token}")
+    return all_files
 
 
 def gd_index(url, auth):
