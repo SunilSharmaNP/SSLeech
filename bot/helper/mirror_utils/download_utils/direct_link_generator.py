@@ -663,6 +663,10 @@ def direct_link_generator(link):
             "streamtape.net",
             "streamta.pe",
             "streamtape.xyz",
+            "strcloud.club",
+            "shavetape.cash",
+            "tapeadsenjoyer.com",
+            "strtape.site",
         ]
     ):
         return streamtape(link)
