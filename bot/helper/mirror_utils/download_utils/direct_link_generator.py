@@ -58,6 +58,15 @@ hub_list = [
     "udlinks",
     "drivehub",
     "drivesharer",
+    "vcloud",
+    "driveleech",
+    "neo",
+    "gdrex",
+    "pixelcdn",
+    "extralink",
+    "luxdrive",
+    "nexdrive",
+    "hblinks",
 ]
 
 
@@ -280,16 +289,72 @@ def pbx_resolve_and_select(hub_url):
             "https://pbx1botapi.vercel.app/api/gdflix",
         ]
 
+    elif "vcloud" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/vcloud",
+        ]
+
+    elif "hubcdn" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/hubcdn",
+        ]
+
+    elif "driveleech" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/driveleech",
+        ]
+
+    elif "neo" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/neo",
+        ]
+
+    elif "gdrex" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/gdrex",
+        ]
+
+    elif "pixelxdn" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/pixelcdn",
+        ]
+
+    elif "extralink" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/extralink",
+        ]
+
+    elif "luxdrive" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/luxdrive",
+        ]
+
+    elif "nexdrive" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi2.vercel.app/api/nexdrive",
+        ]
+
+    elif "hblinks" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi2.vercel.app/api/hblinks",
+        ]
+
     else:
         # fallback – try all
         PBX_APIS = [
             "https://pbx1botapi.vercel.app/api/hubcloud",
-            "https://pbx1botapi.vercel.app/api/hubdrive",
-            "https://pbx1botapi.vercel.app/api/gdflix",
-            "https://pbx1botapi.vercel.app/api/driveleech",
+            "https://pbx1botapi.vercel.app/api/vcloud",
             "https://pbx1botapi.vercel.app/api/hubcdn",
+            "https://pbx1botapi.vercel.app/api/driveleech",
+            "https://pbx1botapi.vercel.app/api/hubdrive",
+            "https://pbx1botapi.vercel.app/api/neo",
+            "https://pbx1botapi.vercel.app/api/gdrex",
+            "https://pbx1botapi.vercel.app/api/pixelcdn",
+            "https://pbx1botapi.vercel.app/api/extralink",
+            "https://pbx1botapi.vercel.app/api/luxdrive",
+            "https://pbx1botapi.vercel.app/api/gdflix",
+            "https://pbx1botsapi2.vercel.app/api/nexdrive",
             "https://pbx1botsapi2.vercel.app/api/hblinks",
-            "https://pbx1botsapi2.vercel.app/api/vega",
         ]
 
     session = Session()
