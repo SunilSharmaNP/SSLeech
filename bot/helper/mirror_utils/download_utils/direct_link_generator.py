@@ -178,9 +178,9 @@ def direct_link_generator(link):
         try:
             return pbx_resolve_and_select(link)
         except Exception as e:
-            LOGGER.error(f"PBX failed for hub link: {e}")
+            LOGGER.error(f"failed for hub link: {e}")
             raise DirectDownloadLinkException(
-                "ERROR: Failed to bypass hub/gdflix link using PBX API"
+                "ERROR: Failed to bypass"
             )
 
 
@@ -260,16 +260,13 @@ def direct_link_generator(link):
 
 def pbx_resolve_and_select(hub_url):
     """
-    PBX API resolver (FIXED):
-    - Smart PBX selection
-    - Uses GET instead of HEAD
-    - Tries links in priority order
-    - Returns first WORKING direct download URL
+    PBX API resolver (FINAL):
+    - Domain aware PBX selection
+    - Safe GET check (Range=0-0)
+    - Priority based mirror selection
     """
 
     domain = urlparse(hub_url).hostname or ""
-
-    PBX_APIS = []
 
     # -------- DOMAIN → API MAPPING --------
     if "hubcloud" in domain or "hubcdn" in domain:
@@ -285,62 +282,36 @@ def pbx_resolve_and_select(hub_url):
         ]
 
     elif "gdflix" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/gdflix",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/gdflix"]
 
     elif "vcloud" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/vcloud",
-        ]
-
-    elif "hubcdn" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/hubcdn",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/vcloud"]
 
     elif "driveleech" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/driveleech",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/driveleech"]
 
     elif "neo" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/neo",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/neo"]
 
     elif "gdrex" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/gdrex",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/gdrex"]
 
-    elif "pixelxdn" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/pixelcdn",
-        ]
+    elif "pixelcdn" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/pixelcdn"]
 
     elif "extralink" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/extralink",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/extralink"]
 
     elif "luxdrive" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi.vercel.app/api/luxdrive",
-        ]
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/luxdrive"]
 
     elif "nexdrive" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi2.vercel.app/api/nexdrive",
-        ]
+        PBX_APIS = ["https://pbx1botsapi2.vercel.app/api/nexdrive"]
 
     elif "hblinks" in domain:
-        PBX_APIS = [
-            "https://pbx1botapi2.vercel.app/api/hblinks",
-        ]
+        PBX_APIS = ["https://pbx1botsapi2.vercel.app/api/hblinks"]
 
     else:
-        # fallback – try all
         PBX_APIS = [
             "https://pbx1botapi.vercel.app/api/hubcloud",
             "https://pbx1botapi.vercel.app/api/vcloud",
@@ -376,10 +347,10 @@ def pbx_resolve_and_select(hub_url):
             if not links:
                 continue
 
-            # -------- PRIORITY ORDER --------
+            # -------- PRIORITY --------
             def priority(item):
                 t = (item.get("type") or "").lower()
-                if "fsl" in t or "direct" in t or "cdn" in t:
+                if any(x in t for x in ("fsl", "direct", "cloud", "cdn")):
                     return 0
                 if "pixel" in t:
                     return 1
@@ -387,26 +358,21 @@ def pbx_resolve_and_select(hub_url):
 
             links.sort(key=priority)
 
-            # -------- TRY LINKS (GET STREAM) --------
+            # -------- SAFE CHECK (Range) --------
             for item in links:
                 dl = item.get("url")
                 if not dl:
                     continue
-
                 try:
                     r = session.get(
                         dl,
-                        stream=True,
+                        headers={"Range": "bytes=0-0"},
                         allow_redirects=True,
-                        timeout=15,
+                        timeout=12,
                     )
-
                     if r.status_code in (200, 206):
-                        LOGGER.info(
-                            f"PBX SUCCESS → {item.get('type')} | {dl}"
-                        )
+                        LOGGER.info(f"PBX SUCCESS → {item.get('type')} | {dl}")
                         return dl
-
                 except Exception:
                     continue
 
@@ -414,9 +380,8 @@ def pbx_resolve_and_select(hub_url):
             continue
 
     raise DirectDownloadLinkException(
-        "PBX ERROR: No working direct download link found"
+        "ERROR: No working direct download link found"
     )
-
 
 
 def filepress(url):
