@@ -82,6 +82,15 @@ gdflix_list = [
     "gdflix.xyz",
 ]
 
+# -------- HUBDRIVE ONLY --------
+hubdrive_list = [
+    "hubdrive",
+    "hubdrive.xyz",
+    "hubdrive.in",
+    "hubdrive.one",
+]
+
+
 
 
 debrid_sites = [
@@ -214,6 +223,11 @@ def direct_link_generator(link):
     
         return hubcloud_bypass_single(link)
 
+    # -------- HUBDRIVE --------
+    elif any(x in domain for x in hubdrive_list):
+        return hubcloud_bypass_single(link)
+
+
  
     elif "filepress" in domain:
         return filepress(link)
@@ -298,6 +312,24 @@ def detect_hubcloud_base(url):
     except:
         return "https://hubcloud.one"
 
+def hubdrive_to_hubcloud(url):
+    """
+    Convert HubDrive / Hub family URLs to HubCloud equivalent
+    """
+    try:
+        u = urlparse(url)
+        path = u.path or ""
+
+        # /file/XXXX or /drive/XXXX
+        if "/file/" in path or "/drive/" in path:
+            return f"https://hubcloud.one{path}"
+
+    except Exception:
+        pass
+
+    return url
+
+
 
 def get_base(url):
     u = urlparse(url)
@@ -308,6 +340,9 @@ def fix_url(u):
     return quote(u, safe=":/?#[]@!$&'()*+,;=%")
 
 def hubcloud_bypass_single(url):
+    # 🔥 HubDrive → HubCloud bridge
+    url = hubdrive_to_hubcloud(url)
+    
     base = detect_hubcloud_base(url)
     new_url = url.replace(get_base(url), base)
 
