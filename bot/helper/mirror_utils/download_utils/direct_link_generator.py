@@ -54,22 +54,6 @@ anonfilesBaseSites = [
 # -------- HUB FAMILY (HubCloud type sites) --------
 hub_list = [
     "hubcloud",
-    "hubdrive",
-    "hubcdn",
-    "katdrive",
-    "drivebot",
-    "udlinks",
-    "drivehub",
-    "drivesharer",
-    "vcloud",
-    "driveleech",
-    "neo",
-    "gdrex",
-    "pixelcdn",
-    "extralink",
-    "luxdrive",
-    "nexdrive",
-    "hblinks",
 ]
 
 
