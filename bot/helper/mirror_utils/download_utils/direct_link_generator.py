@@ -36,6 +36,15 @@ user_agent = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
 
+# ✅ Cloudflare bypass scraper (GLOBAL)
+scraper = create_scraper(
+    browser={
+        "browser": "chrome",
+        "platform": "windows",
+        "mobile": False
+    }
+)
+
 # --- Domain Lists ---
 
 fmed_list = [
@@ -314,30 +323,27 @@ def hubdrive_to_hubcloud(url):
     return url
 
 def hubdrive_resolve(url):
-    """
-    Extract HubCloud /drive link from HubDrive page
-    """
     try:
-        r = get(url, headers={"User-Agent": user_agent}, timeout=15)
+        r = scraper.get(url, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
 
-        # 🔍 common pattern
+        # 🔥 primary button
         a = soup.find("a", href=re.compile(r"/drive/"))
         if a:
             return "https://hubcloud.one" + a["href"]
 
-        # 🔍 JS redirect fallback
-        m = re.search(r'location\.href\s*=\s*"([^"]+)"', r.text)
-        if m:
-            link = m.group(1)
-            if link.startswith("/"):
-                return "https://hubcloud.one" + link
-            return link
+        # 🔥 fallback JS
+        for s in soup.find_all("script"):
+            t = s.text or ""
+            m = re.search(r'"/drive/[^"]+"', t)
+            if m:
+                return "https://hubcloud.one" + m.group(0).strip('"')
 
-    except Exception:
-        pass
+    except Exception as e:
+        LOGGER.error(f"HubDrive resolve failed: {e}")
 
     return url
+
 
 
 def get_base(url):
@@ -356,7 +362,7 @@ def hubcloud_bypass_single(url):
     base = detect_hubcloud_base(url)
     new_url = url.replace(get_base(url), base)
 
-    r = get(new_url, headers={"User-Agent": user_agent}, timeout=15)
+    r = scraper.get(new_url, timeout=15)
     soup = BeautifulSoup(r.text, "html.parser")
 
     link = ""
@@ -378,7 +384,7 @@ def hubcloud_bypass_single(url):
     if not link.startswith("http"):
         link = base + link
 
-    r2 = get(link, headers={"User-Agent": user_agent}, timeout=15)
+    r2 = scraper.get(link, timeout=15)
     soup2 = BeautifulSoup(r2.text, "html.parser")
 
     mirrors = []
