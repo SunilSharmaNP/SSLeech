@@ -299,46 +299,56 @@ def direct_link_generator(link):
 
 def hubdrive_bypass_single(url):
     """
-    HubDrive → HubCloud via HTTP redirect (REAL method)
+    HubDrive bypass using session + cookies + referer
     """
     try:
         LOGGER.info(f"[HubDrive] Resolving: {url}")
 
-        # ❗ Redirects OFF so we can capture Location header
-        r = scraper.get(
+        sess = scraper  # same cloudflare session
+
+        # STEP 1: Open page (set cookies)
+        r1 = sess.get(
             url,
-            headers={"User-Agent": user_agent},
-            allow_redirects=False,
+            headers={
+                "User-Agent": user_agent,
+                "Referer": "https://www.google.com/"
+            },
             timeout=15
         )
 
-        # 🔥 Case 1: Direct redirect via Location header
-        location = r.headers.get("Location")
-        if location and "/drive/" in location:
-            if location.startswith("/"):
-                hubcloud_url = "https://hubcloud.one" + location
-            else:
-                hubcloud_url = location
+        # STEP 2: Re-request WITH referer (important)
+        r2 = sess.get(
+            url,
+            headers={
+                "User-Agent": user_agent,
+                "Referer": url
+            },
+            timeout=15
+        )
 
-            LOGGER.info(f"[HubDrive] REDIRECT → {hubcloud_url}")
-            return hubcloud_bypass_single(hubcloud_url)
+        text = r2.text
 
-        # 🔥 Case 2: Sometimes 200 + JS redirect trigger URL
-        r2 = scraper.get(url, timeout=15)
-        html = r2.text
-
-        m = re.search(r'(https?://[^"\']+/drive/[A-Za-z0-9]+)', html)
+        # 🔥 METHOD 1: Embedded JSON / API data
+        m = re.search(r'"(\/drive\/[A-Za-z0-9]+)"', text)
         if m:
-            hubcloud_url = m.group(1)
-            LOGGER.info(f"[HubDrive] HTML URL → {hubcloud_url}")
+            hubcloud_url = "https://hubcloud.one" + m.group(1)
+            LOGGER.info(f"[HubDrive] FOUND → {hubcloud_url}")
             return hubcloud_bypass_single(hubcloud_url)
 
-        raise DirectDownloadLinkException("HubDrive: Redirect not found")
+        # 🔥 METHOD 2: Absolute URL fallback
+        m2 = re.search(r'(https?://[^"\']+/drive/[A-Za-z0-9]+)', text)
+        if m2:
+            hubcloud_url = m2.group(1)
+            LOGGER.info(f"[HubDrive] FOUND ABS → {hubcloud_url}")
+            return hubcloud_bypass_single(hubcloud_url)
+
+        raise DirectDownloadLinkException("HubDrive: Drive link not found")
 
     except DirectDownloadLinkException:
         raise
     except Exception as e:
         raise DirectDownloadLinkException(f"HubDrive error: {e}")
+
 
 def detect_hubcloud_base(url):
     try:
