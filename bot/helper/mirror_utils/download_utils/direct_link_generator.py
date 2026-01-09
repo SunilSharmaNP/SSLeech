@@ -434,6 +434,14 @@ def gdflix_bypass_single(url):
     size = gdflix_scan(html, r"[\d.]+\s*(GB|MB)") or "Unknown"
 
     links = []
+    if gofile:
+        links.append({"type": "gofile", "url": gofile})
+    if pub:
+        links.append({"type": "pub", "url": pub})
+    if workers:
+        links.append({"type": "workers", "url": workers})
+    if test:
+        links.append({"type": "test", "url": test})
     if google:
         links.append({"type": "google", "url": google})
     if pix:
@@ -447,10 +455,14 @@ def gdflix_bypass_single(url):
         raise DirectDownloadLinkException("GDFlix: No links found")
 
     priority = {
-        "google": 0,
-        "pixeldrain": 1,
-        "telegram": 2,
-        "source": 3
+        "gofile": 0,
+        "pub": 1,
+        "workers": 2,
+        "test": 3,
+        "google": 4,
+        "pixeldrain": 5,
+        "telegram": 6,
+        "source": 7
     }
     links.sort(key=lambda x: priority.get(x["type"], 99))
 
