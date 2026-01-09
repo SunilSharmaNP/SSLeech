@@ -427,6 +427,57 @@ def gdflix_get_google(instant):
 
     return None
 
+def gdflix_bypass_single(url):
+    html, final = gdflix_fetch_html(url)
+
+    instant = gdflix_get_instant(url)
+    google = gdflix_get_google(instant)
+
+    pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
+    if pix:
+        pix = pix.replace("?embed", "")
+
+    tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
+
+    gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
+    pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
+    workers = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
+    test = gdflix_scan(html, r"https://test\.[^\"'\s]+")
+
+    links = []
+
+    if gofile:
+        links.append({"type": "gofile", "url": gofile})
+    if pub:
+        links.append({"type": "pub", "url": pub})
+    if workers:
+        links.append({"type": "workers", "url": workers})
+    if test:
+        links.append({"type": "test", "url": test})
+    if google:
+        links.append({"type": "google", "url": google})
+    if pix:
+        links.append({"type": "pixeldrain", "url": pix})
+    if tg:
+        links.append({"type": "telegram", "url": tg})
+
+    if not links:
+        raise DirectDownloadLinkException("GDFlix: No usable links")
+
+    priority = {
+        "gofile": 0,
+        "pub": 1,
+        "workers": 2,
+        "test": 3,
+        "google": 4,
+        "pixeldrain": 5,
+        "telegram": 6,
+    }
+
+    links.sort(key=lambda x: priority.get(x["type"], 99))
+    return links[0]["url"]
+
+
 
 def gdflix_bypass(url):
     html, final = gdflix_fetch_html(url)
