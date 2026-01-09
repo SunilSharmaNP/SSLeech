@@ -351,7 +351,7 @@ def fix_url(u):
 def hubcloud_bypass_single(url):
     # 🔥 HUBDRIVE → HUBCLOUD RESOLVE
     if "hubdrive" in url:
-        url = hubdrive_resolve(url))
+        url = hubdrive_resolve(url)
     
     base = detect_hubcloud_base(url)
     new_url = url.replace(get_base(url), base)
