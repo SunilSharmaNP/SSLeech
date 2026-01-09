@@ -408,6 +408,7 @@ def gdflix_get_instant(url):
 def unwrap_fastcdn(url):
     if not url:
         return None
+
     if "fastcdn-dl.pages.dev" in url and "url=" in url:
         try:
             qs = parse_qs(urlparse(url).query)
@@ -418,7 +419,12 @@ def unwrap_fastcdn(url):
                     return pure
         except:
             pass
+
+        # ❌ agar fastcdn hai but unwrap fail → DROP
+        return None
+
     return url
+
 
 
 def gdflix_get_google(instant):
@@ -460,7 +466,7 @@ def gdflix_bypass_single(url):
     html, final = gdflix_fetch_html(url)
 
     instant = gdflix_get_instant(url)
-    google = gdflix_get_google(instant)   # already unwraps fastcdn
+    google = unwrap_fastcdn(gdflix_get_google(instant))
 
     pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
     if pix:
@@ -475,8 +481,8 @@ def gdflix_bypass_single(url):
 
     links = []
 
-    # 🔥 GOOGLE – ALWAYS FIRST
-    if google and "video-downloads.googleusercontent.com" in google:
+    # ⭐ GOOGLE FIRST
+    if google:
         links.append({"type": "google", "url": google})
 
     if gofile:
@@ -484,17 +490,17 @@ def gdflix_bypass_single(url):
 
     if pub:
         pub = unwrap_fastcdn(pub)
-        if "fastcdn-dl.pages.dev" not in pub:
+        if pub:
             links.append({"type": "pub", "url": pub})
 
     if workers:
         workers = unwrap_fastcdn(workers)
-        if "fastcdn-dl.pages.dev" not in workers:
+        if workers:
             links.append({"type": "workers", "url": workers})
 
     if test:
         test = unwrap_fastcdn(test)
-        if "fastcdn-dl.pages.dev" not in test:
+        if test:
             links.append({"type": "test", "url": test})
 
     if pix:
@@ -507,7 +513,7 @@ def gdflix_bypass_single(url):
         raise DirectDownloadLinkException("GDFlix: No usable links")
 
     priority = {
-        "google": 0,        # ⭐ ALWAYS FIRST
+        "google": 0,
         "gofile": 1,
         "pub": 2,
         "workers": 3,
