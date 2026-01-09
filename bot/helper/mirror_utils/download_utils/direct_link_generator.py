@@ -355,14 +355,10 @@ def fix_url(u):
     return quote(u, safe=":/?#[]@!$&'()*+,;=%")
 
 def hubcloud_bypass_single(url):
-    # 🔥 HUBDRIVE → HUBCLOUD RESOLVE
-    if "hubdrive" in url:
-        url = hubdrive_resolve(url)
-    
     base = detect_hubcloud_base(url)
     new_url = url.replace(get_base(url), base)
 
-    r = scraper.get(new_url, timeout=15)
+    r = get(new_url, headers={"User-Agent": user_agent}, timeout=15)
     soup = BeautifulSoup(r.text, "html.parser")
 
     link = ""
@@ -384,7 +380,7 @@ def hubcloud_bypass_single(url):
     if not link.startswith("http"):
         link = base + link
 
-    r2 = scraper.get(link, timeout=15)
+    r2 = get(link, headers={"User-Agent": user_agent}, timeout=15)
     soup2 = BeautifulSoup(r2.text, "html.parser")
 
     mirrors = []
