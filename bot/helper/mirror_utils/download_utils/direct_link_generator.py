@@ -442,6 +442,12 @@ def gdflix_bypass_single(url):
     tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
 
     title = gdflix_scan(html, r"<title>(.*?)</title>")
+    # ---- EXTRA MIRRORS ----
+    gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
+    pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
+    workers = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
+    test = gdflix_scan(html, r"https://test\.[^\"'\s]+")
+
     if title:
         title = re.sub(r"</?title>", "", title).strip()
     else:
@@ -497,6 +503,8 @@ def gdflix_bypass(url):
         raise DirectDownloadLinkException("GDFlix pack failed")
 
     return gdflix_bypass_single(url)
+
+ye he mera code
 
 
 
