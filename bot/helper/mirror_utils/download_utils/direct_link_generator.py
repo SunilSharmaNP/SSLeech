@@ -313,6 +313,31 @@ def hubdrive_to_hubcloud(url):
 
     return url
 
+def hubdrive_resolve(url):
+    """
+    Extract HubCloud /drive link from HubDrive page
+    """
+    try:
+        r = get(url, headers={"User-Agent": user_agent}, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # 🔍 common pattern
+        a = soup.find("a", href=re.compile(r"/drive/"))
+        if a:
+            return "https://hubcloud.one" + a["href"]
+
+        # 🔍 JS redirect fallback
+        m = re.search(r'location\.href\s*=\s*"([^"]+)"', r.text)
+        if m:
+            link = m.group(1)
+            if link.startswith("/"):
+                return "https://hubcloud.one" + link
+            return link
+
+    except Exception:
+        pass
+
+    return url
 
 
 def get_base(url):
@@ -324,8 +349,9 @@ def fix_url(u):
     return quote(u, safe=":/?#[]@!$&'()*+,;=%")
 
 def hubcloud_bypass_single(url):
-    # 🔥 HubDrive → HubCloud bridge
-    url = hubdrive_to_hubcloud(url)
+    # 🔥 HUBDRIVE → HUBCLOUD RESOLVE
+    if "hubdrive" in url:
+        url = hubdrive_resolve(url))
     
     base = detect_hubcloud_base(url)
     new_url = url.replace(get_base(url), base)
