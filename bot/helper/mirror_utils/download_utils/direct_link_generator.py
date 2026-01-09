@@ -471,7 +471,9 @@ def gdflix_bypass_single(url):
     if tg:
         links.append({"type": "telegram", "url": tg})
 
-    links.append({"type": "source", "url": final})
+    if "video-downloads.googleusercontent.com" in final:
+        links.append({"type": "google", "url": final})
+
 
     if not links:
         raise DirectDownloadLinkException("GDFlix: No links found")
