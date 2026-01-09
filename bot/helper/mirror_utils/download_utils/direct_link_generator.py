@@ -441,21 +441,17 @@ def gdflix_bypass_single(url):
 
     tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
 
-    title = gdflix_scan(html, r"<title>(.*?)</title>")
     # ---- EXTRA MIRRORS ----
     gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
     pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
     workers = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
     test = gdflix_scan(html, r"https://test\.[^\"'\s]+")
 
-    if title:
-        title = re.sub(r"</?title>", "", title).strip()
-    else:
-        title = "Unknown"
-
-    size = gdflix_scan(html, r"[\d.]+\s*(GB|MB)") or "Unknown"
+    # 🔥 IMPORTANT: fastcdn / final NEVER use
+    # 🔥 only real google link allowed
 
     links = []
+
     if gofile:
         links.append({"type": "gofile", "url": gofile})
     if pub:
@@ -464,20 +460,17 @@ def gdflix_bypass_single(url):
         links.append({"type": "workers", "url": workers})
     if test:
         links.append({"type": "test", "url": test})
-    if google:
+    if google and "video-downloads.googleusercontent.com" in google:
         links.append({"type": "google", "url": google})
     if pix:
         links.append({"type": "pixeldrain", "url": pix})
     if tg:
         links.append({"type": "telegram", "url": tg})
 
-    if "video-downloads.googleusercontent.com" in final:
-        links.append({"type": "google", "url": final})
-
-
     if not links:
-        raise DirectDownloadLinkException("GDFlix: No links found")
+        raise DirectDownloadLinkException("GDFlix: No usable links")
 
+    # ✅ TUMHARI PRIORITY — UNCHANGED
     priority = {
         "gofile": 0,
         "pub": 1,
@@ -485,12 +478,12 @@ def gdflix_bypass_single(url):
         "test": 3,
         "google": 4,
         "pixeldrain": 5,
-        "telegram": 6,
-        "source": 7
+        "telegram": 6
     }
-    links.sort(key=lambda x: priority.get(x["type"], 99))
 
+    links.sort(key=lambda x: priority.get(x["type"], 99))
     return links[0]["url"]
+
 
 def gdflix_bypass(url):
     html, final = gdflix_fetch_html(url)
