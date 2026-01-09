@@ -218,7 +218,8 @@ def direct_link_generator(link):
 
     # -------- HUBDRIVE --------
     elif any(x in domain for x in hubdrive_list):
-        return hubcloud_bypass_single(link)
+        return hubdrive_bypass_single(link)
+
 
 
  
@@ -295,6 +296,38 @@ def direct_link_generator(link):
         raise DirectDownloadLinkException("ERROR: R.I.P Zippyshare")
     else:
         raise DirectDownloadLinkException(f"No Direct link function found for {link}")
+
+def hubdrive_bypass_single(url):
+    """
+    Handle HubDrive links safely and convert them to HubCloud
+    """
+
+    try:
+        # Cloudflare safe request
+        r = scraper.get(url, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # 1️⃣ Normal anchor redirect
+        a = soup.find("a", href=re.compile(r"/drive/"))
+        if a:
+            hubcloud_url = "https://hubcloud.one" + a["href"]
+            LOGGER.info(f"[HubDrive] Resolved → {hubcloud_url}")
+            return hubcloud_bypass_single(hubcloud_url)
+
+        # 2️⃣ JS redirect fallback
+        for s in soup.find_all("script"):
+            t = s.text or ""
+            m = re.search(r'"/drive/[^"]+"', t)
+            if m:
+                hubcloud_url = "https://hubcloud.one" + m.group(0).strip('"')
+                LOGGER.info(f"[HubDrive] JS Resolved → {hubcloud_url}")
+                return hubcloud_bypass_single(hubcloud_url)
+
+        raise DirectDownloadLinkException("HubDrive: Unable to resolve link")
+
+    except Exception as e:
+        raise DirectDownloadLinkException(f"HubDrive error: {e}")
+
 
 def detect_hubcloud_base(url):
     try:
