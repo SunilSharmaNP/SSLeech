@@ -51,12 +51,11 @@ anonfilesBaseSites = [
     "upvid.cc",
 ]
 
-# Hub / GDFlix / Drive Family (PBX Supported)
+# -------- HUB FAMILY (HubCloud type sites) --------
 hub_list = [
     "hubcloud",
     "hubdrive",
     "hubcdn",
-    "gdflix",
     "katdrive",
     "drivebot",
     "udlinks",
@@ -72,6 +71,17 @@ hub_list = [
     "nexdrive",
     "hblinks",
 ]
+
+
+gdflix_list = [
+    "gdflix",
+    "gd-flix",
+    "gdfliix",
+    "gdflix.dev",
+    "gdflix.top",
+    "gdflix.xyz",
+]
+
 
 
 debrid_sites = [
@@ -177,13 +187,23 @@ def direct_link_generator(link):
     elif config_dict["REAL_DEBRID_API"] and any(x in domain for x in debrid_sites):
         return real_debrid(link)
 
+    # -------- GDFlix FIRST --------
+    elif any(x in domain for x in gdflix_list):
+        # PACK MODE
+        if "/pack" in link or "/packs/" in link:
+            return gdflix_bypass(link)
+    
+        # SINGLE MODE
+        return gdflix_bypass(link)
+
+
+    # -------- HUB FAMILY --------
     elif any(x in domain for x in hub_list):
         if "/packs/" in link:
             links = hubcloud_extract_pack(link)
             if not links:
                 raise DirectDownloadLinkException("HubCloud pack empty")
     
-            # First working file ka direct link
             for l in links:
                 try:
                     return hubcloud_bypass_single(l)
@@ -191,12 +211,8 @@ def direct_link_generator(link):
                     continue
     
             raise DirectDownloadLinkException("HubCloud pack failed")
-        else:
-            return hubcloud_bypass_single(link)
-
-    elif "gdflix" in domain:
-        return gdflix_bypass(link)
-
+    
+        return hubcloud_bypass_single(link)
 
  
     elif "filepress" in domain:
