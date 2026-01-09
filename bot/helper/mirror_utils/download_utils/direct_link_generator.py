@@ -405,6 +405,22 @@ def gdflix_get_instant(url):
     except:
         return None
 
+def unwrap_fastcdn(url):
+    if not url:
+        return None
+    if "fastcdn-dl.pages.dev" in url and "url=" in url:
+        try:
+            qs = parse_qs(urlparse(url).query)
+            pure = qs.get("url", [None])[0]
+            if pure:
+                pure = unquote(pure)
+                if "video-downloads.googleusercontent.com" in pure:
+                    return pure
+        except:
+            pass
+    return url
+
+
 def gdflix_get_google(instant):
     if not instant:
         return None
@@ -444,7 +460,7 @@ def gdflix_bypass_single(url):
     html, final = gdflix_fetch_html(url)
 
     instant = gdflix_get_instant(url)
-    google = gdflix_get_google(instant)
+    google = gdflix_get_google(instant)   # already unwraps fastcdn
 
     pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
     if pix:
@@ -459,18 +475,31 @@ def gdflix_bypass_single(url):
 
     links = []
 
+    # 🔥 GOOGLE – ALWAYS FIRST
+    if google and "video-downloads.googleusercontent.com" in google:
+        links.append({"type": "google", "url": google})
+
     if gofile:
         links.append({"type": "gofile", "url": gofile})
+
     if pub:
-        links.append({"type": "pub", "url": pub})
+        pub = unwrap_fastcdn(pub)
+        if "fastcdn-dl.pages.dev" not in pub:
+            links.append({"type": "pub", "url": pub})
+
     if workers:
-        links.append({"type": "workers", "url": workers})
+        workers = unwrap_fastcdn(workers)
+        if "fastcdn-dl.pages.dev" not in workers:
+            links.append({"type": "workers", "url": workers})
+
     if test:
-        links.append({"type": "test", "url": test})
-    if google:
-        links.append({"type": "google", "url": google})
+        test = unwrap_fastcdn(test)
+        if "fastcdn-dl.pages.dev" not in test:
+            links.append({"type": "test", "url": test})
+
     if pix:
         links.append({"type": "pixeldrain", "url": pix})
+
     if tg:
         links.append({"type": "telegram", "url": tg})
 
@@ -478,18 +507,17 @@ def gdflix_bypass_single(url):
         raise DirectDownloadLinkException("GDFlix: No usable links")
 
     priority = {
-        "gofile": 0,
-        "pub": 1,
-        "workers": 2,
-        "test": 3,
-        "google": 4,
+        "google": 0,        # ⭐ ALWAYS FIRST
+        "gofile": 1,
+        "pub": 2,
+        "workers": 3,
+        "test": 4,
         "pixeldrain": 5,
         "telegram": 6,
     }
 
     links.sort(key=lambda x: priority.get(x["type"], 99))
     return links[0]["url"]
-
 
 
 def gdflix_bypass(url):
