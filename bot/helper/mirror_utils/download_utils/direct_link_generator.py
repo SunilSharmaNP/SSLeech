@@ -405,10 +405,10 @@ def gdflix_get_instant(url):
     except:
         return None
 
-
 def gdflix_get_google(instant):
     if not instant:
         return None
+
     try:
         r = get(
             instant,
@@ -416,16 +416,29 @@ def gdflix_get_google(instant):
             allow_redirects=True,
             timeout=15
         )
+
         final = r.url
 
-        # ✅ ONLY real google video
+        # ✅ DIRECT GOOGLE LINK
         if "video-downloads.googleusercontent.com" in final:
             return final
 
-    except:
+        # ✅ FASTCDN WRAPPER → UNWRAP (JS JAISE)
+        if "fastcdn-dl.pages.dev" in final and "url=" in final:
+            parsed = urlparse(final)
+            qs = parse_qs(parsed.query)
+
+            pure = qs.get("url", [None])[0]
+            if pure:
+                pure = unquote(pure)
+                if "video-downloads.googleusercontent.com" in pure:
+                    return pure
+
+    except Exception:
         pass
 
     return None
+
 
 def gdflix_bypass_single(url):
     html, final = gdflix_fetch_html(url)
