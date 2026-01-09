@@ -361,18 +361,10 @@ async def _mirror_leech(
                 if isinstance(link, tuple):
                     link, headers = link
                 elif isinstance(link, str):
-                    # 🔥 STRIP fastcdn wrapper
-                    if "fastcdn-dl.pages.dev" in link and "url=" in link:
-                        try:
-                            link = unquote(link.split("url=", 1)[1])
-                            LOGGER.info("🔥 fastcdn wrapper removed")
-                        except Exception:
-                            pass
-                
-                    LOGGER.info(f"𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐋ɪɴᴋ: {link}")
+                    LOGGER.info(f"Generated link: {link}")
                     await editMessage(
                         process_msg,
-                        f"<i><b>𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐋ɪɴᴋ:</b></i> <code>{link}</code>",
+                        f"<i><b>Generated link:</b></i> <code>{link}</code>",
                     )
             except DirectDownloadLinkException as e:
                 e = str(e)
