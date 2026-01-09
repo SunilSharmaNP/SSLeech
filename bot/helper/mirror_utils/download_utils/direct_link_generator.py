@@ -7,6 +7,10 @@ from uuid import uuid4
 from hashlib import sha256
 from time import sleep
 from re import findall, match, search, sub
+import json
+import re
+from bs4 import BeautifulSoup
+
 
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -172,18 +176,25 @@ def direct_link_generator(link):
         return debrid_link(link)
     elif config_dict["REAL_DEBRID_API"] and any(x in domain for x in debrid_sites):
         return real_debrid(link)
-    
-    # --- Specific Domain Checks ---
+
     elif any(x in domain for x in hub_list):
-        try:
-            return pbx_resolve_and_select(link)
-        except Exception as e:
-            LOGGER.error(f"failed for hub link: {e}")
-            raise DirectDownloadLinkException(
-                "ERROR: Failed to bypass"
-            )
+        if "/packs/" in link:
+            links = hubcloud_extract_pack(link)
+            if not links:
+                raise DirectDownloadLinkException("HubCloud pack empty")
+    
+            # First working file ka direct link
+            for l in links:
+                try:
+                    return hubcloud_bypass_single(l)
+                except Exception:
+                    continue
+    
+            raise DirectDownloadLinkException("HubCloud pack failed")
+        else:
+            return hubcloud_bypass_single(link)
 
-
+ 
     elif "filepress" in domain:
         return filepress(link)
     elif "oxxfile.com" in domain or "oxxfile" in domain:
@@ -258,13 +269,97 @@ def direct_link_generator(link):
     else:
         raise DirectDownloadLinkException(f"No Direct link function found for {link}")
 
-def pbx_resolve_and_select(hub_url):
-    """
+def detect_hubcloud_base(url):
+    try:
+        h = urlparse(url).hostname or ""
+        if "hubcloud." in h:
+            return f"https://{h}"
+        return "https://hubcloud.one"
+    except:
+        return "https://hubcloud.one"
+
+
+def get_base(url):
+    u = urlparse(url)
+    return f"{u.scheme}://{u.hostname}"
+
+
+def fix_url(u):
+    return quote(u, safe=":/?#[]@!$&'()*+,;=%")
+
+def hubcloud_bypass_single(url):
+    base = detect_hubcloud_base(url)
+    new_url = url.replace(get_base(url), base)
+
+    r = get(new_url, headers={"User-Agent": user_agent}, timeout=15)
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    link = ""
+    for s in soup.find_all("script"):
+        t = s.string or ""
+        m = re.search(r"var\s+url\s*=\s*'([^']+)'", t)
+        if m:
+            link = m.group(1)
+            break
+
+    if not link:
+        a = soup.select_one("div.vd center a")
+        if a:
+            link = a.get("href", "")
+
+    if not link:
+        raise DirectDownloadLinkException("HubCloud: Link not found")
+
+    if not link.startswith("http"):
+        link = base + link
+
+    r2 = get(link, headers={"User-Agent": user_agent}, timeout=15)
+    soup2 = BeautifulSoup(r2.text, "html.parser")
+
+    mirrors = []
+    for a in soup2.select("div.card-body h2 a.btn"):
+        href = fix_url(a.get("href", ""))
+        txt = a.get_text(strip=True).lower()
+
+        if "fslv2" in txt:
+            t = "fslv2"
+        elif "fsl" in txt:
+            t = "fsl"
+        elif "pixel" in href:
+            t = "pixel"
+        else:
+            t = "direct"
+
+        mirrors.append({"type": t, "url": href})
+
+    if not mirrors:
+        raise DirectDownloadLinkException("HubCloud: No mirrors found")
+
+    # 🔥 priority
+    priority = {"direct": 0, "fslv2": 1, "fsl": 2, "pixel": 3}
+    mirrors.sort(key=lambda x: priority.get(x["type"], 99))
+
+    return mirrors[0]["url"]
+
+def hubcloud_extract_pack(url):
+    r = get(url, headers={"User-Agent": user_agent}, timeout=15)
+    m = re.search(r"JSON\.parse\(`([\s\S]+?)`\)", r.text)
+
+    if not m:
+        return []
+
+    data = json.loads(m.group(1))
+    base = get_base(url)
+    return [f"{base}/drive/{f['share_id']}" for f in data.get("files", [])]
+
+
+"""def pbx_resolve_and_select(hub_url):
+   
     PBX API resolver (FINAL):
     - Domain aware PBX selection
     - Safe GET check (Range=0-0)
     - Priority based mirror selection
-    """
+   
 
     domain = urlparse(hub_url).hostname or ""
 
@@ -382,6 +477,7 @@ def pbx_resolve_and_select(hub_url):
     raise DirectDownloadLinkException(
         "ERROR: No working direct download link found"
     )
+    """
 
 
 def filepress(url):
