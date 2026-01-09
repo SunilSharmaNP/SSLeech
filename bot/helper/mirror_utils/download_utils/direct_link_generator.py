@@ -194,6 +194,10 @@ def direct_link_generator(link):
         else:
             return hubcloud_bypass_single(link)
 
+    elif "gdflix" in domain:
+        return gdflix_bypass(link)
+
+
  
     elif "filepress" in domain:
         return filepress(link)
@@ -351,6 +355,122 @@ def hubcloud_extract_pack(url):
     data = json.loads(m.group(1))
     base = get_base(url)
     return [f"{base}/drive/{f['share_id']}" for f in data.get("files", [])]
+
+def gdflix_fetch_html(url):
+    r = get(
+        url,
+        headers={"User-Agent": user_agent},
+        allow_redirects=True,
+        timeout=15
+    )
+    return r.text, r.url
+
+
+def gdflix_scan(text, pattern):
+    m = re.search(pattern, text, re.S)
+    return m.group(0) if m else None
+    
+def gdflix_extract_pack_links(html, base):
+    out = []
+    matches = re.findall(r'href="(/file/[A-Za-z0-9]+)"', html)
+    for m in matches:
+        full = urljoin(base, m)
+        if full not in out:
+            out.append(full)
+    return out
+
+def gdflix_get_instant(url):
+    try:
+        r = get(url, headers={"User-Agent": user_agent}, timeout=15)
+        return gdflix_scan(
+            r.text,
+            r"https://instant\.busycdn\.cfd/[A-Za-z0-9:]+"
+        )
+    except:
+        return None
+
+
+def gdflix_get_google(instant):
+    if not instant:
+        return None
+    try:
+        r = get(
+            instant,
+            headers={"User-Agent": user_agent},
+            allow_redirects=True,
+            timeout=15
+        )
+        final = r.url
+
+        if "video-downloads.googleusercontent.com" in final:
+            return final
+
+        if "fastcdn-dl.pages.dev" in final and "url=" in final:
+            pure = unquote(final.split("url=")[1])
+            if "video-downloads.googleusercontent.com" in pure:
+                return pure
+    except:
+        pass
+    return None
+
+def gdflix_bypass_single(url):
+    html, final = gdflix_fetch_html(url)
+
+    instant = gdflix_get_instant(url)
+    google = gdflix_get_google(instant)
+
+    pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
+    if pix:
+        pix = pix.replace("?embed", "")
+
+    tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
+
+    title = gdflix_scan(html, r"<title>(.*?)</title>")
+    if title:
+        title = re.sub(r"</?title>", "", title).strip()
+    else:
+        title = "Unknown"
+
+    size = gdflix_scan(html, r"[\d.]+\s*(GB|MB)") or "Unknown"
+
+    links = []
+    if google:
+        links.append({"type": "google", "url": google})
+    if pix:
+        links.append({"type": "pixeldrain", "url": pix})
+    if tg:
+        links.append({"type": "telegram", "url": tg})
+
+    links.append({"type": "source", "url": final})
+
+    if not links:
+        raise DirectDownloadLinkException("GDFlix: No links found")
+
+    priority = {
+        "google": 0,
+        "pixeldrain": 1,
+        "telegram": 2,
+        "source": 3
+    }
+    links.sort(key=lambda x: priority.get(x["type"], 99))
+
+    return links[0]["url"]
+
+def gdflix_bypass(url):
+    html, final = gdflix_fetch_html(url)
+    pack_links = gdflix_extract_pack_links(html, final)
+
+    if len(pack_links) > 1:
+        for l in pack_links:
+            try:
+                return gdflix_bypass_single(l)
+            except Exception:
+                continue
+        raise DirectDownloadLinkException("GDFlix pack failed")
+
+    return gdflix_bypass_single(url)
+
+
 
 
 """def pbx_resolve_and_select(hub_url):
