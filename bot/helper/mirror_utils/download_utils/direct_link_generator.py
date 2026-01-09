@@ -336,7 +336,7 @@ def hubcloud_bypass_single(url):
         raise DirectDownloadLinkException("HubCloud: No mirrors found")
 
     # 🔥 priority
-    priority = {"direct": 0, "fslv2": 1, "fsl": 2, "pixel": 3}
+    priority = {"fsl": 0, "fslv2": 2, "direct": 3, "cloud": 4, "cdn": 5, "pixel": 6}
     mirrors.sort(key=lambda x: priority.get(x["type"], 99))
 
     return mirrors[0]["url"]
