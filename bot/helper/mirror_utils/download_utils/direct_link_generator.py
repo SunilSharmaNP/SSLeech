@@ -338,46 +338,6 @@ def detect_hubcloud_base(url):
     except:
         return "https://hubcloud.one"
 
-def hubdrive_to_hubcloud(url):
-    """
-    Convert HubDrive / Hub family URLs to HubCloud equivalent
-    """
-    try:
-        u = urlparse(url)
-        path = u.path or ""
-
-        # /file/XXXX or /drive/XXXX
-        if "/file/" in path or "/drive/" in path:
-            return f"https://hubcloud.one{path}"
-
-    except Exception:
-        pass
-
-    return url
-
-def hubdrive_resolve(url):
-    try:
-        r = scraper.get(url, timeout=15)
-        soup = BeautifulSoup(r.text, "html.parser")
-
-        # 🔥 primary button
-        a = soup.find("a", href=re.compile(r"/drive/"))
-        if a:
-            return "https://hubcloud.one" + a["href"]
-
-        # 🔥 fallback JS
-        for s in soup.find_all("script"):
-            t = s.text or ""
-            m = re.search(r'"/drive/[^"]+"', t)
-            if m:
-                return "https://hubcloud.one" + m.group(0).strip('"')
-
-    except Exception as e:
-        LOGGER.error(f"HubDrive resolve failed: {e}")
-
-    return url
-
-
 
 def get_base(url):
     u = urlparse(url)
