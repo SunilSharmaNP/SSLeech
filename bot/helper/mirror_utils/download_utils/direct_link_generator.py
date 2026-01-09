@@ -299,32 +299,69 @@ def direct_link_generator(link):
 
 def hubdrive_bypass_single(url):
     """
-    Handle HubDrive links safely and convert them to HubCloud
+    Robust HubDrive resolver → HubCloud
     """
-
     try:
-        # Cloudflare safe request
-        r = scraper.get(url, timeout=15)
-        soup = BeautifulSoup(r.text, "html.parser")
+        r = scraper.get(
+            url,
+            headers={"User-Agent": user_agent},
+            timeout=15
+        )
+        html = r.text
+        soup = BeautifulSoup(html, "html.parser")
 
-        # 1️⃣ Normal anchor redirect
+        LOGGER.info(f"[HubDrive] Resolving: {url}")
+
+        # 1️⃣ <meta http-equiv="refresh">
+        meta = soup.find("meta", attrs={"http-equiv": re.compile("refresh", re.I)})
+        if meta:
+            content = meta.get("content", "")
+            m = re.search(r"url\s*=\s*(/drive/\S+)", content, re.I)
+            if m:
+                hubcloud_url = "https://hubcloud.one" + m.group(1)
+                LOGGER.info(f"[HubDrive] META → {hubcloud_url}")
+                return hubcloud_bypass_single(hubcloud_url)
+
+        # 2️⃣ <a href="/drive/...">
         a = soup.find("a", href=re.compile(r"/drive/"))
         if a:
             hubcloud_url = "https://hubcloud.one" + a["href"]
-            LOGGER.info(f"[HubDrive] Resolved → {hubcloud_url}")
+            LOGGER.info(f"[HubDrive] A-TAG → {hubcloud_url}")
             return hubcloud_bypass_single(hubcloud_url)
 
-        # 2️⃣ JS redirect fallback
+        # 3️⃣ data-href="/drive/..."
+        data = soup.find(attrs={"data-href": re.compile(r"/drive/")})
+        if data:
+            hubcloud_url = "https://hubcloud.one" + data["data-href"]
+            LOGGER.info(f"[HubDrive] DATA-HREF → {hubcloud_url}")
+            return hubcloud_bypass_single(hubcloud_url)
+
+        # 4️⃣ JS string "/drive/XXXX"
+        m = re.search(r'(/drive/[A-Za-z0-9]+)', html)
+        if m:
+            hubcloud_url = "https://hubcloud.one" + m.group(1)
+            LOGGER.info(f"[HubDrive] JS → {hubcloud_url}")
+            return hubcloud_bypass_single(hubcloud_url)
+
+        # 5️⃣ Base64 encoded drive path
         for s in soup.find_all("script"):
-            t = s.text or ""
-            m = re.search(r'"/drive/[^"]+"', t)
-            if m:
-                hubcloud_url = "https://hubcloud.one" + m.group(0).strip('"')
-                LOGGER.info(f"[HubDrive] JS Resolved → {hubcloud_url}")
-                return hubcloud_bypass_single(hubcloud_url)
+            text = s.text or ""
+            for token in re.findall(r"[A-Za-z0-9+/=]{20,}", text):
+                try:
+                    decoded = b64decode(token).decode("utf-8", "ignore")
+                    if "/drive/" in decoded:
+                        m = re.search(r"/drive/\S+", decoded)
+                        if m:
+                            hubcloud_url = "https://hubcloud.one" + m.group(0)
+                            LOGGER.info(f"[HubDrive] BASE64 → {hubcloud_url}")
+                            return hubcloud_bypass_single(hubcloud_url)
+                except:
+                    pass
 
-        raise DirectDownloadLinkException("HubDrive: Unable to resolve link")
+        raise DirectDownloadLinkException("HubDrive: Drive link not found")
 
+    except DirectDownloadLinkException:
+        raise
     except Exception as e:
         raise DirectDownloadLinkException(f"HubDrive error: {e}")
 
