@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex, user
-from asyncio import sleep, wait_for, Event, wrap_future
+from asyncio import sleep, wait_for, Event
 from aiohttp import ClientSession
 from aiofiles.os import path as aiopath
 from yt_dlp import YoutubeDL
@@ -14,7 +14,6 @@ from bot.helper.telegram_helper.message_utils import (
     sendMessage,
     editMessage,
     deleteMessage,
-    auto_delete_message,
     delete_links,
     open_category_btns,
     open_dump_btns,
@@ -28,7 +27,6 @@ from bot.helper.ext_utils.bot_utils import (
     is_gdrive_link,
     new_task,
     sync_to_async,
-    new_task,
     is_rclone_path,
     new_thread,
     get_readable_time,
@@ -65,7 +63,7 @@ async def select_format(_, query, obj):
     elif data[1] == "back":
         await obj.back_to_main()
     elif data[1] == "cancel":
-        await editMessage(message, " 𝐓ᴀsᴋ ʜᴀs ʙᴇᴇɴ ᴄᴀɴᴄᴇʟʟᴇᴅ.")
+        await editMessage(message, "Task has been cancelled.")
         obj.qual = None
         obj.is_cancelled = True
         obj.event.set()
@@ -95,8 +93,7 @@ class YtSelection:
         self.formats = {}
         self.qual = None
 
-    @new_thread
-    async def __event_handler(self):
+    async def _event_handler(self):
         pfunc = partial(select_format, obj=self)
         handler = self.__client.add_handler(
             CallbackQueryHandler(pfunc, filters=regex("^ytq") & user(self.__user_id)),
@@ -105,7 +102,7 @@ class YtSelection:
         try:
             await wait_for(self.event.wait(), timeout=self.__timeout)
         except Exception:
-            await editMessage(self.__reply_to, "𝐓ɪᴍᴇᴅ 𝐎ᴜᴛ. 𝐓ᴀsᴋ ʜᴀs ʙᴇᴇɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
+            await editMessage(self.__reply_to, "Timed Out. Task has been cancelled!")
             self.qual = None
             self.is_cancelled = True
             self.event.set()
@@ -113,7 +110,6 @@ class YtSelection:
             self.__client.remove_handler(*handler)
 
     async def get_quality(self, result):
-        future = self.__event_handler()
         buttons = ButtonMaker()
         if "entries" in result:
             self.__is_playlist = True
@@ -127,12 +123,12 @@ class YtSelection:
                 self.formats[b_data] = video_format
                 buttons.ibutton(f"{i}-webm", f"ytq {b_data}")
             buttons.ibutton("MP3", "ytq mp3")
-            buttons.ibutton("𝐀ᴜᴅɪᴏ 𝐅ᴏʀᴍᴀᴛs", "ytq audio")
-            buttons.ibutton("𝐁ᴇsᴛ 𝐕ɪᴅᴇᴏs", "ytq bv*+ba/b")
-            buttons.ibutton("𝐁ᴇsᴛ 𝐀ᴜᴅɪᴏs", "ytq ba/b")
-            buttons.ibutton("𝐂ᴀɴᴄᴇʟ", "ytq cancel", "footer")
+            buttons.ibutton("Audio Formats", "ytq audio")
+            buttons.ibutton("Best Videos", "ytq bv*+ba/b")
+            buttons.ibutton("Best Audios", "ytq ba/b")
+            buttons.ibutton("Cancel", "ytq cancel", "footer")
             self.__main_buttons = buttons.build_menu(3)
-            msg = f"𝐂ʜᴏᴏsᴇ 𝐏ʟᴀʏʟɪsᴛ 𝐕ɪᴅᴇᴏs 𝐐ᴜᴀʟɪᴛʏ:\n𝐓ɪᴍᴇᴏᴜᴛ: {get_readable_time(self.__timeout-(time()-self.__time))}"
+            msg = f"Choose Playlist Videos Quality:\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}"
         else:
             format_dict = result.get("formats")
             if format_dict is not None:
@@ -147,13 +143,14 @@ class YtSelection:
                         else:
                             size = 0
 
-                        if (
-                            item.get("video_ext") == "none"
-                            and item.get("acodec") != "none"
+                        # FIXED: यहाँ condition update की है
+                        if item.get("video_ext") == "none" and (
+                            item.get("resolution") == "audio only"
+                            or item.get("acodec") != "none"
                         ):
                             if item.get("audio_ext") == "m4a":
                                 self.__is_m4a = True
-                            b_name = f"{item['acodec']}-{item['ext']}"
+                            b_name = f"{item.get('acodec') or format_id}-{item['ext']}"
                             v_format = format_id
                         elif item.get("height"):
                             height = item["height"]
@@ -180,23 +177,23 @@ class YtSelection:
                     else:
                         buttons.ibutton(b_name, f"ytq dict {b_name}")
             buttons.ibutton("MP3", "ytq mp3")
-            buttons.ibutton("𝐀ᴜᴅɪᴏ 𝐅ᴏʀᴍᴀᴛs", "ytq audio")
-            buttons.ibutton("𝐁ᴇsᴛ 𝐕ɪᴅᴇᴏ", "ytq bv*+ba/b")
-            buttons.ibutton("𝐁ᴇsᴛ 𝐀ᴜᴅɪᴏ", "ytq ba/b")
-            buttons.ibutton("𝐂ᴀɴᴄᴇʟ", "ytq cancel", "footer")
+            buttons.ibutton("Audio Formats", "ytq audio")
+            buttons.ibutton("Best Video", "ytq bv*+ba/b")
+            buttons.ibutton("Best Audio", "ytq ba/b")
+            buttons.ibutton("Cancel", "ytq cancel", "footer")
             self.__main_buttons = buttons.build_menu(2)
-            msg = f"𝐂ʜᴏᴏsᴇ 𝐕ɪᴅᴇᴏ 𝐐ᴜᴀʟɪᴛʏ:\n𝐓ɪᴍᴇᴏᴜᴛ: {get_readable_time(self.__timeout-(time()-self.__time))}"
+            msg = f"Choose Video Quality:\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}"
         self.__reply_to = await sendMessage(self.__message, msg, self.__main_buttons)
-        await wrap_future(future)
+        await self._event_handler()  # FIXED: wrap_future के बजाय direct call
         if not self.is_cancelled:
             await deleteMessage(self.__reply_to)
         return self.qual
 
     async def back_to_main(self):
         if self.__is_playlist:
-            msg = f"𝐂ʜᴏᴏsᴇ 𝐏ʟᴀʏʟɪsᴛ 𝐕ɪᴅᴇᴏs 𝐐ᴜᴀʟɪᴛʏ:\n𝐓ɪᴍᴇᴏᴜᴛ: {get_readable_time(self.__timeout-(time()-self.__time))}"
+            msg = f"Choose Playlist Videos Quality:\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}"
         else:
-            msg = f"𝐂ʜᴏᴏsᴇ 𝐕ɪᴅᴇᴏs 𝐐ᴜᴀʟɪᴛʏ:\n𝐓ɪᴍᴇᴏᴜᴛ: {get_readable_time(self.__timeout-(time()-self.__time))}"
+            msg = f"Choose Video Quality:\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}"
         await editMessage(self.__reply_to, msg, self.__main_buttons)
 
     async def qual_subbuttons(self, b_name):
@@ -230,8 +227,8 @@ class YtSelection:
         for frmt in ["aac", "alac", "flac", "m4a", "opus", "vorbis", "wav"]:
             audio_format = f"ba/b-{frmt}-"
             buttons.ibutton(frmt, f"ytq aq {audio_format}")
-        buttons.ibutton("𝐁ᴀᴄᴋ", "ytq back", "footer")
-        buttons.ibutton("𝐂ᴀɴᴄᴇʟ", "ytq cancel", "footer")
+        buttons.ibutton("Back", "ytq back", "footer")
+        buttons.ibutton("Cancel", "ytq cancel", "footer")
         subbuttons = buttons.build_menu(3)
         msg = f"Choose Audio{i} Format:\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}"
         await editMessage(self.__reply_to, msg, subbuttons)
@@ -242,10 +239,10 @@ class YtSelection:
         for qual in range(11):
             audio_format = f"{format}{qual}"
             buttons.ibutton(qual, f"ytq {audio_format}")
-        buttons.ibutton("𝐁ᴀᴄᴋ", "ytq aq back")
-        buttons.ibutton("𝐂ᴀɴᴄᴇʟ", "ytq aq cancel")
+        buttons.ibutton("Back", "ytq aq back")
+        buttons.ibutton("Cancel", "ytq aq cancel")
         subbuttons = buttons.build_menu(5)
-        msg = f"𝐂ʜᴏᴏsᴇ 𝐀ᴜᴅɪᴏ{i} 𝐐ᴜᴀʟɪᴛʏ:\n0 ɪs 𝐁ᴇsᴛ ᴀɴᴅ 10 ɪs 𝐖ᴏʀsᴛ\n𝐓ɪᴍᴇᴏᴜᴛ: {get_readable_time(self.__timeout-(time()-self.__time))}"
+        msg = f"Choose Audio{i} Quality:\n0 is best and 10 is worst\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}"
         await editMessage(self.__reply_to, msg, subbuttons)
 
 
@@ -253,7 +250,7 @@ def extract_info(link, options):
     with YoutubeDL(options) as ydl:
         result = ydl.extract_info(link, download=False)
         if result is None:
-            raise ValueError("𝐈ɴғᴏ 𝐑ᴇsᴜʟᴛ 𝐈s 𝐍ᴏɴᴇ")
+            raise ValueError("Info result is None")
         return result
 
 
@@ -357,7 +354,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         except Exception:
             await sendMessage(
                 message,
-                "𝐑ᴇᴘʟʏ ᴛᴏ ᴛᴇxᴛ ғɪʟᴇ ᴏʀ ᴛɢ ᴍᴇssᴀɢᴇ ᴛʜᴀᴛ ʜᴀᴠᴇ ʟɪɴᴋs sᴇᴘᴀʀᴀᴛᴇᴅ ʙʏ ɴᴇᴡ ʟɪɴᴇ!",
+                "Reply to text file or tg message that have links seperated by new line!",
             )
             return
         b_msg = input_list[:1]
@@ -482,13 +479,13 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             if drive_id and not await sync_to_async(
                 GoogleDriveHelper().getFolderData, drive_id
             ):
-                return await sendMessage(message, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ 𝐈ᴅ 𝐕ᴀʟɪᴅᴀᴛɪᴏɴ 𝐅ᴀɪʟᴇᴅ‼")
+                return await sendMessage(message, "Google Drive ID validation failed!!")
         if up == "gd" and not config_dict["GDRIVE_ID"] and not drive_id:
-            await sendMessage(message, "𝐆𝐃𝐑𝐈𝐕𝐄_𝐈𝐃 ɴᴏᴛ 𝐏ʀᴏᴠɪᴅᴇᴅ!")
+            await sendMessage(message, "GDRIVE_ID not Provided!")
             await delete_links(message)
             return
         elif not up:
-            await sendMessage(message, "ɴᴏ 𝐑ᴄʟᴏɴᴇ 𝐃ᴇsᴛɪɴᴀᴛɪᴏɴ!")
+            await sendMessage(message, "No Rclone Destination!")
             await delete_links(message)
             return
         elif up not in ["rcl", "gd", "ddl"]:
@@ -501,7 +498,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 await delete_links(message)
                 return
         if up != "gd" and up != "ddl" and not is_rclone_path(up):
-            await sendMessage(message, "𝐖ʀᴏɴɢ 𝐑ᴄʟᴏɴᴇ 𝐔ᴘʟᴏᴀᴅ 𝐃ᴇsᴛɪɴᴀᴛɪᴏɴ!")
+            await sendMessage(message, "Wrong Rclone Upload Destination!")
             await delete_links(message)
             return
     else:
