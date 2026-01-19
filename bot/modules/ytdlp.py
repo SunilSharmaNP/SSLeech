@@ -551,7 +551,50 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
 
-    options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+    # FIXED: Enhanced YouTube options with better error handling
+    cookie_file = "cookies.txt"
+    options = {
+        "usenetrc": True,
+        "verbose": True,
+        "ignoreerrors": False,
+        "no_warnings": False,
+        "extractor_retries": 5,
+        "retries": 10,
+        "fragment_retries": 10,
+        "skip_unavailable_fragments": True,
+        "quiet": True,
+        "no_color": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "web"],
+                "skip": ["dash"],
+            }
+        },
+    }
+    
+    # Add cookies only if file exists
+    if await aiopath.exists(cookie_file):
+        options["cookiefile"] = cookie_file
+        LOGGER.info(f"Using cookies file: {cookie_file}")
+    else:
+        LOGGER.warning(f"Cookies file {cookie_file} not found. Download may fail for age-restricted content.")
+    
+    # Special handling for YouTube live streams
+    if "youtube.com/live" in link or "youtube.com/watch" in link:
+        live_options = {
+            "live_from_start": False,
+            "wait_for_video": (30, 120),
+            "hls_prefer_native": True,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "tv_embedded", "web"],
+                    "skip": ["hls", "dash"],
+                }
+            },
+        }
+        options.update(live_options)
+    
+    # Parse user options
     if opt:
         yt_opt = opt.split("|")
         for ytopt in yt_opt:
@@ -572,33 +615,70 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             elif value.lower() == "false":
                 value = False
             elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
-                value = eval(value)
+                try:
+                    value = eval(value)
+                except:
+                    pass
             options[key] = value
 
         options["playlist_items"] = "0"
+    
+    # Remove format from options for first extraction (to get available formats)
+    if "format" in options:
+        format_backup = options.pop("format")
+        if not select and not qual:
+            qual = format_backup
 
     try:
+        # First attempt to extract info
         result = await sync_to_async(extract_info, link, options)
     except Exception as e:
-        msg = str(e).replace("<", " ").replace(">", " ")
-        await sendMessage(message, f"{tag} {msg}")
-        __run_multi()
-        await delete_links(message)
-        return
+        error_msg = str(e).replace("<", " ").replace(">", " ")
+        
+        # If cookies error, try without cookies
+        if "cookies" in error_msg.lower() or "sign in" in error_msg.lower():
+            LOGGER.warning("Cookies issue detected, trying without cookies...")
+            if "cookiefile" in options:
+                options.pop("cookiefile", None)
+            try:
+                result = await sync_to_async(extract_info, link, options)
+            except Exception as e2:
+                msg = str(e2).replace("<", " ").replace(">", " ")
+                await sendMessage(message, f"{tag} {msg}")
+                __run_multi()
+                await delete_links(message)
+                return
+        else:
+            await sendMessage(message, f"{tag} {error_msg}")
+            __run_multi()
+            await delete_links(message)
+            return
 
     __run_multi()
 
     if not select and (not qual and "format" in options):
         qual = options["format"]
+    
+    # For YouTube live streams, use best format if none selected
+    if not qual and ("youtube.com/live" in link or "youtube.com/watch" in link):
+        LOGGER.info("Live stream detected, using best format")
+        qual = "best"
 
     if not qual:
         qual = await YtSelection(client, message).get_quality(result)
         if qual is None:
             return
+    
     await delete_links(message)
     LOGGER.info(f"Downloading with YT-DLP: {link}")
     playlist = "entries" in result
     ydl = YoutubeDLHelper(listener)
+    
+    # Prepare final options for download
+    final_options = options.copy()
+    if qual:
+        final_options["format"] = qual
+    
     await ydl.add_download(link, path, name, qual, playlist, opt)
 
 
