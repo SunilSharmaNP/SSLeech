@@ -157,7 +157,25 @@ class YoutubeDLHelper:
                 if result is None:
                     raise ValueError("Info result is None")
             except Exception as e:
-                return self.__onDownloadError(str(e))
+                error_str = str(e)
+                # Check if it's an age restriction or format issue
+                if "Sign in" in error_str or "age" in error_str.lower():
+                    LOGGER.warning(f"Age-restricted content detected. Trying with different player client...")
+                    # Update opts for age-restricted content
+                    if "extractor_args" not in self.opts:
+                        self.opts["extractor_args"] = {}
+                    if "youtube" not in self.opts["extractor_args"]:
+                        self.opts["extractor_args"]["youtube"] = {}
+                    self.opts["extractor_args"]["youtube"]["player_client"] = ["android", "web_creator"]
+                    try:
+                        with YoutubeDL(self.opts) as ydl_retry:
+                            result = ydl_retry.extract_info(link, download=False)
+                            if result is None:
+                                raise ValueError("Info result is None")
+                    except Exception as e2:
+                        return self.__onDownloadError(f"Age-restricted content cannot be downloaded: {str(e2)}")
+                else:
+                    return self.__onDownloadError(error_str)
             if self.is_playlist:
                 self.playlist_count = result.get("playlist_count", 0)
             if "entries" in result:
@@ -166,9 +184,9 @@ class YoutubeDLHelper:
                     if not entry:
                         continue
                     elif "filesize_approx" in entry:
-                        self.__size += entry["filesize_approx"]
+                        self.__size += entry.get("filesize_approx", 0) or 0
                     elif "filesize" in entry:
-                        self.__size += entry["filesize"]
+                        self.__size += entry.get("filesize", 0) or 0
                     if not self.name:
                         outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
                         self.name, ext = ospath.splitext(
@@ -184,31 +202,42 @@ class YoutubeDLHelper:
                 if not self.__ext:
                     self.__ext = ext
                 if result.get("filesize"):
-                    self.__size = result["filesize"]
+                    self.__size = result.get("filesize", 0) or 0
                 elif result.get("filesize_approx"):
-                    self.__size = result["filesize_approx"]
+                    self.__size = result.get("filesize_approx", 0) or 0
 
     def __download(self, link, path):
-        try:
-            with YoutubeDL(self.opts) as ydl:
-                try:
-                    ydl.download([link])
-                except DownloadError as e:
-                    if not self.__is_cancelled:
-                        self.__onDownloadError(str(e))
+        with suppress(Exception):
+            try:
+                with YoutubeDL(self.opts) as ydl:
+                    try:
+                        ydl.download([link])
+                    except DownloadError as e:
+                        error_str = str(e)
+                        # If format not available, try with best format
+                        if "Requested format is not available" in error_str or "not a valid format" in error_str:
+                            LOGGER.warning(f"Format not available, trying with best format. Error: {error_str}")
+                            self.opts["format"] = "best"
+                            with YoutubeDL(self.opts) as ydl_retry:
+                                ydl_retry.download([link])
+                        else:
+                            if not self.__is_cancelled:
+                                self.__onDownloadError(error_str)
+                            return
+                if self.is_playlist and (
+                    not ospath.exists(path) or len(listdir(path)) == 0
+                ):
+                    self.__onDownloadError(
+                        "No video available to download from this playlist. Check logs for more details"
+                    )
                     return
-            if self.is_playlist and (
-                not ospath.exists(path) or len(listdir(path)) == 0
-            ):
-                self.__onDownloadError(
-                    "No video available to download from this playlist. Check logs for more details"
-                )
-                return
-            if self.__is_cancelled:
-                raise ValueError
-            async_to_sync(self.__listener.onDownloadComplete)
-        except ValueError:
-            self.__onDownloadError("Download Stopped by User!")
+                if self.__is_cancelled:
+                    return
+                async_to_sync(self.__listener.onDownloadComplete)
+            except ValueError:
+                if not self.__is_cancelled:
+                    self.__onDownloadError("Download Stopped by User!")
+        return
 
     async def add_download(self, link, path, name, qual, playlist, options):
         if playlist:
@@ -216,6 +245,20 @@ class YoutubeDLHelper:
             self.is_playlist = True
 
         self.__gid = token_hex(5)
+        
+        # Setup YouTube extractor arguments for better compatibility
+        if "youtube" in link or "youtu.be" in link:
+            self.opts["extractor_args"] = {
+                "youtube": {
+                    "player_client": ["android", "web", "tv", "web_creator"],
+                    "player_skip": ["js", "configs"],
+                    "skip": ["dash", "hls"],
+                }
+            }
+            # Try to handle age-restricted content
+            self.opts["call_home"] = False
+            self.opts["no_check_certificate"] = True
+        
         await self.__onDownloadStart()
 
         self.opts["postprocessors"] = [
@@ -246,7 +289,18 @@ class YoutubeDLHelper:
             else:
                 self.__ext = f".{audio_format}"
 
-        self.opts["format"] = qual
+        # Use format string with fallback options
+        if qual and not qual.startswith("ba/b"):
+            # Add fallback formats to handle unavailable quality
+            if qual == "best":
+                self.opts["format"] = "best"
+            else:
+                # Create fallback chain for video downloads
+                self.opts["format"] = f"{qual}/best"
+        elif qual.startswith("ba/b"):
+            self.opts["format"] = qual
+        else:
+            self.opts["format"] = "best"
 
         if options:
             self.__set_options(options)
