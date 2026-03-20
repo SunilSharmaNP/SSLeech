@@ -4,6 +4,7 @@ from secrets import token_hex
 from logging import getLogger
 from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
+from contextlib import suppress
 
 from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
@@ -21,19 +22,19 @@ LOGGER = getLogger(__name__)
 
 class MyLogger:
     def __init__(self, obj, listener):
-        self.obj = obj
+        self._obj = obj
         self._listener = listener
 
     def debug(self, msg):
         # Hack to fix changing extension
-        if not self.obj.is_playlist:
+        if not self._obj.is_playlist:
             if match := re_search(
                 r".Merger..Merging formats into..(.*?).$", msg
             ) or re_search(r".ExtractAudio..Destination..(.*?)$", msg):
                 LOGGER.info(msg)
                 newname = match.group(1)
                 newname = newname.rsplit("/", 1)[-1]
-                self.obj.name = newname
+                self._listener.name = newname
 
     @staticmethod
     def warning(msg):
@@ -56,16 +57,15 @@ class YoutubeDLHelper:
         self.__listener = listener
         self.__gid = ""
         self.__is_cancelled = False
-        self.__downloading = False
         self.__ext = ""
         self.name = ""
         self.is_playlist = False
+        self.keep_thumb = False
         self.playlist_count = 0
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self, self.__listener),
             "usenetrc": True,
-            "cookiefile": "cookies.txt",
             "allow_multiple_video_streams": True,
             "allow_multiple_audio_streams": True,
             "noprogress": True,
@@ -82,6 +82,13 @@ class YoutubeDLHelper:
                 "extractor": lambda n: 3,
             },
         }
+        # Handle cookie file - check if exists
+        cookie_to_use = "cookies.txt" if ospath.exists("cookies.txt") else None
+        if cookie_to_use:
+            self.opts["cookiefile"] = cookie_to_use
+            LOGGER.info(f"Using cookies file: {cookie_to_use}")
+        else:
+            LOGGER.warning("Cookies file not found. Some downloads may fail.")
 
     @property
     def download_speed(self):
@@ -104,29 +111,28 @@ class YoutubeDLHelper:
         return self.__eta
 
     def __onDownloadProgress(self, d):
-        self.__downloading = True
         if self.__is_cancelled:
             raise ValueError("Cancelling...")
         if d["status"] == "finished":
             if self.is_playlist:
                 self.__last_downloaded = 0
         elif d["status"] == "downloading":
-            self.__download_speed = d["speed"]
+            self.__download_speed = d.get("speed") or 0
             if self.is_playlist:
-                downloadedBytes = d["downloaded_bytes"]
+                downloadedBytes = d.get("downloaded_bytes") or 0
                 chunk_size = downloadedBytes - self.__last_downloaded
                 self.__last_downloaded = downloadedBytes
                 self.__downloaded_bytes += chunk_size
             else:
                 if d.get("total_bytes"):
-                    self.__size = d["total_bytes"]
+                    self.__size = d["total_bytes"] or 0
                 elif d.get("total_bytes_estimate"):
-                    self.__size = d["total_bytes_estimate"]
-                self.__downloaded_bytes = d["downloaded_bytes"]
+                    self.__size = d["total_bytes_estimate"] or 0
+                self.__downloaded_bytes = d.get("downloaded_bytes") or 0
                 self.__eta = d.get("eta", "-") or "-"
             try:
                 self.__progress = (self.__downloaded_bytes / self.__size) * 100
-            except Exception:
+            except ZeroDivisionError:
                 pass
 
     async def __onDownloadStart(self, from_queue=False):
@@ -306,7 +312,7 @@ class YoutubeDLHelper:
             ".m4a",
             ".mp4",
             ".mov",
-            "m4v",
+            ".m4v",
         ]:
             self.opts["postprocessors"].append(
                 {
@@ -350,31 +356,54 @@ class YoutubeDLHelper:
     async def cancel_download(self):
         self.__is_cancelled = True
         LOGGER.info(f"Cancelling Download: {self.name}")
-        if not self.__downloading:
-            await self.__listener.onDownloadError("Download Cancelled by User!")
+        await self.__listener.onDownloadError("Download Stopped by User!")
 
     def __set_options(self, options):
-        options = options.split("|")
-        for opt in options:
-            key, value = map(str.strip, opt.split(":", 1))
+        # Keep original options string format but parse safely
+        import ast
+        if isinstance(options, str):
+            options_list = options.split("|")
+        else:
+            options_list = []
+        
+        for opt in options_list:
+            if not opt.strip():
+                continue
+            try:
+                key, value = map(str.strip, opt.split(":", 1))
+            except ValueError:
+                continue
+                
             if key == "format" and value.startswith("ba/b-"):
                 continue
+            
+            # Safe type conversion
             if value.startswith("^"):
-                if "." in value or value == "^inf":
-                    value = float(value.split("^", 1)[1])
-                else:
-                    value = int(value.split("^", 1)[1])
+                try:
+                    if "." in value or value == "^inf":
+                        value = float(value.split("^", 1)[1])
+                    else:
+                        value = int(value.split("^", 1)[1])
+                except (ValueError, IndexError):
+                    pass
             elif value.lower() == "true":
                 value = True
             elif value.lower() == "false":
                 value = False
             elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
-                value = eval(value)
+                try:
+                    value = ast.literal_eval(value)
+                except (ValueError, SyntaxError):
+                    pass
 
+            # Set option safely
             if key == "postprocessors":
                 if isinstance(value, list):
                     self.opts[key].extend(tuple(value))
                 elif isinstance(value, dict):
                     self.opts[key].append(value)
+            elif key == "writethumbnail" and value is True:
+                self.keep_thumb = True
+                self.opts[key] = value
             else:
                 self.opts[key] = value
