@@ -1,301 +1,294 @@
 """
-Video Mode Selector - Interactive UI for selecting video processing modes
+Interactive Video Tools Selector - Anime-Leech Style
+Provides button-based UI for selecting video tools and configuring settings
 """
 
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from __future__ import annotations
+from asyncio import Event, gather, wait_for, wrap_future
+from functools import partial
+from os import path as ospath
+from pyrogram.filters import text, document, photo
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+from pyrogram.types import Message, CallbackQuery
+from time import time
 from logging import getLogger
+
+from bot import config_dict, VID_MODE
+from bot.helper.ext_utils.bot_utils import new_task, new_thread, sync_to_async
+from bot.helper.ext_utils.files_utils import clean_target
+from bot.helper.ext_utils.links_utils import is_media
+from bot.helper.ext_utils.status_utils import get_readable_time
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage
 
 LOGGER = getLogger(__name__)
 
 
 class SelectMode:
-    """Interactive mode selection UI for video tools"""
+    """Interactive selector for video tools - Anime-Leech style"""
     
-    MODES = {
-        'vid_vid': '🎬 Merge Videos',
-        'vid_aud': '🎵 Merge Video + Audio',
-        'vid_sub': '📝 Merge Video + Subtitle',
-        'subsync': '🔄 Synchronize Subtitles',
-        'compress': '📦 Compress Video',
-        'convert': '📐 Convert Resolution',
-        'watermark': '🎨 Add Watermark',
-        'extract': '📂 Extract Streams',
-        'trim': '✂️ Trim Video',
-        'rmstream': '🗑️ Remove Stream',
-    }
-    
-    RESOLUTIONS = {
-        '1080p': '1920x1080 - Full HD',
-        '720p': '1280x720 - HD',
-        '540p': '960x540 - Standard',
-        '480p': '854x480 - Mobile',
-        '360p': '640x360 - Low',
-    }
-    
-    POSITIONS = {
-        'tl': '↖️ Top-Left',
-        'tr': '↗️ Top-Right',
-        'bl': '↙️ Bottom-Left',
-        'br': '↘️ Bottom-Right',
-    }
-    
-    COMPRESS_PRESETS = {
-        'faster': '⚡ Faster (Low compression)',
-        'fast': '🔥 Fast (Medium compression)',
-        'medium': '⚖️ Medium (Balanced)',
-        'slow': '🐢 Slow (High compression)',
-    }
-    
-    STREAM_TYPES = {
-        'video': '🎬 Video Stream',
-        'audio': '🔊 Audio Stream',
-        'subtitle': '📝 Subtitle Stream',
-        'all': '📦 All Streams',
-    }
-    
-    @staticmethod
-    def get_mode_buttons(disabled_modes=None):
-        """Get inline buttons for mode selection"""
-        disabled_modes = disabled_modes or []
-        buttons = InlineKeyboardMarkup([])
+    def __init__(self, listener, is_link=False):
+        """Initialize selector with listener and link status"""
+        self.listener = listener
+        self.message = listener.message
+        self._isLink = is_link
+        self.event = Event()
+        self.message_event = None
+        self.mode = None
+        self.newname = ''
+        self.extra_data = {}
+        self.is_rename = False
+        self.is_cancelled = False
+        self._message = None
+        self._start_time = time()
         
-        mode_list = list(SelectMode.MODES.items())
+        # Quality mappings
+        self._qual = {
+            '1080p': '1920',
+            '720p': '1280',
+            '540p': '960',
+            '480p': '854',
+            '360p': '640'
+        }
+
+    @new_thread
+    def _event_handler(self, *args):
+        """Wait for message event with timeout"""
+        try:
+            self.message_event = Event()
+            wait_time = 600  # 10 minutes timeout
+            return wait_for(self.message_event.wait(), timeout=wait_time)
+        except Exception as e:
+            LOGGER.error(f"Event handler error: {e}")
+            return None
+
+    def message_event_handler(self, *args):
+        """Create message event handler for user input"""
+        return self._event_handler(*args)
+
+    async def get_buttons(self):
+        """Get initial video tools menu buttons"""
+        buttons = ButtonMaker()
         
-        # Arrange in 2 columns
-        for i in range(0, len(mode_list), 2):
-            row = []
-            mode1_key, mode1_name = mode_list[i]
-            
-            # Check if mode is disabled
-            if mode1_key not in disabled_modes:
-                row.append(
-                    InlineKeyboardButton(
-                        mode1_name,
-                        callback_data=f'vidmode_{mode1_key}'
-                    )
-                )
-            
-            if i + 1 < len(mode_list):
-                mode2_key, mode2_name = mode_list[i + 1]
-                if mode2_key not in disabled_modes:
-                    row.append(
-                        InlineKeyboardButton(
-                            mode2_name,
-                            callback_data=f'vidmode_{mode2_key}'
-                        )
-                    )
-            
-            if row:
-                buttons.inline_keyboard.append(row)
+        # Show appropriate vid modes
+        vid_modes = dict(list(VID_MODE.items())[4:]) if self._isLink else VID_MODE
+
+        # Create main menu with 10 video tools
+        for key, value in vid_modes.items():
+            buttons.button_data(f"{'🔥 ' if self.mode == key else ''}{value}", f'vidtool {key}')
+
+        # Add rename option
+        buttons.button_data(f"{'🔥 ' if self.is_rename else ''}✏️ Rename", 'vidtool rename', 'header')
         
         # Add cancel button
-        buttons.inline_keyboard.append([
-            InlineKeyboardButton('❌ Cancel', callback_data='vidmode_cancel')
-        ])
+        buttons.button_data('❌ Cancel', 'vidtool cancel', 'footer')
         
-        return buttons
-    
-    @staticmethod
-    def get_resolution_buttons():
-        """Get buttons for resolution selection"""
-        buttons = InlineKeyboardMarkup([])
-        
-        res_list = list(SelectMode.RESOLUTIONS.items())
-        
-        for i in range(0, len(res_list), 2):
-            row = []
-            res1_key, res1_name = res_list[i]
-            row.append(
-                InlineKeyboardButton(
-                    res1_name,
-                    callback_data=f'vidres_{res1_key}'
-                )
-            )
-            
-            if i + 1 < len(res_list):
-                res2_key, res2_name = res_list[i + 1]
-                row.append(
-                    InlineKeyboardButton(
-                        res2_name,
-                        callback_data=f'vidres_{res2_key}'
-                    )
-                )
-            
-            buttons.inline_keyboard.append(row)
-        
-        buttons.inline_keyboard.append([
-            InlineKeyboardButton('⬅️ Back', callback_data='vidmode_back')
-        ])
-        
-        return buttons
-    
-    @staticmethod
-    def get_position_buttons():
-        """Get buttons for watermark position selection"""
-        buttons = InlineKeyboardMarkup([])
-        
-        pos_list = list(SelectMode.POSITIONS.items())
-        
-        # 2x2 grid
-        for i in range(0, len(pos_list), 2):
-            row = []
-            key1, name1 = pos_list[i]
-            row.append(
-                InlineKeyboardButton(
-                    name1,
-                    callback_data=f'vidpos_{key1}'
-                )
-            )
-            
-            if i + 1 < len(pos_list):
-                key2, name2 = pos_list[i + 1]
-                row.append(
-                    InlineKeyboardButton(
-                        name2,
-                        callback_data=f'vidpos_{key2}'
-                    )
-                )
-            
-            buttons.inline_keyboard.append(row)
-        
-        buttons.inline_keyboard.append([
-            InlineKeyboardButton('⬅️ Back', callback_data='vidmode_back')
-        ])
-        
-        return buttons
-    
-    @staticmethod
-    def get_compress_preset_buttons():
-        """Get buttons for compression preset selection"""
-        buttons = InlineKeyboardMarkup([])
-        
-        preset_list = list(SelectMode.COMPRESS_PRESETS.items())
-        
-        for key, name in preset_list:
-            buttons.inline_keyboard.append([
-                InlineKeyboardButton(
-                    name,
-                    callback_data=f'vidpreset_{key}'
-                )
-            ])
-        
-        buttons.inline_keyboard.append([
-            InlineKeyboardButton('⬅️ Back', callback_data='vidmode_back')
-        ])
-        
-        return buttons
-    
-    @staticmethod
-    def get_stream_type_buttons():
-        """Get buttons for stream type selection"""
-        buttons = InlineKeyboardMarkup([])
-        
-        for key, name in SelectMode.STREAM_TYPES.items():
-            buttons.inline_keyboard.append([
-                InlineKeyboardButton(
-                    name,
-                    callback_data=f'vidstream_{key}'
-                )
-            ])
-        
-        buttons.inline_keyboard.append([
-            InlineKeyboardButton('⬅️ Back', callback_data='vidmode_back')
-        ])
-        
-        return buttons
-    
-    @staticmethod
-    def get_menu_caption(config=None):
-        """Get caption for video tools menu"""
-        config = config or {}
-        
-        caption = "🎬 <b>Video Tools Menu</b>\n\n"
-        caption += "<b>Available Operations:</b>\n"
-        
-        for key, name in SelectMode.MODES.items():
-            caption += f"• {name}\n"
-        
-        if config:
-            caption += "\n<b>Current Settings:</b>\n"
-            if config.get('mode'):
-                caption += f"• Mode: {SelectMode.MODES.get(config['mode'], config['mode'])}\n"
-            if config.get('resolution'):
-                caption += f"• Resolution: {config['resolution']}\n"
-            if config.get('preset'):
-                caption += f"• Preset: {config['preset']}\n"
-        
-        caption += "\n<i>Select an operation below:</i>"
-        
-        return caption
-    
-    @staticmethod
-    def get_confirmation_caption(mode, config=None):
-        """Get confirmation message for selected mode"""
-        config = config or {}
-        
-        caption = f"✅ <b>Selected: {SelectMode.MODES.get(mode, mode)}</b>\n\n"
-        
-        if mode == 'convert':
-            caption += "📐 <b>Resolution Selection</b>\n"
-            caption += "Choose target resolution:\n"
-        elif mode == 'compress':
-            caption += "📦 <b>Compression Settings</b>\n"
-            caption += "Choose compression preset:\n"
-            caption += "• <b>Faster:</b> Quicker encoding, larger file\n"
-            caption += "• <b>Fast:</b> Balanced speed and compression\n"
-            caption += "• <b>Medium:</b> Standard compression\n"
-            caption += "• <b>Slow:</b> Maximum compression, slower\n"
-        elif mode == 'watermark':
-            caption += "🎨 <b>Watermark Position</b>\n"
-            caption += "Choose watermark placement:\n"
-        elif mode == 'extract':
-            caption += "📂 <b>Stream Extraction</b>\n"
-            caption += "Choose which streams to extract:\n"
-        elif mode == 'trim':
-            caption += "✂️ <b>Video Trimming</b>\n"
-            caption += "<i>Send start and end time in format:</i> <code>HH:MM:SS HH:MM:SS</code>\n"
-            caption += "<i>Example:</i> <code>00:00:10 00:02:30</code>\n"
-        else:
-            caption += f"Processing video with {SelectMode.MODES.get(mode, mode)} mode...\n"
-        
-        return caption
-    
-    @staticmethod
-    def get_help_text():
-        """Get comprehensive help text"""
-        help_text = """
-<b>🎬 Video Tools Help</b>
+        # Add proceed button if mode selected
+        if self.mode:
+            buttons.button_data('✅ Configure', 'vidtool configure', 'footer')
 
-<b>Available Commands:</b>
+        # Send main menu
+        reply_markup = buttons.build_menu(2)
+        menu_text = """🎬 <b>Video Tools Menu</b>
 
-1. <b>Merge Videos</b> - Combine multiple video files
-2. <b>Merge Video + Audio</b> - Add audio tracks to video
-3. <b>Merge Video + Subtitle</b> - Add subtitle files (softcopy or hardsub)
-4. <b>Compress Video</b> - Reduce video size using HEVC codec
-5. <b>Convert Resolution</b> - Scale to 1080p, 720p, 540p, 480p, 360p
-6. <b>Add Watermark</b> - Place watermark image on video
-7. <b>Extract Streams</b> - Export video, audio, or subtitle streams
-8. <b>Trim Video</b> - Cut video to specific duration
-9. <b>Sync Subtitles</b> - Auto-synchronize subtitle timing
-10. <b>Remove Stream</b> - Delete audio/video/subtitle tracks
+Select the tool you want to use, then click <b>Configure</b> to adjust settings.
 
-<b>Usage:</b>
-/vtl <link/file> -vt <mode> <options>
-/vtm <link/file> -vt <mode> <options>
+<b>Available Tools:</b>
+1️⃣ Merge Videos (video + video)
+2️⃣ Merge Audio (video + audio)
+3️⃣ Add Subtitles (video + subtitle)
+4️⃣ Compress Video (HEVC codec)
+5️⃣ Convert Resolution (1080p-360p)
+6️⃣ Add Watermark
+7️⃣ Extract Streams (v/a/s)
+8️⃣ Trim Video (cut duration)
+9️⃣ Sync Subtitles (auto-sync)
+🔟 Remove Streams (delete tracks)"""
 
-<b>Supported Flags:</b>
-• <code>-n</code> - Rename output
-• <code>-z</code> - Compress with password
-• <code>-t</code> - Custom thumbnail
-• <code>-sp</code> - Split size (500mb, 2gb)
-• <code>-up</code> - Upload destination
-• <code>-b</code> - Bulk download
-• <code>-sv</code> - Create sample video
-• <code>-ss</code> - Generate screenshots
+        self._message = await sendMessage(menu_text, self.message, reply_markup)
+        
+        # Wait for user to make selections
+        timeout_count = 0
+        while not self.event.is_set() and timeout_count < 2:
+            try:
+                await wait_for(self.event.wait(), timeout=600)
+            except:
+                timeout_count += 1
+                if timeout_count < 2:
+                    buttons.button_data('⏰ Timeout - Retry', 'vidtool refresh')
+                    await editMessage(menu_text, self._message, buttons.build_menu(2))
+                    self.event.clear()
 
-<b>Note:</b>
-• Merge operations require multiple files/links
-• Compression is slow but reduces file size significantly
-• All timestamps in HH:MM:SS or MM:SS format
-"""
-        return help_text.strip()
+        if self.is_cancelled:
+            await deleteMessage(self._message)
+            return None
+
+        # Return tuple: (mode, name, kwargs)
+        kwargs = self.extra_data.copy()
+        if self.is_rename:
+            kwargs['name'] = self.newname
+        
+        return (self.mode, self.newname, kwargs)
+
+    async def list_buttons(self, mode=''):
+        """Display settings menu for selected tool"""
+        if not mode:
+            mode = self.mode
+
+        buttons = ButtonMaker()
+        
+        match mode:
+            case 'compress':
+                # Compression preset selector
+                buttons.button_data('⚡ Faster (Quick, Large)', 'vidtool preset faster', 'header')
+                buttons.button_data('🔥 Fast (Balanced)', 'vidtool preset fast')
+                buttons.button_data('⏱️ Medium (Standard)', 'vidtool preset medium')
+                buttons.button_data('🐢 Slow (Small, Slow)', 'vidtool preset slow')
+
+            case 'convert':
+                # Resolution selector
+                buttons.button_data('Resolution:', 'vidtool back', 'header')
+                for res in ['1080p', '720p', '540p', '480p', '360p']:
+                    marker = '🔥 ' if self.extra_data.get('resolution') == res else ''
+                    buttons.button_data(f"{marker}{res}", f'vidtool resolution {res}')
+
+            case 'watermark':
+                # Watermark position
+                buttons.button_data('Position:', 'vidtool back', 'header')
+                positions = {'tl': '↖️ TL', 'tr': '↗️ TR', 'bl': '↙️ BL', 'br': '↘️ BR'}
+                for key, val in positions.items():
+                    marker = '🔥 ' if self.extra_data.get('position') == key else ''
+                    buttons.button_data(f"{marker}{val}", f'vidtool position {key}')
+
+            case 'trim':
+                buttons.button_data('Format: 00:00:00 - 00:02:30', 'vidtool back', 'header')
+                buttons.button_data('📝 Send Trim Time', 'vidtool back')
+
+            case 'extract':
+                buttons.button_data('Stream Type:', 'vidtool back', 'header')
+                for stype in ['Video', 'Audio', 'Subtitle', 'All']:
+                    marker = '🔥 ' if self.extra_data.get('stream_type') == stype.lower() else ''
+                    buttons.button_data(f"{marker}{stype}", f'vidtool stream {stype.lower()}')
+
+            case 'subsync':
+                buttons.button_data('🤖 Auto Sync', 'vidtool sync_mode auto')
+                buttons.button_data('👤 Manual Sync', 'vidtool sync_mode manual')
+
+            case 'rmstream':
+                buttons.button_data('Remove:', 'vidtool back', 'header')
+                for stype in ['Video', 'Audio', 'Subtitle']:
+                    marker = '🔥 ' if self.extra_data.get('remove_type') == stype.lower() else ''
+                    buttons.button_data(f"{marker}{stype}", f'vidtool remove_type {stype.lower()}')
+
+            case 'vid_sub':
+                buttons.button_data('Subtitle Mode:', 'vidtool back', 'header')
+                buttons.button_data('📄 Softcopy', 'vidtool submode softcopy')
+                buttons.button_data('🔥 Hardsub (Sudo)', 'vidtool submode hardsub')
+
+            case 'rename':
+                buttons.button_data('Send new filename:', 'vidtool back', 'header')
+
+        # Navigation buttons
+        if mode:
+            buttons.button_data('◀️ Back', 'vidtool back', 'footer')
+        
+        buttons.button_data('✅ Start Task', 'vidtool done', 'footer')
+
+        caption = self._get_menu_caption(mode)
+        if self._message:
+            await editMessage(caption, self._message, buttons.build_menu(2))
+
+    def _get_menu_caption(self, mode):
+        """Generate menu caption based on mode"""
+        captions = {
+            'compress': '⚙️ <b>Compress Settings</b>\n\nSelect compression preset.\nFaster = Quick, bigger file\nSlow = Smaller file, takes longer',
+            'convert': '📐 <b>Convert Resolution</b>\n\n• 1080p (1920x1080) - Full HD\n• 720p (1280x720) - HD\n• 540p (960x540) - Standard\n• 480p (854x480) - Mobile\n• 360p (640x360) - Low',
+            'watermark': '🎨 <b>Watermark Settings</b>\n\nSelect position for your watermark image.',
+            'trim': '✂️ <b>Trim Video</b>\n\nSend time range in format:\n<code>start time - end time</code>\nExample: <code>00:30 - 02:45</code>',
+            'extract': '📤 <b>Extract Streams</b>\n\nSelect which streams to extract separately.',
+            'subsync': '🔄 <b>Sync Subtitles</b>\n\nAuto: AI auto-sync\nManual: Manual adjustment',
+            'rmstream': '🗑️ <b>Remove Streams</b>\n\nRemove unwanted audio/subtitle tracks',
+            'vid_sub': '📝 <b>Add Subtitles</b>\n\nSoftcopy: Keep as separate stream\nHardsub: Burn into video permanently',
+           'rename': '✏️ <b>Rename File</b>\n\nSend new filename (without extension)',
+        }
+        return captions.get(mode, f'⚙️ <b>{VID_MODE.get(mode, mode)} Settings</b>')
+
+
+@new_task
+async def cb_vidtools(_, query: CallbackQuery, obj: SelectMode):
+    """Handle video tools button callbacks"""
+    data = query.data.split()
+    
+    if data[1] in config_dict.get('DISABLE_VIDTOOLS', []):
+        await query.answer(f'{VID_MODE.get(data[1], data[1])} is disabled!', True)
+        return
+
+    await query.answer()
+
+    match data[1]:
+        case 'done':
+            obj.event.set()
+
+        case 'cancel':
+            obj.mode = 'Task cancelled!'
+            obj.is_cancelled = True
+            obj.event.set()
+
+        case 'back':
+            if obj.message_event:
+                obj.message_event.set()
+            await obj.list_buttons()
+
+        case 'configure':
+            await obj.list_buttons()
+
+        case 'refresh':
+            await obj.get_buttons()
+
+        case 'preset':
+            if len(data) > 2:
+                obj.extra_data['preset'] = data[2]
+            await obj.list_buttons('compress')
+
+        case 'resolution':
+            if len(data) > 2:
+                obj.extra_data['resolution'] = data[2]
+            await obj.list_buttons('convert')
+
+        case 'position':
+            if len(data) > 2:
+                obj.extra_data['position'] = data[2]
+            await obj.list_buttons('watermark')
+
+        case 'stream':
+            if len(data) > 2:
+                obj.extra_data['stream_type'] = data[2]
+            await obj.list_buttons('extract')
+
+        case 'sync_mode':
+            if len(data) > 2:
+                obj.extra_data['sync_mode'] = data[2]
+            await obj.list_buttons('subsync')
+
+        case 'remove_type':
+            if len(data) > 2:
+                obj.extra_data['remove_type'] = data[2]
+            await obj.list_buttons('rmstream')
+
+        case 'submode':
+            if len(data) > 2:
+                obj.extra_data['submode'] = data[2]
+            await obj.list_buttons('vid_sub')
+
+        case 'rename':
+            obj.is_rename = True
+            future = obj.message_event_handler('rename')
+            await gather(obj.list_buttons('rename'), wrap_future(future))
+
+        case _:
+            if data[1] in VID_MODE:
+                obj.mode = data[1]
+                obj.extra_data.clear()
+                obj.is_rename = False
+                await obj.list_buttons()
