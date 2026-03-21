@@ -122,10 +122,35 @@ async def _mirror_leech(
         "-screenshots": "",
         "-t": "",
         "-thumb": "",
+        "-vt": False,
     }
 
     args = arg_parser(input_list[1:], arg_base)
     cmd = input_list[0].split("@")[0]
+
+    # Check if video tools flag is set
+    if args["-vt"]:
+        from bot.helper.video_utils.selector import SelectMode
+        from bot.helper.listeners.tasks_listener import TaskListener
+        
+        # Create a minimal task listener for video tools
+        class VidToolsListener(TaskListener):
+            def __init__(self, client, message, isLeech):
+                self.message = message
+                self.client = client
+                self.isLeech = isLeech
+                super().__init__()
+        
+        listener = VidToolsListener(client, message, isLeech)
+        selector = SelectMode(listener, is_link=True)
+        vidMode = await selector.get_buttons()
+        
+        if not vidMode:
+            return
+        
+        # Store video mode and continue with normal leech/mirror
+        message.vidMode = vidMode
+        # Continue with normal processing below...
 
     multi = int(args["-i"]) if args["-i"].isdigit() else 0
 
