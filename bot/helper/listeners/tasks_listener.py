@@ -989,3 +989,57 @@ class MirrorLeechListener:
         await clean_download(self.dir)
         if self.newDir:
             await clean_download(self.newDir)
+
+
+class TaskListener:
+    """Base class for task listeners - provides common functionality for download/upload tasks"""
+    
+    def __init__(self):
+        """Initialize TaskListener"""
+        self.message = None
+        self.client = None
+        self.isLeech = False
+        self.tag = None
+        self.editable = None
+        self.name = ''
+        self.link = ''
+    
+    async def getTag(self, text):
+        """Extract user tag from command text
+        
+        Args:
+            text: List of text lines from message
+        """
+        # Extract tag from text if provided
+        # Format: /command link -tag mytag
+        # Or: /command link | mytag
+        
+        if text and len(text) > 0:
+            cmd_line = text[0]
+            
+            # Check for tag with pipe separator
+            if '|' in cmd_line:
+                parts = cmd_line.split('|')
+                if len(parts) > 1:
+                    self.tag = parts[1].strip()
+                    return
+            
+            # Check for -tag flag
+            if '-tag' in cmd_line:
+                parts = cmd_line.split('-tag')
+                if len(parts) > 1:
+                    tag_part = parts[1].strip().split()[0]
+                    if tag_part:
+                        self.tag = tag_part
+                        return
+        
+        # Default tag
+        self.tag = self.message.from_user.mention(style='html') if self.message and self.message.from_user else 'Anonymous'
+    
+    async def beforeStart(self):
+        """Hook called before download starts"""
+        pass
+    
+    def status(self):
+        """Get task status"""
+        return "Processing"
