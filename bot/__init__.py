@@ -652,6 +652,62 @@ if len(MDL_TEMPLATE) == 0:
 
 <a href='{url}'>Read More ...</a>"""
 
+# ==============================
+# Video Tools Configuration
+# ==============================
+COMPRESS_BANNER = environ.get("COMPRESS_BANNER", "Re-Encoded")
+if len(COMPRESS_BANNER) == 0:
+    COMPRESS_BANNER = "Re-Encoded"
+
+LIB264_PRESET = environ.get("LIB264_PRESET", "superfast")
+if len(LIB264_PRESET) == 0:
+    LIB264_PRESET = "superfast"
+
+LIB265_PRESET = environ.get("LIB265_PRESET", "faster")
+if len(LIB265_PRESET) == 0:
+    LIB265_PRESET = "faster"
+
+HARDSUB_FONT_NAME = environ.get("HARDSUB_FONT_NAME", "Arial")
+if len(HARDSUB_FONT_NAME) == 0:
+    HARDSUB_FONT_NAME = "Arial"
+
+HARDSUB_FONT_SIZE = environ.get("HARDSUB_FONT_SIZE", "20")
+HARDSUB_FONT_SIZE = int(HARDSUB_FONT_SIZE) if HARDSUB_FONT_SIZE.isdigit() else 20
+
+HARDSUB_FONT_COLOR = environ.get("HARDSUB_FONT_COLOR", "white")
+if len(HARDSUB_FONT_COLOR) == 0:
+    HARDSUB_FONT_COLOR = "white"
+
+VIDTOOLS_FFMPEG_PATH = environ.get("VIDTOOLS_FFMPEG_PATH", "ffmpeg")
+if len(VIDTOOLS_FFMPEG_PATH) == 0:
+    VIDTOOLS_FFMPEG_PATH = "ffmpeg"
+
+VIDTOOLS_FFPROBE_PATH = environ.get("VIDTOOLS_FFPROBE_PATH", "ffprobe")
+if len(VIDTOOLS_FFPROBE_PATH) == 0:
+    VIDTOOLS_FFPROBE_PATH = "ffprobe"
+
+DISABLE_VIDTOOLS = environ.get("DISABLE_VIDTOOLS", "")
+if len(DISABLE_VIDTOOLS) == 0:
+    DISABLE_VIDTOOLS = "None"
+
+DISABLE_MULTI_VIDTOOLS = environ.get("DISABLE_MULTI_VIDTOOLS", "")
+if len(DISABLE_MULTI_VIDTOOLS) == 0:
+    DISABLE_MULTI_VIDTOOLS = "None"
+
+# Video mode definitions
+VID_MODE = {
+    'vid_vid': 'Video + Video',
+    'vid_aud': 'Video + Audio',
+    'vid_sub': 'Video + Subtitle',
+    'subsync': 'SubSync',
+    'compress': 'Compress',
+    'convert': 'Convert',
+    'watermark': 'Watermark',
+    'extract': 'Extract',
+    'trim': 'Trim',
+    'rmstream': 'Remove Stream'
+}
+
 config_dict = {
     "ANIME_TEMPLATE": ANIME_TEMPLATE,
     "AS_DOCUMENT": AS_DOCUMENT,
@@ -765,6 +821,16 @@ config_dict = {
     "USE_SERVICE_ACCOUNTS": USE_SERVICE_ACCOUNTS,
     "WEB_PINCODE": WEB_PINCODE,
     "YT_DLP_OPTIONS": YT_DLP_OPTIONS,
+    "COMPRESS_BANNER": COMPRESS_BANNER,
+    "LIB264_PRESET": LIB264_PRESET,
+    "LIB265_PRESET": LIB265_PRESET,
+    "HARDSUB_FONT_NAME": HARDSUB_FONT_NAME,
+    "HARDSUB_FONT_SIZE": HARDSUB_FONT_SIZE,
+    "HARDSUB_FONT_COLOR": HARDSUB_FONT_COLOR,
+    "VIDTOOLS_FFMPEG_PATH": VIDTOOLS_FFMPEG_PATH,
+    "VIDTOOLS_FFPROBE_PATH": VIDTOOLS_FFPROBE_PATH,
+    "DISABLE_VIDTOOLS": DISABLE_VIDTOOLS,
+    "DISABLE_MULTI_VIDTOOLS": DISABLE_MULTI_VIDTOOLS,
 }
 
 if GDRIVE_ID:
