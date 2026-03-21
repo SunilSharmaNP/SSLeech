@@ -11,6 +11,7 @@ cloudscraper
 cryptography
 dnspython
 feedparser
+ffmpeg-python
 flask
 gevent
 google-api-python-client
