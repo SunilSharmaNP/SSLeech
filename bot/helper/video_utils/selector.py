@@ -14,10 +14,8 @@ from time import time
 from logging import getLogger
 
 from bot import config_dict, VID_MODE
-from bot.helper.ext_utils.bot_utils import new_task, new_thread, sync_to_async
-from bot.helper.ext_utils.files_utils import clean_target
-from bot.helper.ext_utils.links_utils import is_media
-from bot.helper.ext_utils.status_utils import get_readable_time
+from bot.helper.ext_utils.bot_utils import new_task, new_thread, sync_to_async, get_readable_time
+from bot.helper.ext_utils.fs_utils import clean_target
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage
