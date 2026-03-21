@@ -59,14 +59,14 @@ class SelectMode:
         # Create menu with video tools (2-column layout)
         for key, value in vid_modes.items():
             marker = '🔥 ' if self.mode == key else ''
-            buttons.button_data(f"{marker}{value}", f'vidtool {key}')
+            buttons.ibutton(f"{marker}{value}", f'vidtool {key}')
         
         # Add action buttons
-        buttons.button_data(f"{'🔥 ' if self.is_rename else ''}✏️ Rename", 'vidtool rename', 'header')
-        buttons.button_data('❌ Cancel', 'vidtool cancel', 'footer')
+        buttons.ibutton(f"{'🔥 ' if self.is_rename else ''}✏️ Rename", 'vidtool rename', 'header')
+        buttons.ibutton('❌ Cancel', 'vidtool cancel', 'footer')
         
         if self.mode:
-            buttons.button_data('✅ Configure', 'vidtool configure', 'footer')
+            buttons.ibutton('✅ Configure', 'vidtool configure', 'footer')
         
         # Menu text
         menu_text = """🎬 <b>VIDEO TOOLS</b>
@@ -119,55 +119,55 @@ Select a tool and configure settings:
         buttons = ButtonMaker()
         
         if mode == 'compress':
-            buttons.button_data('⚡ Faster (Quick)', 'vidtool preset faster', 'header')
-            buttons.button_data('🔥 Fast (Balanced)', 'vidtool preset fast')
-            buttons.button_data('⏱️ Medium (Std)', 'vidtool preset medium')
-            buttons.button_data('🐢 Slow (Small)', 'vidtool preset slow')
+            buttons.ibutton('⚡ Faster (Quick)', 'vidtool preset faster', 'header')
+            buttons.ibutton('🔥 Fast (Balanced)', 'vidtool preset fast')
+            buttons.ibutton('⏱️ Medium (Std)', 'vidtool preset medium')
+            buttons.ibutton('🐢 Slow (Small)', 'vidtool preset slow')
         
         elif mode == 'convert':
-            buttons.button_data('Select Resolution:', 'vidtool none', 'header')
+            buttons.ibutton('Select Resolution:', 'vidtool none', 'header')
             for res in ['1080p', '720p', '540p', '480p', '360p']:
                 marker = '🔥 ' if self.extra_data.get('resolution') == res else ''
-                buttons.button_data(f"{marker}{res}", f'vidtool resolution {res}')
+                buttons.ibutton(f"{marker}{res}", f'vidtool resolution {res}')
         
         elif mode == 'watermark':
-            buttons.button_data('Position:', 'vidtool none', 'header')
+            buttons.ibutton('Position:', 'vidtool none', 'header')
             positions = {'tl': '↖️ TL', 'tr': '↗️ TR', 'bl': '↙️ BL', 'br': '↘️ BR'}
             for key, val in positions.items():
                 marker = '🔥 ' if self.extra_data.get('position') == key else ''
-                buttons.button_data(f"{marker}{val}", f'vidtool position {key}')
+                buttons.ibutton(f"{marker}{val}", f'vidtool position {key}')
         
         elif mode == 'trim':
-            buttons.button_data('Format: 00:00:00 - 00:02:30', 'vidtool none', 'header')
-            buttons.button_data('📝 Send Time Range', 'vidtool back')
+            buttons.ibutton('Format: 00:00:00 - 00:02:30', 'vidtool none', 'header')
+            buttons.ibutton('📝 Send Time Range', 'vidtool back')
         
         elif mode == 'extract':
-            buttons.button_data('Stream Type:', 'vidtool none', 'header')
+            buttons.ibutton('Stream Type:', 'vidtool none', 'header')
             for stype in ['Video', 'Audio', 'Subtitle', 'All']:
                 marker = '🔥 ' if self.extra_data.get('stream_type') == stype.lower() else ''
-                buttons.button_data(f"{marker}{stype}", f'vidtool stream {stype.lower()}')
+                buttons.ibutton(f"{marker}{stype}", f'vidtool stream {stype.lower()}')
         
         elif mode == 'subsync':
-            buttons.button_data('🤖 Auto Sync', 'vidtool sync_mode auto')
-            buttons.button_data('👤 Manual Sync', 'vidtool sync_mode manual')
+            buttons.ibutton('🤖 Auto Sync', 'vidtool sync_mode auto')
+            buttons.ibutton('👤 Manual Sync', 'vidtool sync_mode manual')
         
         elif mode == 'rmstream':
-            buttons.button_data('Remove:', 'vidtool none', 'header')
+            buttons.ibutton('Remove:', 'vidtool none', 'header')
             for stype in ['Video', 'Audio', 'Subtitle']:
                 marker = '🔥 ' if self.extra_data.get('remove_type') == stype.lower() else ''
-                buttons.button_data(f"{marker}{stype}", f'vidtool remove_type {stype.lower()}')
+                buttons.ibutton(f"{marker}{stype}", f'vidtool remove_type {stype.lower()}')
         
         elif mode == 'vid_sub':
-            buttons.button_data('Subtitle Mode:', 'vidtool none', 'header')
-            buttons.button_data('📄 Softcopy', 'vidtool submode softcopy')
-            buttons.button_data('🔥 Hardsub', 'vidtool submode hardsub')
+            buttons.ibutton('Subtitle Mode:', 'vidtool none', 'header')
+            buttons.ibutton('📄 Softcopy', 'vidtool submode softcopy')
+            buttons.ibutton('🔥 Hardsub', 'vidtool submode hardsub')
         
         elif mode == 'rename':
-            buttons.button_data('Send new filename:', 'vidtool none', 'header')
+            buttons.ibutton('Send new filename:', 'vidtool none', 'header')
         
         # Navigation
-        buttons.button_data('◀️ Back', 'vidtool back', 'footer')
-        buttons.button_data('✅ Start', 'vidtool done', 'footer')
+        buttons.ibutton('◀️ Back', 'vidtool back', 'footer')
+        buttons.ibutton('✅ Start', 'vidtool done', 'footer')
         
         caption = self._get_caption(mode)
         
@@ -276,4 +276,3 @@ async def message_handler(client, message: Message, obj: SelectMode):
         obj.extra_data['trim_time'] = message.text.strip()
     
     await obj.list_buttons()
-
