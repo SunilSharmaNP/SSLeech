@@ -316,6 +316,192 @@ Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link or rclone path
 """,
 ]
 
+VIDTOOLS_HELP_MESSAGE = [
+    """🎬 <b><u>Video Tools Help</u></b>
+
+<i>Advanced video processing with 10+ operations: merge, compress, convert, watermark, extract, trim, subsync & more</i>
+
+➲ <b><u>Available Commands</u></b>:
+
+1. <b>Video + Video (Merge):</b> Combine multiple video files
+2. <b>Video + Audio (Merge):</b> Add audio tracks to video
+3. <b>Video + Subtitle (Merge):</b> Add subtitle files (softcopy or hardsub)
+4. <b>Compress:</b> Reduce video size using HEVC codec
+5. <b>Convert:</b> Scale to 1080p, 720p, 540p, 480p, 360p
+6. <b>Watermark:</b> Place watermark image on video
+7. <b>Extract:</b> Export video, audio, or subtitle streams
+8. <b>Trim:</b> Cut video to specific duration
+9. <b>SubSync:</b> Auto-synchronize subtitle timing
+10. <b>Remove Stream:</b> Delete audio/video/subtitle tracks
+
+""",
+    """➲ <b><u>Usage</u></b>:
+
+<b>Leech (Upload to Telegram):</b>
+<code>/{BotCommands.LVidCommand}</code> link/file -vt mode options
+
+<b>Mirror (Upload to Cloud):</b>
+<code>/{BotCommands.MVidCommand}</code> link/file -vt mode options
+
+➲ <b><u>Video Mode Operations</u></b>:
+
+<b>Merge Video + Video:</b> -vt vid_vid
+<code>/{cmd}</code> link1 link2 -vt vid_vid -m <folder_name>
+Requires multiple video files in same folder
+
+<b>Merge Video + Audio:</b> -vt vid_aud
+<code>/{cmd}</code> video.mp4 audio.m4a -vt vid_aud
+Merges audio track(s) with video
+
+<b>Merge Video + Subtitle:</b> -vt vid_sub
+<code>/{cmd}</code> video.mp4 subtitle.srt -vt vid_sub
+Options: softcopy (default) or hardsub
+
+<b>Compress Video:</b> -vt compress
+<code>/{cmd}</code> video.mp4 -vt compress -preset faster
+Presets: faster, fast, medium, slow
+
+<b>Convert Resolution:</b> -vt convert
+<code>/{cmd}</code> video.mp4 -vt convert -res 720p
+Resolutions: 1080p, 720p, 540p, 480p, 360p
+
+<b>Add Watermark:</b> -vt watermark
+<code>/{cmd}</code> video.mp4 -watermark.png -vt watermark -pos br
+Positions: tl (top-left), tr(top-right), bl(bottom-left), br(bottom-right)
+
+<b>Extract Streams:</b> -vt extract
+<code>/{cmd}</code> video.mp4 -vt extract -type video|audio|subtitle|all
+Extracts specified streams to separate files
+
+<b>Trim Video:</b> -vt trim
+<code>/{cmd}</code> video.mp4 -vt trim -start 00:10 -end 02:30
+Format: HH:MM:SS or MM:SS
+
+<b>Sync Subtitles:</b> -vt subsync
+<code>/{cmd}</code> video.mp4 subtitle.srt -vt subsync
+Auto-synchronizes subtitles using alass
+
+<b>Remove Stream:</b> -vt rmstream
+<code>/{cmd}</code> video.mp4 -vt rmstream -type audio
+Types: video, audio, subtitle
+
+""",
+    """➲ <b><u>Supported Flags</u></b>:
+
+1. <b>-n or -name :</b> Rename output file
+   <code>-n "New Video Name"</code>
+
+2. <b>-z or -zip :</b> Compress/Zip output with password
+   <code>-z password</code>
+
+3. <b>-t or -thumb :</b> Custom thumbnail
+   <code>-t telegram_url/download_url</code>
+
+4. <b>-sp or -split :</b> Split size for large files
+   <code>-sp 500mb</code> or <code>-sp 2gb</code>
+
+5. <b>-up or -upload :</b> Upload destination
+   <code>-up gdrive:path</code> or <code>-up rc:remote:path</code>
+
+6. <b>-rcf :</b> RClone additional flags
+   <code>-rcf --buffer-size:8M</code>
+
+7. <b>-i :</b> Multi-link download
+   <code>-i 5</code> (for 5 links)
+
+8. <b>-b or -bulk :</b> Bulk download
+   <code>-b</code> or <code>-b 1:5</code> (range)
+
+9. <b>-sv or -sample :</b> Create sample video
+   <code>-sv 60:5</code> (60 seconds, 5 second segments)
+
+10. <b>-ss or -screenshots :</b> Generate screenshots
+    <code>-ss 6</code> (up to 10 screenshots)
+
+""",
+    """➲ <b><u>Advanced Options</u></b>:
+
+<b>Hardsub (Sudo Only):</b>
+Burn subtitles into video with customizable:
+• Font: Configurable (default: Arial)
+• Size: 11-30px
+• Colors: 10+ presets (Red, Green, Blue, Yellow, Orange, Purple, etc.)
+• Bold/Shadow: Optional styling
+
+<b>Compression Presets:</b>
+• <b>faster:</b> Quick encoding, larger file (best for fast processing)
+• <b>fast:</b> Balanced speed and compression
+• <b>medium:</b> Standard compression
+• <b>slow:</b> Maximum compression, slower encoding
+
+<b>Watermark Features:</b>
+• Positioning: Corners (top-left, top-right, bottom-left, bottom-right)
+• Size: 5-30% of video size
+• Opacity: Configurable transparency
+• Animation: Optional popup display
+
+<b>Quality Conversions:</b>
+1080p (1920×1080) - Full HD
+720p (1280×720) - HD
+540p (960×540) - Standard
+480p (854×480) - Mobile
+360p (640×360) - Low
+
+""",
+    """➲ <b><u>Examples</u></b>:
+
+<b>Simple Compression:</b>
+<code>/{cmd}</code> https://youtu.be/example -vt compress -preset faster -n "Compressed Video"
+
+<b>Convert + Watermark:</b>
+<code>/{cmd}</code> video.mp4 -watermark.png -vt convert -res 720p -vt watermark -pos br
+
+<b>Merge with Upload:</b>
+<code>/{cmd}</code> video1.mp4 video2.mp4 -vt vid_vid -up gdrive:Folder/Path -z password
+
+<b>Extract + Zip:</b>
+<code>/{cmd}</code> video.mp4 -vt extract -type audio -z mypass -n "Audio"
+
+<b>Trim + Trim  Bulk:</b>
+<code>/{cmd}</code> -b -vt trim -start 00:30 -end 01:45 -n "Trimmed"
+
+<b>Subsync + Hardsub (Sudo):</b>
+<code>/{cmd}</code> video.mp4 subtitle.srt -vt subsync -vt vid_sub -hardsub -preset slow
+
+<b>Multi Video Processing:</b>
+<code>/{cmd}</code> -i 3 -vt compress -preset fast -up rc:main:Videos
+
+➲ <b><u>Important Notes</u></b>:
+
+<b>Merge Operations:</b>
+• Require multiple files/links
+• Use -m flag for same folder
+• Don't use -n for merge modes
+
+<b>Processing Time:</b>
+• Compression: Slow but effective
+• Conversion: Medium speed
+• Merge/Extract: Fast operations
+
+<b>File Formats:</b>
+• Video: MP4, MKV, AVI, MOV, FLV
+• Audio: M4A, MP3, AAC, FLAC
+• Subtitle: SRT, ASS, SUB, VTT
+
+<b>Limitations:</b>
+• Maximum processing time: 1 hour
+• File size: Limited by storage
+• Concurrent jobs: Based on BOT_MAX_TASKS
+
+<b>Requirements:</b>
+• FFmpeg (for video processing)
+• FFprobe (for metadata)
+• ALASS (for subtitle sync)
+
+Use /{BotCommands.HelpCommand} for more command help!
+""",
+]
+
 CATEGORY_HELP_MESSAGE = """Reply to an active /{cmd} which was used to start the download or add gid along with {cmd}
 This command mainly for change category incase you decided to change category from already added download.
 But you can always use -c or -category with to select category before download start.
