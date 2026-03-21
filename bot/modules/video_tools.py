@@ -11,8 +11,7 @@ from secrets import token_urlsafe
 from time import sleep
 
 from bot import bot, config_dict, LOGGER
-from bot.helper.ext_utils.bot_utils import new_task
-from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
+from bot.helper.ext_utils.bot_utils import new_task, is_url
 from bot.helper.listeners.tasks_listener import TaskListener
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
@@ -38,42 +37,19 @@ class VidTools(TaskListener):
         text = self.message.text.split('\n')
         await self.getTag(text)
         
-        # Check user permissions
-        if fmsg := await UseCheck(self.message, self.isLeech).run(True, daily=True, ml_chek=True, session=True, send_pm=True):
-            await auto_delete_message(self.message, fmsg, self.message.reply_to_message)
-            return
+        # Extract link from message
+        reply_to = self.message.reply_to_message
         
-        # Parse command arguments
-        arg_base = {
-            '-i': 0,
-            '-sp': 0,
-            '-b': False,
-            '-gf': False,
-            '-sv': False,
-            '-z': False,
-            '-n': '',
-            '-rcf': '',
-            '-t': '',
-            '-up': '',
-            'link': ''
-        }
+        # Try to get link from command arguments
+        link_parts = text[0].split(' ', 1)
+        self.link = link_parts[1] if len(link_parts) > 1 else None
         
-        input_list = text[0].split(' ')
-        args = arg_parser(input_list[1:], arg_base)
-        
-        # Extract basic info
-        self.link = args['link'] or get_link(self.message)
-        self.name = args['-n'].replace('/', '')
-        self.compress = args['-z']
-        self.isGofile = args['-gf']
-        self.rcFlags = args['-rcf']
-        self.splitSize = args['-sp']
-        self.thumb = args['-t']
-        self.upDest = args['-up']
-        self.sampleVideo = args['-sv']
+        # If no link in command, try reply message
+        if not self.link and reply_to and reply_to.text:
+            self.link = reply_to.text.split('\n', 1)[0].strip()
         
         # Validate link
-        if not is_url(self.link):
+        if not self.link or not is_url(self.link):
             msg = await sendMessage('❌ Send link or use command with link!', self.message)
             await auto_delete_message(self.message, msg)
             return
@@ -101,7 +77,11 @@ class VidTools(TaskListener):
         if vidMode[1]:
             self.name = vidMode[1]
         elif not self.name:
-            self.name = get_url_name(self.link)
+            # Extract filename from URL or use default
+            try:
+                self.name = self.link.split('/')[-1].split('?')[0] or 'video'
+            except:
+                self.name = 'video'
         
         await editMessage('⏳ <b>Processing video...</b>', self.editable)
         
@@ -129,13 +109,13 @@ class VidTools(TaskListener):
 @new_task
 async def mirror_vidtools(_, message: Message):
     """Handle /vtm command (mirror with video tools)"""
-    VidTools(_, message, isLeech=False).newEvent()
+    await VidTools(_, message, isLeech=False).newEvent()
 
 
 @new_task
 async def leech_vidtools(_, message: Message):
     """Handle /vtl command (leech with video tools)"""
-    VidTools(_, message, isLeech=True).newEvent()
+    await VidTools(_, message, isLeech=True).newEvent()
 
 
 # Register handlers
