@@ -2,7 +2,7 @@
 from os import path as ospath, listdir
 from secrets import token_hex
 from logging import getLogger
-from yt_dlp import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL
 from re import search as re_search
 from contextlib import suppress
 
@@ -28,9 +28,7 @@ class MyLogger:
     def debug(self, msg):
         # Hack to fix changing extension
         if not self._obj.is_playlist:
-            if match := re_search(
-                r".Merger..Merging formats into..(.*?).$", msg
-            ) or re_search(r".ExtractAudio..Destination..(.*?)$", msg):
+            if match := re_search(r".Merger..Merging formats into..(.*?).$", msg) or re_search(r".ExtractAudio..Destination..(.*?)$", msg):
                 LOGGER.info(msg)
                 newname = match.group(1)
                 newname = newname.rsplit("/", 1)[-1]
@@ -83,7 +81,7 @@ class YoutubeDLHelper:
             },
         }
         
-        # Better cookie file handling - supports user-specific cookies
+        # Cookie file handling - supports user-specific cookies or default
         usr_cookie = (
             self.__listener.user_dict.get("USER_COOKIE_FILE", "")
             if hasattr(self.__listener, "user_dict")
@@ -96,10 +94,7 @@ class YoutubeDLHelper:
         )
         if ospath.exists(cookie_to_use):
             self.opts["cookiefile"] = cookie_to_use
-            user_id = getattr(self.__listener, "uid", "Unknown")
-            LOGGER.info(f"Using cookies file: {cookie_to_use} | User ID: {user_id}")
-        else:
-            LOGGER.warning("Cookies file not found. Some downloads may fail.")
+            LOGGER.info(f"Using cookies file: {cookie_to_use}")
 
     @property
     def download_speed(self):
@@ -159,148 +154,61 @@ class YoutubeDLHelper:
         self.__is_cancelled = True
         async_to_sync(self.__listener.onDownloadError, error)
 
-    def extractMetaData(self, link, name):
+    def _extract_meta_data(self, link, name):
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
         
-        # First attempt with current settings
-        with YoutubeDL(self.opts) as ydl:
-            try:
+        try:
+            with YoutubeDL(self.opts) as ydl:
                 result = ydl.extract_info(link, download=False)
                 if result is None:
-                    raise ValueError("Info result is None")
-            except Exception as e:
-                error_str = str(e)
-                LOGGER.warning(f"Initial metadata extraction failed: {error_str}")
-                
-                # If it's age-restricted or restricted content
-                if any(keyword in error_str.lower() for keyword in ["sign in", "age", "restricted", "not available"]):
-                    LOGGER.warning(f"Restricted content detected. Trying with enhanced player clients...")
-                    
-                    # Setup YouTube extractor arguments for age-restricted content
-                    if "extractor_args" not in self.opts:
-                        self.opts["extractor_args"] = {}
-                    if "youtube" not in self.opts["extractor_args"]:
-                        self.opts["extractor_args"]["youtube"] = {}
-                    
-                    # Try multiple player clients for age-restricted videos
-                    player_clients = ["android", "web", "tv", "web_creator", "ios"]
-                    self.opts["extractor_args"]["youtube"]["player_client"] = player_clients
-                    self.opts["extractor_args"]["youtube"]["player_skip"] = ["js", "configs"]
-                    self.opts["call_home"] = False
-                    
-                    try:
-                        with YoutubeDL(self.opts) as ydl_retry:
-                            result = ydl_retry.extract_info(link, download=False)
-                            if result is None:
-                                raise ValueError("Info result is None")
-                            LOGGER.info("Successfully extracted metadata with enhanced players")
-                    except Exception as e2:
-                        LOGGER.error(f"Enhanced metadata extraction failed: {str(e2)}")
-                        # Try one more time with minimal options
-                        try:
-                            minimal_opts = {
-                                "quiet": True,
-                                "no_warnings": True,
-                                "socket_timeout": 30,
-                            }
-                            with YoutubeDL(minimal_opts) as ydl_minimal:
-                                result = ydl_minimal.extract_info(link, download=False)
-                                if result is None:
-                                    raise ValueError("Info result is None")
-                                LOGGER.info("Successfully extracted metadata with minimal options")
-                        except Exception as e3:
-                            LOGGER.error(f"All metadata extraction attempts failed: {str(e3)}")
-                            return self.__onDownloadError(f"Cannot extract video info: {str(e3)}")
-                else:
-                    return self.__onDownloadError(error_str)
-            
-            if self.is_playlist:
-                self.playlist_count = result.get("playlist_count", 0)
-            
-            if "entries" in result:
-                self.name = name
-                for entry in result["entries"]:
-                    if not entry:
-                        continue
-                    elif "filesize_approx" in entry:
-                        self.__size += entry.get("filesize_approx", 0) or 0
-                    elif "filesize" in entry:
-                        self.__size += entry.get("filesize", 0) or 0
-                    
-                    if not self.name:
-                        outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
-                        self.name, ext = ospath.splitext(
-                            ydl.prepare_filename(entry, outtmpl=outtmpl_)
-                        )
-                        if not self.__ext:
-                            self.__ext = ext
-            else:
-                outtmpl_ = "%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s"
-                realName = ydl.prepare_filename(result, outtmpl=outtmpl_)
-                ext = ospath.splitext(realName)[-1]
-                self.name = f"{name}{ext}" if name else realName
-                if not self.__ext:
-                    self.__ext = ext
-                if result.get("filesize"):
-                    self.__size = result.get("filesize", 0) or 0
-                elif result.get("filesize_approx"):
-                    self.__size = result.get("filesize_approx", 0) or 0
+                    return self.__onDownloadError("Cannot retrieve video info")
+        except Exception as e:
+            return self.__onDownloadError(str(e))
 
-    def __download(self, link, path):
+        if self.is_playlist:
+            self.playlist_count = result.get("playlist_count", 0)
+
+        if "entries" in result:
+            self.name = name
+            for entry in result["entries"]:
+                if not entry:
+                    continue
+                elif "filesize_approx" in entry:
+                    self.__size += entry.get("filesize_approx", 0) or 0
+                elif "filesize" in entry:
+                    self.__size += entry.get("filesize", 0) or 0
+                
+                if not self.name:
+                    outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
+                    self.name, ext = ospath.splitext(
+                        ydl.prepare_filename(entry, outtmpl=outtmpl_)
+                    )
+                    if not self.__ext:
+                        self.__ext = ext
+        else:
+            outtmpl_ = "%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s"
+            realName = ydl.prepare_filename(result, outtmpl=outtmpl_)
+            ext = ospath.splitext(realName)[-1]
+            self.name = f"{name}{ext}" if name else realName
+            if not self.__ext:
+                self.__ext = ext
+            if result.get("filesize"):
+                self.__size = result.get("filesize", 0) or 0
+            elif result.get("filesize_approx"):
+                self.__size = result.get("filesize_approx", 0) or 0
+
+    def _download(self, link, path):
         with suppress(Exception):
             try:
                 with YoutubeDL(self.opts) as ydl:
-                    try:
-                        ydl.download([link])
-                    except DownloadError as e:
-                        error_str = str(e)
-                        # If format not available, try with multiple fallback strategies
-                        if "Requested format is not available" in error_str or "not a valid format" in error_str.lower():
-                            LOGGER.warning(f"Format not available, trying fallback strategies. Error: {error_str}")
-                            original_format = self.opts.get("format", "best")
-                            
-                            # Progressive fallback chain for better compatibility
-                            fallback_formats = [
-                                "best[ext=mp4]",  # MP4 progressive
-                                "best[ext=webm]",  # WebM progressive
-                                "b[ext=mp4]",  # Best video in MP4
-                                "b[ext=webm]",  # Best video in WebM
-                                "best",  # Ultimate fallback - any best
-                            ]
-                            
-                            download_success = False
-                            for fallback_fmt in fallback_formats:
-                                try:
-                                    LOGGER.info(f"Trying format: {fallback_fmt}")
-                                    self.opts["format"] = fallback_fmt
-                                    with YoutubeDL(self.opts) as ydl_retry:
-                                        ydl_retry.download([link])
-                                    download_success = True
-                                    LOGGER.info(f"Successfully downloaded with format: {fallback_fmt}")
-                                    break
-                                except DownloadError as e_retry:
-                                    LOGGER.debug(f"Format {fallback_fmt} failed: {str(e_retry)}")
-                                    continue
-                            
-                            if not download_success:
-                                self.opts["format"] = original_format
-                                LOGGER.error(f"All format fallbacks failed for: {link}")
-                                if not self.__is_cancelled:
-                                    self.__onDownloadError(f"Could not download video - no compatible format available. Try with /ytdl command to select format manually.")
-                                return
-                            
-                            self.opts["format"] = original_format
-                        else:
-                            if not self.__is_cancelled:
-                                self.__onDownloadError(error_str)
-                            return
-                        
+                    ydl.download([link])
+                
                 if self.is_playlist and (
                     not ospath.exists(path) or len(listdir(path)) == 0
                 ):
                     self.__onDownloadError(
-                        "No video available to download from this playlist. Check logs for more details"
+                        "No video available to download from this playlist"
                     )
                     return
                 if self.__is_cancelled:
@@ -325,13 +233,10 @@ class YoutubeDLHelper:
             if "youtube" not in self.opts["extractor_args"]:
                 self.opts["extractor_args"]["youtube"] = {}
             
-            # Better player client selection for improved compatibility
+            # Enhanced player client selection for better video support
             self.opts["extractor_args"]["youtube"]["player_client"] = ["android", "web", "tv", "web_creator"]
             self.opts["extractor_args"]["youtube"]["player_skip"] = ["js", "configs"]
-            
-            # Add additional options for problematic videos
             self.opts["call_home"] = False
-            self.opts["no_check_certificate"] = True
         
         await self.__onDownloadStart()
 
@@ -363,11 +268,9 @@ class YoutubeDLHelper:
             else:
                 self.__ext = f".{audio_format}"
 
-        # Improved format selection with robust fallback strategy
+        # Simple format setting - let yt-dlp handle fallback naturally
         if qual and not qual.startswith("ba/b"):
-            # For video downloads, use a more robust fallback chain
-            # This tries: requested_format/best[ext=mp4]/best[ext=webm]/best
-            self.opts["format"] = f"{qual}/best[ext=mp4]/best[ext=webm]/best"
+            self.opts["format"] = qual
         elif qual.startswith("ba/b"):
             self.opts["format"] = qual
         else:
@@ -376,7 +279,7 @@ class YoutubeDLHelper:
         if options:
             self.__set_options(options)
 
-        await sync_to_async(self.extractMetaData, link, name)
+        await sync_to_async(self._extract_meta_data, link, name)
         if self.__is_cancelled:
             return
 
@@ -479,7 +382,7 @@ class YoutubeDLHelper:
         async with queue_dict_lock:
             non_queued_dl.add(self.__listener.uid)
 
-        await sync_to_async(self.__download, link, path)
+        await sync_to_async(self._download, link, path)
 
     async def cancel_download(self):
         self.__is_cancelled = True
