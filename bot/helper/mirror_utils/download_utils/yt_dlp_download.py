@@ -226,18 +226,6 @@ class YoutubeDLHelper:
 
         self.__gid = token_hex(5)
         
-        # Setup YouTube extractor arguments for better compatibility
-        if "youtube" in link or "youtu.be" in link:
-            if "extractor_args" not in self.opts:
-                self.opts["extractor_args"] = {}
-            if "youtube" not in self.opts["extractor_args"]:
-                self.opts["extractor_args"]["youtube"] = {}
-            
-            # Enhanced player client selection for better video support
-            self.opts["extractor_args"]["youtube"]["player_client"] = ["android", "web", "tv", "web_creator"]
-            self.opts["extractor_args"]["youtube"]["player_skip"] = ["js", "configs"]
-            self.opts["call_home"] = False
-        
         await self.__onDownloadStart()
 
         self.opts["postprocessors"] = [
