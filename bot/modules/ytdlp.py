@@ -247,9 +247,10 @@ class YtSelection:
 
 
 def extract_info(link, options):
-    """Extract video info with comprehensive fallback strategy for SABR/format errors"""
+    """Extract video info with comprehensive fallback for format/SABR errors"""
+    last_error = None
     
-    # Attempt 1: Standard extraction with provided options
+    # Attempt 1: Standard extraction
     try:
         with YoutubeDL(options) as ydl:
             result = ydl.extract_info(link, download=False)
@@ -258,59 +259,56 @@ def extract_info(link, options):
             return result
     except Exception as e:
         error_str = str(e).lower()
+        last_error = e
         LOGGER.debug(f"Extraction attempt 1 failed: {error_str[:100]}")
-        
-        # Only retry if it's a format-related error
         if "requested format is not available" not in error_str and "only images are available" not in error_str:
             raise
     
-    # Attempt 2: Extract without any format specification (bypass format validation)
+    # Attempt 2: Without format specification
     try:
         opts_no_format = options.copy()
         opts_no_format.pop("format", None)
-        opts_no_format["quiet"] = False  # Enable some output for debugging
-        
         with YoutubeDL(opts_no_format) as ydl:
             result = ydl.extract_info(link, download=False)
             if result:
-                LOGGER.info("Successfully extracted info without format specification")
+                LOGGER.info("Extracted info successfully (without format)")
                 return result
     except Exception as e:
-        LOGGER.debug(f"Extraction attempt 2 failed (no format): {str(e)[:100]}")
+        last_error = e
+        LOGGER.debug(f"Extraction attempt 2 failed: {str(e)[:100]}")
     
-    # Attempt 3: Use format=best explicitly to force fallback
+    # Attempt 3: Force format=best
     try:
         opts_best = options.copy()
         opts_best["format"] = "best"
-        opts_best["quiet"] = False
-        
         with YoutubeDL(opts_best) as ydl:
             result = ydl.extract_info(link, download=False)
             if result:
-                LOGGER.info("Successfully extracted info with format=best")
+                LOGGER.info("Extracted info successfully (format=best)")
                 return result
     except Exception as e:
-        LOGGER.debug(f"Extraction attempt 3 failed (best): {str(e)[:100]}")
+        last_error = e
+        LOGGER.debug(f"Extraction attempt 3 failed: {str(e)[:100]}")
     
-    # Attempt 4: Disable SABR manifest support to get image formats metadata
+    # Attempt 4: Disable SABR manifests
     try:
         opts_no_manifest = options.copy()
         opts_no_manifest.pop("format", None)
         opts_no_manifest["youtube_include_dash_manifest"] = False
         opts_no_manifest["youtube_include_hls_manifest"] = False
-        opts_no_manifest["quiet"] = False
-        opts_no_manifest["skip_unavailable_fragments"] = True
-        
         with YoutubeDL(opts_no_manifest) as ydl:
             result = ydl.extract_info(link, download=False)
             if result:
-                LOGGER.info("Successfully extracted info without SABR manifests")
+                LOGGER.info("Extracted info successfully (no SABR manifests)")
                 return result
     except Exception as e:
-        LOGGER.debug(f"Extraction attempt 4 failed (no manifests): {str(e)[:100]}")
+        last_error = e
+        LOGGER.debug(f"Extraction attempt 4 failed: {str(e)[:100]}")
     
-    # If all attempts fail, raise original error
-    raise
+    # All attempts failed - raise stored error
+    if last_error:
+        raise last_error
+    raise RuntimeError("All extraction methods exhausted")
 
 
 async def _mdisk(link, name):
@@ -636,19 +634,28 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     # Special handling for YouTube content
     is_youtube = "youtube.com/live" in link or "youtube.com/watch" in link or "youtu.be" in link
     if is_youtube:
-        # Multiple YouTube client options to handle SABR streaming and format restrictions
+        # Extended YouTube options to handle SABR streaming and format restrictions
         youtube_options = {
             "live_from_start": False,
             "wait_for_video": (30, 120),
             "hls_prefer_native": True,
             "call_home": False,
             "no_check_certificate": True,
-            # Try multiple YouTube clients to bypass SABR streaming restrictions
+            # SABR handling - try multiple clients and manifest types
             "youtube_include_dash_manifest": True,
             "youtube_include_hls_manifest": True,
+            # Extractor args for better format discovery
+            "extractor_args": {
+                "youtube": [
+                    "player_skip=configs,js",  # Skip JS challenge solving (we don't have runtime)
+                ]
+            },
+            # Alternative clients to try (fallback chain)
+            "youtube_prefer_av1": False,
+            "youtube_prefer_hd": False,
         }
         options.update(youtube_options)
-        LOGGER.info("YouTube special options enabled for better format availability")
+        LOGGER.info("YouTube special options enabled for SABR/format handling")
     
     # Parse user options
     if opt:
@@ -690,7 +697,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     result = None
     
     try:
-        # Extract info without format to avoid validation errors
         LOGGER.info(f"Extracting video info: {link}")
         extract_opts = options.copy()
         extract_opts.pop("format", None)
@@ -700,22 +706,23 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         error_msg = str(e).replace("<", " ").replace(">", " ")
         LOGGER.error(f"Video extraction failed: {error_msg}")
         
-        # Analyze error and provide user feedback
+        # Provide user with actionable error message
         error_lower = error_msg.lower()
-        user_msg = f"{tag} Cannot download this video:\n\n"
+        user_msg = f"{tag}\n\n"
         
-        if "only images are available" in error_lower:
-            user_msg += "🖼️ This video contains only thumbnails/images.\nVideo download is not possible."
-        elif "requested format is not available" in error_lower:
-            user_msg += "🔒 YouTube is restricting access to this video (SABR protection).\nIt cannot be downloaded at this time.\n\n💡 Try: Updating cookies, waiting a few hours, or using a different account."
+        if "requested format is not available" in error_lower or "sabr" in error_lower:
+            user_msg += "🔒 **YouTube SABR Protection Active**\nThis video cannot be downloaded.\n\n"
+            user_msg += "💡 **Try:**\n• Update YouTube cookies (GetCookies.txt extension)\n• Wait 30+ minutes\n• Use different account"
+        elif "only images are available" in error_lower:
+            user_msg += "🖼️ **Image-Only Content**\nNo video stream available."
         elif "login required" in error_lower or "sign in" in error_lower:
-            user_msg += "🔐 This video requires YouTube authentication.\nUpdate your cookies using: GetCookies.txt extension\n\n📝 See pinned documentation for cookie setup."
-        elif "no supported javascript" in error_lower or "javascript runtime" in error_lower:
-            user_msg += "⚙️ Server configuration issue: Missing JavaScript runtime.\n\nAdmin fix: apt install nodejs && npm install -g esbuild quickjs"
-        elif "age restricted" in error_lower or "n challenge" in error_lower:
-            user_msg += "⚠️ This video requires special handling (age-restricted or protected).\nUpdate your YouTube cookies for better access."
+            user_msg += "🔐 **Authentication Required**\nUpdate cookies: GetCookies.txt extension"
+        elif "n challenge" in error_lower or "javascript" in error_lower:
+            user_msg += "⚙️ **Admin Action Needed**\nInstall Node.js runtime:\n`apt install nodejs && npm install -g esbuild`"
+        elif "age restricted" in error_lower:
+            user_msg += "⚠️ **Age-Restricted Content**\nUpdate YouTube cookies"
         else:
-            user_msg += f"Error extracting video:\n{error_msg[:150]}"
+            user_msg += f"❌ Error: {error_msg[:150]}"
         
         await sendMessage(message, user_msg)
         __run_multi()
