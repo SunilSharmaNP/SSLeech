@@ -551,7 +551,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
 
-    # FIXED: Enhanced YouTube options with better error handling
+    # FIXED: Enhanced YouTube options with multiple client support and better error handling
     cookie_file = "cookies.txt"
     options = {
         "usenetrc": True,
@@ -564,6 +564,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         "skip_unavailable_fragments": True,
         "quiet": True,
         "no_color": True,
+        "socket_timeout": 30,
     }
     
     # Add cookies only if file exists
@@ -573,16 +574,22 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     else:
         LOGGER.warning(f"Cookies file {cookie_file} not found. Download may fail for age-restricted content.")
     
-    # Special handling for YouTube live streams and age-restricted content
-    if "youtube.com/live" in link or "youtube.com/watch" in link or "youtu.be" in link:
+    # Special handling for YouTube content
+    is_youtube = "youtube.com/live" in link or "youtube.com/watch" in link or "youtu.be" in link
+    if is_youtube:
+        # Multiple YouTube client options to handle SABR streaming and format restrictions
         youtube_options = {
             "live_from_start": False,
             "wait_for_video": (30, 120),
             "hls_prefer_native": True,
             "call_home": False,
             "no_check_certificate": True,
+            # Try multiple YouTube clients to bypass SABR streaming restrictions
+            "youtube_include_dash_manifest": True,
+            "youtube_include_hls_manifest": True,
         }
         options.update(youtube_options)
+        LOGGER.info("YouTube special options enabled for better format availability")
     
     # Parse user options
     if opt:
@@ -620,50 +627,124 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         if not select and not qual:
             qual = format_backup
 
+    # Track if we encounter image-only content
+    extraction_attempts = 0
+    result = None
+    
     try:
         # First attempt to extract info
+        extraction_attempts += 1
+        LOGGER.info(f"Extraction attempt {extraction_attempts}: Extracting info for {link}")
         result = await sync_to_async(extract_info, link, options)
     except Exception as e:
         error_msg = str(e).replace("<", " ").replace(">", " ")
+        LOGGER.warning(f"Extraction attempt {extraction_attempts} failed: {error_msg}")
         
-        # If cookies error, try without cookies
-        if "cookies" in error_msg.lower() or "sign in" in error_msg.lower():
-            LOGGER.warning("Cookies issue detected, trying without cookies...")
+        # Check for specific error types
+        is_format_error = "requested format is not available" in error_msg.lower()
+        is_image_only = "only images are available" in error_msg.lower()
+        is_cookies_error = "cookies" in error_msg.lower() or "sign in" in error_msg.lower()
+        is_sabr_error = "sabr" in error_msg.lower() or "streaming" in error_msg.lower()
+        is_brotli_error = "brotli" in error_msg.lower()
+        
+        # Handle image-only content
+        if is_image_only or (is_format_error and extraction_attempts == 1):
+            LOGGER.warning("Video may only have image/thumbnail formats. Trying with image format selector...")
+            options["format"] = "image"
+            try:
+                extraction_attempts += 1
+                result = await sync_to_async(extract_info, link, options)
+                LOGGER.info("Successfully extracted image formats")
+            except Exception:
+                # Fall through to next attempt
+                pass
+        
+        # If format error persists, try without cookies
+        if result is None and (is_format_error or is_cookies_error or is_sabr_error):
+            LOGGER.warning("Attempting extraction without cookies...")
             if "cookiefile" in options:
                 options.pop("cookiefile", None)
+            if "format" in options and options["format"] == "image":
+                options.pop("format", None)
             try:
+                extraction_attempts += 1
                 result = await sync_to_async(extract_info, link, options)
+                LOGGER.info("Successfully extracted info without cookies")
             except Exception as e2:
-                msg = str(e2).replace("<", " ").replace(">", " ")
-                await sendMessage(message, f"{tag} {msg}")
+                error_msg_2 = str(e2).replace("<", " ").replace(">", " ")
+                LOGGER.warning(f"Extraction attempt {extraction_attempts} failed: {error_msg_2}")
+                pass
+        
+        # If still failing, try with minimal options
+        if result is None:
+            LOGGER.warning("Trying extraction with minimal options...")
+            minimal_options = {
+                "quiet": True,
+                "no_warnings": False,
+                "extractor_retries": 3,
+                "retries": 5,
+            }
+            try:
+                extraction_attempts += 1
+                result = await sync_to_async(extract_info, link, minimal_options)
+                LOGGER.info("Successfully extracted info with minimal options")
+            except Exception as e3:
+                error_msg_3 = str(e3).replace("<", " ").replace(">", " ")
+                msg = f"{tag} Unable to download: {error_msg_3}"
+                if is_image_only:
+                    msg += "\n\n⚠️ This video only has thumbnail/image formats available."
+                if is_sabr_error:
+                    msg += "\n\n⚠️ YouTube is using SABR streaming protection on this video."
+                if is_brotli_error:
+                    msg += "\n\n⚠️ Brotli decompression error - try again in a few moments."
+                await sendMessage(message, msg)
+                LOGGER.error(f"All extraction attempts failed. Final error: {error_msg_3}")
                 __run_multi()
                 await delete_links(message)
                 return
-        else:
-            await sendMessage(message, f"{tag} {error_msg}")
-            __run_multi()
-            await delete_links(message)
-            return
 
     __run_multi()
+    
+    # Check for image-only content
+    is_image_only_result = False
+    if result and isinstance(result, dict):
+        formats = result.get("formats", [])
+        if formats:
+            is_video = any(f.get("vcodec") != "none" for f in formats)
+            is_audio = any(f.get("acodec") != "none" for f in formats)
+            is_image_only_result = not is_video and not is_audio
+        else:
+            is_image_only_result = result.get("_type") == "playlist" or len(result.get("entries", [])) == 0
 
     if not select and (not qual and "format" in options):
         qual = options["format"]
     
     # For YouTube live streams, use best format if none selected
-    if not qual and ("youtube.com/live" in link or "youtube.com/watch" in link):
-        LOGGER.info("Live stream detected, using best format")
-        qual = "best"
+    if not qual and is_youtube:
+        LOGGER.info("YouTube video detected, using fallback format strategy")
+        qual = "bv*+ba/b"  # Best video + audio fallback
 
     if not qual:
-        qual = await YtSelection(client, message).get_quality(result)
-        if qual is None:
-            return
+        try:
+            qual = await YtSelection(client, message).get_quality(result)
+            if qual is None:
+                return
+        except Exception as e:
+            LOGGER.error(f"Error in quality selection: {e}")
+            qual = "best"
     
-    # Add format fallback for video downloads  
-    if qual and not qual.startswith("ba/b"):
-        # Create fallback chain: try requested quality first, then best
-        qual_with_fallback = f"{qual}/best"
+    # Add format fallback for video downloads
+    if is_image_only_result:
+        LOGGER.warning("Image-only content detected, using image format")
+        qual_with_fallback = "image"
+    elif qual and not qual.startswith("ba/b"):
+        # Create comprehensive fallback chain
+        if is_youtube:
+            # YouTube fallback: try requested quality, then best video+audio, then best
+            qual_with_fallback = f"{qual}/bv*+ba/best"
+        else:
+            # General fallback
+            qual_with_fallback = f"{qual}/best"
     else:
         qual_with_fallback = qual or "best"
     
