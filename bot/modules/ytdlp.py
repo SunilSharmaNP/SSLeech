@@ -448,9 +448,9 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         return
 
     if not isLeech:
-        if config_dict["DEFAULT_UPLOAD"] == "rc" and not up or up == "rc":
+        if (config_dict["DEFAULT_UPLOAD"] == "rc" and not up) or up == "rc":
             up = config_dict["RCLONE_PATH"]
-        elif config_dict["DEFAULT_UPLOAD"] == "ddl" and not up or up == "ddl":
+        elif (config_dict["DEFAULT_UPLOAD"] == "ddl" and not up) or up == "ddl":
             up = "ddl"
         if not up and config_dict["DEFAULT_UPLOAD"] == "gd":
             up = "gd"
@@ -488,7 +488,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             await sendMessage(message, "No Rclone Destination!")
             await delete_links(message)
             return
-        elif up not in ["rcl", "gd", "ddl"]:
+        elif up not in ["rc", "gd", "ddl"]:
             if up.startswith("mrcc:"):
                 config_path = f"rclone/{message.from_user.id}.conf"
             else:
@@ -564,12 +564,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         "skip_unavailable_fragments": True,
         "quiet": True,
         "no_color": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android", "web"],
-                "skip": ["dash"],
-            }
-        },
     }
     
     # Add cookies only if file exists
@@ -579,20 +573,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     else:
         LOGGER.warning(f"Cookies file {cookie_file} not found. Download may fail for age-restricted content.")
     
-    # Special handling for YouTube live streams
-    if "youtube.com/live" in link or "youtube.com/watch" in link:
-        live_options = {
+    # Special handling for YouTube live streams and age-restricted content
+    if "youtube.com/live" in link or "youtube.com/watch" in link or "youtu.be" in link:
+        youtube_options = {
             "live_from_start": False,
             "wait_for_video": (30, 120),
             "hls_prefer_native": True,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "tv_embedded", "web"],
-                    "skip": ["hls", "dash"],
-                }
-            },
+            "call_home": False,
+            "no_check_certificate": True,
         }
-        options.update(live_options)
+        options.update(youtube_options)
     
     # Parse user options
     if opt:
@@ -615,9 +605,10 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             elif value.lower() == "false":
                 value = False
             elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
+                import ast
                 try:
-                    value = eval(value)
-                except:
+                    value = ast.literal_eval(value)
+                except (ValueError, SyntaxError):
                     pass
             options[key] = value
 
@@ -669,17 +660,24 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         if qual is None:
             return
     
+    # Add format fallback for video downloads  
+    if qual and not qual.startswith("ba/b"):
+        # Create fallback chain: try requested quality first, then best
+        qual_with_fallback = f"{qual}/best"
+    else:
+        qual_with_fallback = qual or "best"
+    
     await delete_links(message)
-    LOGGER.info(f"Downloading with YT-DLP: {link}")
+    LOGGER.info(f"Downloading with YT-DLP: {link} | Format: {qual_with_fallback}")
     playlist = "entries" in result
     ydl = YoutubeDLHelper(listener)
     
     # Prepare final options for download
     final_options = options.copy()
-    if qual:
-        final_options["format"] = qual
+    if qual_with_fallback:
+        final_options["format"] = qual_with_fallback
     
-    await ydl.add_download(link, path, name, qual, playlist, opt)
+    await ydl.add_download(link, path, name, qual_with_fallback, playlist, opt)
 
 
 async def ytdl(client, message):
