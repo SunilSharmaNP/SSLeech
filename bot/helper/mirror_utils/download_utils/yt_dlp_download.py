@@ -6,7 +6,7 @@ from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
 from contextlib import suppress
 
-from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
+from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock, config_dict
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
 from ..status_utils.yt_dlp_download_status import YtDlpDownloadStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
@@ -82,11 +82,22 @@ class YoutubeDLHelper:
                 "extractor": lambda n: 3,
             },
         }
-        # Handle cookie file - check if exists
-        cookie_to_use = "cookies.txt" if ospath.exists("cookies.txt") else None
-        if cookie_to_use:
+        
+        # Better cookie file handling - supports user-specific cookies
+        usr_cookie = (
+            self.__listener.user_dict.get("USER_COOKIE_FILE", "")
+            if hasattr(self.__listener, "user_dict")
+            else ""
+        )
+        cookie_to_use = (
+            usr_cookie
+            if usr_cookie and ospath.exists(usr_cookie)
+            else "cookies.txt"
+        )
+        if ospath.exists(cookie_to_use):
             self.opts["cookiefile"] = cookie_to_use
-            LOGGER.info(f"Using cookies file: {cookie_to_use}")
+            user_id = getattr(self.__listener, "uid", "Unknown")
+            LOGGER.info(f"Using cookies file: {cookie_to_use} | User ID: {user_id}")
         else:
             LOGGER.warning("Cookies file not found. Some downloads may fail.")
 
@@ -159,25 +170,36 @@ class YoutubeDLHelper:
             except Exception as e:
                 error_str = str(e)
                 # Check if it's an age restriction or format issue
-                if "Sign in" in error_str or "age" in error_str.lower():
-                    LOGGER.warning(f"Age-restricted content detected. Trying with different player client...")
-                    # Update opts for age-restricted content
+                if "Sign in" in error_str or "age" in error_str.lower() or "restricted" in error_str.lower():
+                    LOGGER.warning(f"Age-restricted content detected. Trying with different player clients...")
+                    # Setup YouTube extractor arguments for age-restricted content
                     if "extractor_args" not in self.opts:
                         self.opts["extractor_args"] = {}
                     if "youtube" not in self.opts["extractor_args"]:
                         self.opts["extractor_args"]["youtube"] = {}
-                    self.opts["extractor_args"]["youtube"]["player_client"] = ["android", "web_creator"]
+                    
+                    # Try multiple player clients for age-restricted videos
+                    player_clients = ["android", "web", "tv", "web_creator"]
+                    self.opts["extractor_args"]["youtube"]["player_client"] = player_clients
+                    self.opts["extractor_args"]["youtube"]["player_skip"] = ["js", "configs"]
+                    
                     try:
                         with YoutubeDL(self.opts) as ydl_retry:
                             result = ydl_retry.extract_info(link, download=False)
                             if result is None:
                                 raise ValueError("Info result is None")
                     except Exception as e2:
+                        LOGGER.error(f"Age-restricted content failed: {str(e2)}")
                         return self.__onDownloadError(f"Age-restricted content cannot be downloaded: {str(e2)}")
+                elif "Requested format is not available" in error_str or "not a valid format" in error_str:
+                    LOGGER.warning(f"Format not available. Error: {error_str}")
+                    return self.__onDownloadError(error_str)
                 else:
                     return self.__onDownloadError(error_str)
+            
             if self.is_playlist:
                 self.playlist_count = result.get("playlist_count", 0)
+            
             if "entries" in result:
                 self.name = name
                 for entry in result["entries"]:
@@ -187,6 +209,7 @@ class YoutubeDLHelper:
                         self.__size += entry.get("filesize_approx", 0) or 0
                     elif "filesize" in entry:
                         self.__size += entry.get("filesize", 0) or 0
+                    
                     if not self.name:
                         outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
                         self.name, ext = ospath.splitext(
@@ -214,16 +237,28 @@ class YoutubeDLHelper:
                         ydl.download([link])
                     except DownloadError as e:
                         error_str = str(e)
-                        # If format not available, try with best format
-                        if "Requested format is not available" in error_str or "not a valid format" in error_str:
-                            LOGGER.warning(f"Format not available, trying with best format. Error: {error_str}")
-                            self.opts["format"] = "best"
-                            with YoutubeDL(self.opts) as ydl_retry:
-                                ydl_retry.download([link])
+                        # If format not available, try with fallback formats
+                        if "Requested format is not available" in error_str or "not a valid format" in error_str.lower():
+                            LOGGER.warning(f"Format not available, trying fallback. Error: {error_str}")
+                            original_format = self.opts.get("format", "best")
+                            
+                            # Try progressive download first
+                            self.opts["format"] = "best[ext=mp4]"
+                            try:
+                                with YoutubeDL(self.opts) as ydl_retry:
+                                    ydl_retry.download([link])
+                            except DownloadError as e2:
+                                # Ultimate fallback to best
+                                LOGGER.warning(f"Progressive download failed, trying best format")
+                                self.opts["format"] = "best"
+                                with YoutubeDL(self.opts) as ydl_final:
+                                    ydl_final.download([link])
+                            self.opts["format"] = original_format
                         else:
                             if not self.__is_cancelled:
                                 self.__onDownloadError(error_str)
                             return
+                        
                 if self.is_playlist and (
                     not ospath.exists(path) or len(listdir(path)) == 0
                 ):
@@ -248,14 +283,16 @@ class YoutubeDLHelper:
         
         # Setup YouTube extractor arguments for better compatibility
         if "youtube" in link or "youtu.be" in link:
-            self.opts["extractor_args"] = {
-                "youtube": {
-                    "player_client": ["android", "web", "tv", "web_creator"],
-                    "player_skip": ["js", "configs"],
-                    "skip": ["dash", "hls"],
-                }
-            }
-            # Try to handle age-restricted content
+            if "extractor_args" not in self.opts:
+                self.opts["extractor_args"] = {}
+            if "youtube" not in self.opts["extractor_args"]:
+                self.opts["extractor_args"]["youtube"] = {}
+            
+            # Better player client selection for improved compatibility
+            self.opts["extractor_args"]["youtube"]["player_client"] = ["android", "web", "tv", "web_creator"]
+            self.opts["extractor_args"]["youtube"]["player_skip"] = ["js", "configs"]
+            
+            # Add additional options for problematic videos
             self.opts["call_home"] = False
             self.opts["no_check_certificate"] = True
         
@@ -289,14 +326,10 @@ class YoutubeDLHelper:
             else:
                 self.__ext = f".{audio_format}"
 
-        # Use format string with fallback options
+        # Improved format selection with fallback strategy
         if qual and not qual.startswith("ba/b"):
-            # Add fallback formats to handle unavailable quality
-            if qual == "best":
-                self.opts["format"] = "best"
-            else:
-                # Create fallback chain for video downloads
-                self.opts["format"] = f"{qual}/best"
+            # Create fallback chain for video downloads
+            self.opts["format"] = f"{qual}/best"
         elif qual.startswith("ba/b"):
             self.opts["format"] = qual
         else:
@@ -317,10 +350,12 @@ class YoutubeDLHelper:
             )
             base_name = ospath.splitext(self.name)[0]
 
+        start_path = path if self.keep_thumb else f"{path}/yt-dlp-thumb"
+        
         if self.is_playlist:
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
-                "thumbnail": f"{path}/yt-dlp-thumb/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
+                "thumbnail": f"{start_path}/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
             }
         elif any(
             key in options
@@ -333,16 +368,17 @@ class YoutubeDLHelper:
                 "writeurllink",
                 "writesubtitles",
                 "writeautomaticsub",
+                "write_all_thumbnails",
             ]
         ):
             self.opts["outtmpl"] = {
                 "default": f"{path}/{base_name}/{self.name}",
-                "thumbnail": f"{path}/yt-dlp-thumb/{base_name}.%(ext)s",
+                "thumbnail": f"{start_path}/{base_name}.%(ext)s",
             }
         else:
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}",
-                "thumbnail": f"{path}/yt-dlp-thumb/{base_name}.%(ext)s",
+                "thumbnail": f"{start_path}/{base_name}.%(ext)s",
             }
 
         if qual.startswith("ba/b"):
