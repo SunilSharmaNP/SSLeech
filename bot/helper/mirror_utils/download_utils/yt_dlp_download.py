@@ -162,6 +162,8 @@ class YoutubeDLHelper:
     def extractMetaData(self, link, name):
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
+        
+        # First attempt with current settings
         with YoutubeDL(self.opts) as ydl:
             try:
                 result = ydl.extract_info(link, download=False)
@@ -169,9 +171,12 @@ class YoutubeDLHelper:
                     raise ValueError("Info result is None")
             except Exception as e:
                 error_str = str(e)
-                # Check if it's an age restriction or format issue
-                if "Sign in" in error_str or "age" in error_str.lower() or "restricted" in error_str.lower():
-                    LOGGER.warning(f"Age-restricted content detected. Trying with different player clients...")
+                LOGGER.warning(f"Initial metadata extraction failed: {error_str}")
+                
+                # If it's age-restricted or restricted content
+                if any(keyword in error_str.lower() for keyword in ["sign in", "age", "restricted", "not available"]):
+                    LOGGER.warning(f"Restricted content detected. Trying with enhanced player clients...")
+                    
                     # Setup YouTube extractor arguments for age-restricted content
                     if "extractor_args" not in self.opts:
                         self.opts["extractor_args"] = {}
@@ -179,21 +184,34 @@ class YoutubeDLHelper:
                         self.opts["extractor_args"]["youtube"] = {}
                     
                     # Try multiple player clients for age-restricted videos
-                    player_clients = ["android", "web", "tv", "web_creator"]
+                    player_clients = ["android", "web", "tv", "web_creator", "ios"]
                     self.opts["extractor_args"]["youtube"]["player_client"] = player_clients
                     self.opts["extractor_args"]["youtube"]["player_skip"] = ["js", "configs"]
+                    self.opts["call_home"] = False
                     
                     try:
                         with YoutubeDL(self.opts) as ydl_retry:
                             result = ydl_retry.extract_info(link, download=False)
                             if result is None:
                                 raise ValueError("Info result is None")
+                            LOGGER.info("Successfully extracted metadata with enhanced players")
                     except Exception as e2:
-                        LOGGER.error(f"Age-restricted content failed: {str(e2)}")
-                        return self.__onDownloadError(f"Age-restricted content cannot be downloaded: {str(e2)}")
-                elif "Requested format is not available" in error_str or "not a valid format" in error_str:
-                    LOGGER.warning(f"Format not available. Error: {error_str}")
-                    return self.__onDownloadError(error_str)
+                        LOGGER.error(f"Enhanced metadata extraction failed: {str(e2)}")
+                        # Try one more time with minimal options
+                        try:
+                            minimal_opts = {
+                                "quiet": True,
+                                "no_warnings": True,
+                                "socket_timeout": 30,
+                            }
+                            with YoutubeDL(minimal_opts) as ydl_minimal:
+                                result = ydl_minimal.extract_info(link, download=False)
+                                if result is None:
+                                    raise ValueError("Info result is None")
+                                LOGGER.info("Successfully extracted metadata with minimal options")
+                        except Exception as e3:
+                            LOGGER.error(f"All metadata extraction attempts failed: {str(e3)}")
+                            return self.__onDownloadError(f"Cannot extract video info: {str(e3)}")
                 else:
                     return self.__onDownloadError(error_str)
             
@@ -237,22 +255,41 @@ class YoutubeDLHelper:
                         ydl.download([link])
                     except DownloadError as e:
                         error_str = str(e)
-                        # If format not available, try with fallback formats
+                        # If format not available, try with multiple fallback strategies
                         if "Requested format is not available" in error_str or "not a valid format" in error_str.lower():
-                            LOGGER.warning(f"Format not available, trying fallback. Error: {error_str}")
+                            LOGGER.warning(f"Format not available, trying fallback strategies. Error: {error_str}")
                             original_format = self.opts.get("format", "best")
                             
-                            # Try progressive download first
-                            self.opts["format"] = "best[ext=mp4]"
-                            try:
-                                with YoutubeDL(self.opts) as ydl_retry:
-                                    ydl_retry.download([link])
-                            except DownloadError as e2:
-                                # Ultimate fallback to best
-                                LOGGER.warning(f"Progressive download failed, trying best format")
-                                self.opts["format"] = "best"
-                                with YoutubeDL(self.opts) as ydl_final:
-                                    ydl_final.download([link])
+                            # Progressive fallback chain for better compatibility
+                            fallback_formats = [
+                                "best[ext=mp4]",  # MP4 progressive
+                                "best[ext=webm]",  # WebM progressive
+                                "b[ext=mp4]",  # Best video in MP4
+                                "b[ext=webm]",  # Best video in WebM
+                                "best",  # Ultimate fallback - any best
+                            ]
+                            
+                            download_success = False
+                            for fallback_fmt in fallback_formats:
+                                try:
+                                    LOGGER.info(f"Trying format: {fallback_fmt}")
+                                    self.opts["format"] = fallback_fmt
+                                    with YoutubeDL(self.opts) as ydl_retry:
+                                        ydl_retry.download([link])
+                                    download_success = True
+                                    LOGGER.info(f"Successfully downloaded with format: {fallback_fmt}")
+                                    break
+                                except DownloadError as e_retry:
+                                    LOGGER.debug(f"Format {fallback_fmt} failed: {str(e_retry)}")
+                                    continue
+                            
+                            if not download_success:
+                                self.opts["format"] = original_format
+                                LOGGER.error(f"All format fallbacks failed for: {link}")
+                                if not self.__is_cancelled:
+                                    self.__onDownloadError(f"Could not download video - no compatible format available. Try with /ytdl command to select format manually.")
+                                return
+                            
                             self.opts["format"] = original_format
                         else:
                             if not self.__is_cancelled:
@@ -326,10 +363,11 @@ class YoutubeDLHelper:
             else:
                 self.__ext = f".{audio_format}"
 
-        # Improved format selection with fallback strategy
+        # Improved format selection with robust fallback strategy
         if qual and not qual.startswith("ba/b"):
-            # Create fallback chain for video downloads
-            self.opts["format"] = f"{qual}/best"
+            # For video downloads, use a more robust fallback chain
+            # This tries: requested_format/best[ext=mp4]/best[ext=webm]/best
+            self.opts["format"] = f"{qual}/best[ext=mp4]/best[ext=webm]/best"
         elif qual.startswith("ba/b"):
             self.opts["format"] = qual
         else:
