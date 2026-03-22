@@ -199,24 +199,44 @@ class YoutubeDLHelper:
                 self.__size = result.get("filesize_approx", 0) or 0
 
     def _download(self, link, path):
-        with suppress(Exception):
-            try:
-                with YoutubeDL(self.opts) as ydl:
-                    ydl.download([link])
-                
-                if self.is_playlist and (
-                    not ospath.exists(path) or len(listdir(path)) == 0
-                ):
-                    self.__onDownloadError(
-                        "No video available to download from this playlist"
-                    )
+        try:
+            with YoutubeDL(self.opts) as ydl:
+                ydl.download([link])
+            
+            if self.is_playlist and (
+                not ospath.exists(path) or len(listdir(path)) == 0
+            ):
+                self.__onDownloadError(
+                    "No video available to download from this playlist"
+                )
+                return
+            if self.__is_cancelled:
+                return
+            async_to_sync(self.__listener.onDownloadComplete)
+        except Exception as e:
+            error_str = str(e).lower()
+            # Handle specific format-related errors
+            if "requested format is not available" in error_str:
+                LOGGER.warning(f"Format not available, trying fallback format: {e}")
+                # Try with best format fallback
+                self.opts["format"] = "best"
+                try:
+                    with YoutubeDL(self.opts) as ydl:
+                        ydl.download([link])
+                    if not self.__is_cancelled:
+                        async_to_sync(self.__listener.onDownloadComplete)
                     return
-                if self.__is_cancelled:
-                    return
-                async_to_sync(self.__listener.onDownloadComplete)
-            except ValueError:
+                except Exception as e2:
+                    self.__onDownloadError(f"Download failed even with fallback format: {e2}")
+            elif "only images are available" in error_str:
+                self.__onDownloadError("This video only has thumbnail/image formats available. Cannot download video.")
+            elif "brotli" in error_str:
+                self.__onDownloadError(f"Content encoding error: {e}. Please try again.")
+            elif isinstance(e, ValueError):
                 if not self.__is_cancelled:
                     self.__onDownloadError("Download Stopped by User!")
+            else:
+                self.__onDownloadError(str(e))
         return
 
     async def add_download(self, link, path, name, qual, playlist, options):
