@@ -247,11 +247,29 @@ class YtSelection:
 
 
 def extract_info(link, options):
-    with YoutubeDL(options) as ydl:
-        result = ydl.extract_info(link, download=False)
-        if result is None:
-            raise ValueError("Info result is None")
-        return result
+    """Extract video info with better error handling for image-only content"""
+    try:
+        with YoutubeDL(options) as ydl:
+            result = ydl.extract_info(link, download=False)
+            if result is None:
+                raise ValueError("Info result is None")
+            return result
+    except Exception as e:
+        # If the error is about format not available, try without format validation
+        error_str = str(e).lower()
+        if "requested format is not available" in error_str or "only images are available" in error_str:
+            # Try extraction without format to get metadata anyway
+            try:
+                opts_no_format = options.copy()
+                opts_no_format.pop("format", None)
+                with YoutubeDL(opts_no_format) as ydl:
+                    # Use extract_info with skip_download to get metadata without format validation
+                    result = ydl.extract_info(link, download=False)
+                    if result:
+                        return result
+            except Exception:
+                pass
+        raise
 
 
 async def _mdisk(link, name):
@@ -627,81 +645,41 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         if not select and not qual:
             qual = format_backup
 
-    # Track if we encounter image-only content
-    extraction_attempts = 0
+    # Extract info without format validation to avoid premature errors
     result = None
     
     try:
-        # First attempt to extract info
-        extraction_attempts += 1
-        LOGGER.info(f"Extraction attempt {extraction_attempts}: Extracting info for {link}")
-        result = await sync_to_async(extract_info, link, options)
+        # Extract info without format to avoid validation errors
+        LOGGER.info(f"Extracting video info: {link}")
+        extract_opts = options.copy()
+        extract_opts.pop("format", None)
+        result = await sync_to_async(extract_info, link, extract_opts)
+        LOGGER.info("Video info extracted successfully")
     except Exception as e:
         error_msg = str(e).replace("<", " ").replace(">", " ")
-        LOGGER.warning(f"Extraction attempt {extraction_attempts} failed: {error_msg}")
+        LOGGER.error(f"Video extraction failed: {error_msg}")
         
-        # Check for specific error types
-        is_format_error = "requested format is not available" in error_msg.lower()
-        is_image_only = "only images are available" in error_msg.lower()
-        is_cookies_error = "cookies" in error_msg.lower() or "sign in" in error_msg.lower()
-        is_sabr_error = "sabr" in error_msg.lower() or "streaming" in error_msg.lower()
-        is_brotli_error = "brotli" in error_msg.lower()
+        # Analyze error and provide user feedback
+        error_lower = error_msg.lower()
+        user_msg = f"{tag} Cannot download this video:\n\n"
         
-        # Handle image-only content
-        if is_image_only or (is_format_error and extraction_attempts == 1):
-            LOGGER.warning("Video may only have image/thumbnail formats. Trying with image format selector...")
-            options["format"] = "image"
-            try:
-                extraction_attempts += 1
-                result = await sync_to_async(extract_info, link, options)
-                LOGGER.info("Successfully extracted image formats")
-            except Exception:
-                # Fall through to next attempt
-                pass
+        if "only images are available" in error_lower:
+            user_msg += "🖼️ This video contains only thumbnails/images.\nVideo download is not possible."
+        elif "requested format is not available" in error_lower:
+            user_msg += "🔒 YouTube is restricting access to this video (SABR protection).\nIt cannot be downloaded at this time."
+        elif "login required" in error_lower or "sign in" in error_lower:
+            user_msg += "🔐 This video requires YouTube authentication.\nUpdate your cookies or try a different video."
+        elif "no supported javascript" in error_lower or "javascript runtime" in error_lower:
+            user_msg += "⚙️ Server configuration issue: Missing JavaScript runtime.\nContact administrator to install Node.js or Deno."
+        elif "age restricted" in error_lower:
+            user_msg += "⚠️ This video is age-restricted.\nCannot be downloaded without proper authentication."
+        else:
+            user_msg += f"Error extracting video:\n{error_msg[:120]}"
         
-        # If format error persists, try without cookies
-        if result is None and (is_format_error or is_cookies_error or is_sabr_error):
-            LOGGER.warning("Attempting extraction without cookies...")
-            if "cookiefile" in options:
-                options.pop("cookiefile", None)
-            if "format" in options and options["format"] == "image":
-                options.pop("format", None)
-            try:
-                extraction_attempts += 1
-                result = await sync_to_async(extract_info, link, options)
-                LOGGER.info("Successfully extracted info without cookies")
-            except Exception as e2:
-                error_msg_2 = str(e2).replace("<", " ").replace(">", " ")
-                LOGGER.warning(f"Extraction attempt {extraction_attempts} failed: {error_msg_2}")
-                pass
-        
-        # If still failing, try with minimal options
-        if result is None:
-            LOGGER.warning("Trying extraction with minimal options...")
-            minimal_options = {
-                "quiet": True,
-                "no_warnings": False,
-                "extractor_retries": 3,
-                "retries": 5,
-            }
-            try:
-                extraction_attempts += 1
-                result = await sync_to_async(extract_info, link, minimal_options)
-                LOGGER.info("Successfully extracted info with minimal options")
-            except Exception as e3:
-                error_msg_3 = str(e3).replace("<", " ").replace(">", " ")
-                msg = f"{tag} Unable to download: {error_msg_3}"
-                if is_image_only:
-                    msg += "\n\n⚠️ This video only has thumbnail/image formats available."
-                if is_sabr_error:
-                    msg += "\n\n⚠️ YouTube is using SABR streaming protection on this video."
-                if is_brotli_error:
-                    msg += "\n\n⚠️ Brotli decompression error - try again in a few moments."
-                await sendMessage(message, msg)
-                LOGGER.error(f"All extraction attempts failed. Final error: {error_msg_3}")
-                __run_multi()
-                await delete_links(message)
-                return
+        await sendMessage(message, user_msg)
+        __run_multi()
+        await delete_links(message)
+        return
 
     __run_multi()
     
