@@ -5,7 +5,7 @@ from logging import getLogger
 from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
 
-from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
+from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock, user_data
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
 from ..status_utils.yt_dlp_download_status import YtDlpDownloadStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
@@ -15,7 +15,6 @@ from bot.helper.ext_utils.task_manager import (
     stop_duplicate_check,
     limit_checker,
 )
-from bot.core.config_manager import BinConfig  # if available, otherwise fallback
 
 LOGGER = getLogger(__name__)
 
@@ -62,14 +61,25 @@ class YoutubeDLHelper:
         self.name = ""
         self.is_playlist = False
         self.playlist_count = 0
-        self.keep_thumb = False
 
-        # Base options (similar to wzv3 but keep original cookie file)
+        # Cookie handling: check user_data for custom cookie file
+        user_dict = user_data.get(listener.uid, {})
+        cookie_to_use = "cookies.txt"  # default
+        if not user_dict.get("USE_DEFAULT_COOKIE", False):
+            usr_cookie = user_dict.get("USER_COOKIE_FILE", "")
+            if usr_cookie and ospath.exists(usr_cookie):
+                cookie_to_use = usr_cookie
+                LOGGER.info(f"Using user-specific cookie file: {cookie_to_use} | User ID: {listener.uid}")
+            else:
+                LOGGER.info(f"User-specific cookie file not found or not set. Using default cookies.txt.")
+        else:
+            LOGGER.info(f"USE_DEFAULT_COOKIE is True, using default cookies.txt.")
+
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self, self.__listener),
             "usenetrc": True,
-            "cookiefile": "cookies.txt",  # hardcoded as original
+            "cookiefile": cookie_to_use,
             "allow_multiple_video_streams": True,
             "allow_multiple_audio_streams": True,
             "noprogress": True,
@@ -86,12 +96,6 @@ class YoutubeDLHelper:
                 "extractor": lambda n: 3,
             },
         }
-
-        # Add ffmpeg_location if BinConfig exists
-        try:
-            self.opts["ffmpeg_location"] = f"/bin/{BinConfig.FFMPEG_NAME}"
-        except:
-            pass
 
     @property
     def download_speed(self):
@@ -222,7 +226,6 @@ class YoutubeDLHelper:
         self.__gid = token_hex(5)
         await self.__onDownloadStart()
 
-        # Set postprocessors
         self.opts["postprocessors"] = [
             {
                 "add_chapters": True,
@@ -253,7 +256,6 @@ class YoutubeDLHelper:
 
         self.opts["format"] = qual
 
-        # Process user options (string)
         if options:
             self.__set_options(options)
 
@@ -269,17 +271,10 @@ class YoutubeDLHelper:
             )
             base_name = ospath.splitext(self.name)[0]
 
-        start_path = path if self.keep_thumb else f"{path}/yt-dlp-thumb"
         if self.is_playlist:
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
-                "thumbnail": f"{start_path}/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
-            }
-        elif "download_ranges" in options:
-            # This case may not be used in original, but kept for compatibility
-            self.opts["outtmpl"] = {
-                "default": f"{path}/{base_name}/%(section_number|)s%(section_number&.|)s%(section_title|)s%(section_title&-|)s%(title,fulltitle,alt_title)s %(section_start)s to %(section_end)s.%(ext)s",
-                "thumbnail": f"{start_path}/%(section_number|)s%(section_number&.|)s%(section_title|)s%(section_title&-|)s%(title,fulltitle,alt_title)s %(section_start)s to %(section_end)s.%(ext)s",
+                "thumbnail": f"{path}/yt-dlp-thumb/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
             }
         elif any(
             key in options
@@ -296,12 +291,12 @@ class YoutubeDLHelper:
         ):
             self.opts["outtmpl"] = {
                 "default": f"{path}/{base_name}/{self.name}",
-                "thumbnail": f"{start_path}/{base_name}.%(ext)s",
+                "thumbnail": f"{path}/yt-dlp-thumb/{base_name}.%(ext)s",
             }
         else:
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}",
-                "thumbnail": f"{start_path}/{base_name}.%(ext)s",
+                "thumbnail": f"{path}/yt-dlp-thumb/{base_name}.%(ext)s",
             }
 
         if qual.startswith("ba/b"):
@@ -396,6 +391,4 @@ class YoutubeDLHelper:
                 elif isinstance(value, dict):
                     self.opts[key].append(value)
             else:
-                if key == "writethumbnail" and value is True:
-                    self.keep_thumb = True
                 self.opts[key] = value
