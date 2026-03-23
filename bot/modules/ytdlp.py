@@ -557,11 +557,11 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
 
-    # FIXED: Enhanced YouTube options with multiple client support and better error handling
+    # FIXED: Enhanced YouTube options with multiple client support and better error handling (wzv3 integration)
     cookie_file = "cookies.txt"
     options = {
         "usenetrc": True,
-        "verbose": True,
+        "verbose": False,
         "ignoreerrors": False,
         "no_warnings": False,
         "extractor_retries": 5,
@@ -571,6 +571,21 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         "quiet": True,
         "no_color": True,
         "socket_timeout": 30,
+        "call_home": False,
+        "no_check_certificate": True,
+        "hls_prefer_native": True,
+        # SABR handling - YouTube special options
+        "youtube_include_dash_manifest": True,
+        "youtube_include_hls_manifest": True,
+        "youtube_prefer_av1": False,
+        "youtube_prefer_hd": False,
+        # Extractor args to handle SABR and JS challenges
+        "extractor_args": {
+            "youtube": [
+                "player_skip=configs,js",  # Skip player JS validation
+                "skip=webpage_url",  # Skip webpage validation
+            ]
+        },
     }
     
     # Add cookies only if file exists
@@ -579,32 +594,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         LOGGER.info(f"Using cookies file: {cookie_file}")
     else:
         LOGGER.warning(f"Cookies file {cookie_file} not found. Download may fail for age-restricted content.")
-    
-    # Special handling for YouTube content
-    is_youtube = "youtube.com/live" in link or "youtube.com/watch" in link or "youtu.be" in link
-    if is_youtube:
-        # Extended YouTube options to handle SABR streaming and format restrictions
-        youtube_options = {
-            "live_from_start": False,
-            "wait_for_video": (30, 120),
-            "hls_prefer_native": True,
-            "call_home": False,
-            "no_check_certificate": True,
-            # SABR handling - try multiple clients and manifest types
-            "youtube_include_dash_manifest": True,
-            "youtube_include_hls_manifest": True,
-            # Extractor args for better format discovery
-            "extractor_args": {
-                "youtube": [
-                    "player_skip=configs,js",  # Skip JS challenge solving (we don't have runtime)
-                ]
-            },
-            # Alternative clients to try (fallback chain)
-            "youtube_prefer_av1": False,
-            "youtube_prefer_hd": False,
-        }
-        options.update(youtube_options)
-        LOGGER.info("YouTube special options enabled for SABR/format handling")
     
     # Parse user options
     if opt:
