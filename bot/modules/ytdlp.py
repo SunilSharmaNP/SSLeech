@@ -8,7 +8,7 @@ from yt_dlp import YoutubeDL
 from pyrogram.filters import regex, user
 from pyrogram.handlers import CallbackQueryHandler
 
-from .. import DOWNLOAD_DIR, LOGGER, bot_loop, task_dict_lock
+from .. import DOWNLOAD_DIR, LOGGER, bot_loop
 from ..core.config_manager import Config
 from ..helper.ext_utils.bot_utils import (
     COMMAND_USAGE,
