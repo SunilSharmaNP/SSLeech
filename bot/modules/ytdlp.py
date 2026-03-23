@@ -13,8 +13,8 @@ from os import path as ospath, listdir
 from contextlib import suppress
 from logging import getLogger
 
-from bot import DOWNLOAD_DIR, bot, categories_dict, config_dict, user_data, LOGGER, task_dict_lock, task_dict
-from bot.helper.ext_utils.task_manager import task_utils
+from bot import DOWNLOAD_DIR, bot, categories_dict, config_dict, user_data, LOGGER, download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
+from bot.helper.ext_utils.task_manager import task_utils, stop_duplicate_check, limit_checker, is_queued
 from bot.helper.telegram_helper.message_utils import (
     sendMessage,
     editMessage,
@@ -23,6 +23,7 @@ from bot.helper.telegram_helper.message_utils import (
     delete_links,
     open_category_btns,
     open_dump_btns,
+    sendStatusMessage,
 )
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.bot_utils import (
@@ -38,6 +39,7 @@ from bot.helper.ext_utils.bot_utils import (
     new_thread,
     get_readable_time,
     arg_parser,
+    async_to_sync,
 )
 from bot.helper.mirror_utils.rclone_utils.list import RcloneList
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -46,10 +48,11 @@ from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.listeners.tasks_listener import MirrorLeechListener
 from bot.helper.ext_utils.help_messages import YT_HELP_MESSAGE
 from bot.helper.ext_utils.bulk_links import extract_bulk_links
-from bot.core.config_manager import BinConfig  # assuming BinConfig is available
+from bot.helper.mirror_utils.status_utils.yt_dlp_download_status import YtDlpDownloadStatus
+from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 
 # -------------------------------------------------------------------
-# -------------------- YT-DLP Helper (from wzv3) --------------------
+# -------------------- YT-DLP Helper (adapted from wzv3) --------------------
 # -------------------------------------------------------------------
 class MyLogger:
     def __init__(self, obj, listener):
@@ -94,7 +97,7 @@ class YoutubeDLHelper:
         self.keep_thumb = False
 
         # Cookie handling
-        user_dict = user_data.get(listener.user_id, {})
+        user_dict = user_data.get(listener.uid, {})
         cookie_to_use = (
             user_dict.get("USER_COOKIE_FILE", "")
             if not user_dict.get("USE_DEFAULT_COOKIE", False)
@@ -114,7 +117,7 @@ class YoutubeDLHelper:
             "overwrites": True,
             "writethumbnail": True,
             "trim_file_name": 220,
-            "ffmpeg_location": f"/bin/{BinConfig.FFMPEG_NAME}",
+            # ffmpeg_location can be set from config if needed, but default is fine
             "fragment_retries": 10,
             "retries": 10,
             "retry_sleep_functions": {
@@ -125,7 +128,7 @@ class YoutubeDLHelper:
             },
         }
         LOGGER.info(
-            f"Using cookies.txt file: {cookie_to_use} | User ID : {listener.user_id}"
+            f"Using cookies.txt file: {cookie_to_use} | User ID : {listener.uid}"
         )
 
     @property
@@ -174,22 +177,22 @@ class YoutubeDLHelper:
                 pass
 
     async def _on_download_start(self, from_queue=False):
-        async with task_dict_lock:
-            task_dict[self._listener.mid] = YtDlpDownloadStatus(
+        async with download_dict_lock:
+            download_dict[self._listener.uid] = YtDlpDownloadStatus(
                 self, self._listener, self._gid
             )
         if not from_queue:
             await self._listener.on_download_start()
             if self._listener.multi <= 1:
-                await send_status_message(self._listener.message)  # need to import
+                await sendStatusMessage(self._listener.message)
 
     def _on_download_error(self, error):
         self._listener.is_cancelled = True
-        async_to_sync(self._listener.on_download_error, error)  # need to import
+        async_to_sync(self._listener.on_download_error, error)
 
     def _extract_meta_data(self):
         if self._listener.link.startswith(("rtmp", "mms", "rstp", "rtmps")):
-            self.opts["external_downloader"] = BinConfig.FFMPEG_NAME
+            self.opts["external_downloader"] = "ffmpeg"
         with YoutubeDL(self.opts) as ydl:
             try:
                 result = ydl.extract_info(self._listener.link, download=False)
@@ -366,10 +369,36 @@ class YoutubeDLHelper:
                 }
             )
 
-        # Duplicate check and queue handling (call original master branch functions)
-        # We'll reuse the listener's methods for these checks
-        if self._listener.is_cancelled:
+        # Duplicate and limit checks
+        msg, button = await stop_duplicate_check(self.name, self._listener)
+        if msg:
+            await self._listener.on_download_error(msg, button)
             return
+
+        if limit_exceeded := await limit_checker(
+            self._size, self._listener, isYtdlp=True, isPlayList=self.playlist_count
+        ):
+            await self._listener.on_download_error(limit_exceeded)
+            return
+
+        added_to_queue, event = await is_queued(self._listener.uid)
+        if added_to_queue:
+            LOGGER.info(f"Added to Queue/Download: {self.name}")
+            async with download_dict_lock:
+                download_dict[self._listener.uid] = QueueStatus(
+                    self.name, self._size, self._gid, self._listener, "dl"
+                )
+            await event.wait()
+            async with download_dict_lock:
+                if self._listener.uid not in download_dict:
+                    return
+            LOGGER.info(f"Start Queued Download from YT_DLP: {self.name}")
+            await self._on_download_start(True)
+        else:
+            LOGGER.info(f"Download with YT_DLP: {self.name}")
+
+        async with queue_dict_lock:
+            non_queued_dl.add(self._listener.uid)
 
         await sync_to_async(self._download, path)
 
@@ -393,12 +422,6 @@ class YoutubeDLHelper:
                     self.keep_thumb = True
                 self.opts[key] = value
 
-
-# We need to import the status classes for task dict
-from bot.helper.mirror_utils.status_utils.yt_dlp_download_status import YtDlpDownloadStatus
-from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
-from bot.helper.telegram_helper.message_utils import send_status_message
-from bot.helper.ext_utils.bot_utils import async_to_sync
 
 # -------------------------------------------------------------------
 # -------------------- YT Selection (from master) --------------------
@@ -878,7 +901,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         source_url=link,
         leech_utils={"screenshots": sshots, "thumb": thumb},
     )
-    listener.link = link  # needed for helper
+    listener.link = link
     listener.name = name
     listener.multi = multi
 
@@ -889,7 +912,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
     # Build yt-dlp options
     options = {"usenetrc": True}
-    # cookie will be set inside helper using user_data
     if opt:
         yt_opt = opt.split("|")
         for ytopt in yt_opt:
@@ -938,7 +960,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     LOGGER.info(f"Downloading with YT-DLP: {link}")
     playlist = "entries" in result
     ydl = YoutubeDLHelper(listener)
-    # Call the helper with path, qual, playlist, and opt dict
     await ydl.add_download(path, qual, playlist, options)
 
 
