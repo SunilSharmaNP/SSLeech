@@ -5,7 +5,7 @@ from logging import getLogger
 from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
 
-from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock, user_data
+from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
 from ..status_utils.yt_dlp_download_status import YtDlpDownloadStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
@@ -61,25 +61,11 @@ class YoutubeDLHelper:
         self.name = ""
         self.is_playlist = False
         self.playlist_count = 0
-
-        # Cookie handling: check user_data for custom cookie file
-        user_dict = user_data.get(listener.uid, {})
-        cookie_to_use = "cookies.txt"  # default
-        if not user_dict.get("USE_DEFAULT_COOKIE", False):
-            usr_cookie = user_dict.get("USER_COOKIE_FILE", "")
-            if usr_cookie and ospath.exists(usr_cookie):
-                cookie_to_use = usr_cookie
-                LOGGER.info(f"Using user-specific cookie file: {cookie_to_use} | User ID: {listener.uid}")
-            else:
-                LOGGER.info(f"User-specific cookie file not found or not set. Using default cookies.txt.")
-        else:
-            LOGGER.info(f"USE_DEFAULT_COOKIE is True, using default cookies.txt.")
-
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self, self.__listener),
             "usenetrc": True,
-            "cookiefile": cookie_to_use,
+            "cookiefile": "cookies.txt",
             "allow_multiple_video_streams": True,
             "allow_multiple_audio_streams": True,
             "noprogress": True,
@@ -125,22 +111,22 @@ class YoutubeDLHelper:
             if self.is_playlist:
                 self.__last_downloaded = 0
         elif d["status"] == "downloading":
-            self.__download_speed = d["speed"] or 0
+            self.__download_speed = d["speed"]
             if self.is_playlist:
-                downloadedBytes = d["downloaded_bytes"] or 0
+                downloadedBytes = d["downloaded_bytes"]
                 chunk_size = downloadedBytes - self.__last_downloaded
                 self.__last_downloaded = downloadedBytes
                 self.__downloaded_bytes += chunk_size
             else:
                 if d.get("total_bytes"):
-                    self.__size = d["total_bytes"] or 0
+                    self.__size = d["total_bytes"]
                 elif d.get("total_bytes_estimate"):
-                    self.__size = d["total_bytes_estimate"] or 0
-                self.__downloaded_bytes = d["downloaded_bytes"] or 0
+                    self.__size = d["total_bytes_estimate"]
+                self.__downloaded_bytes = d["downloaded_bytes"]
                 self.__eta = d.get("eta", "-") or "-"
             try:
                 self.__progress = (self.__downloaded_bytes / self.__size) * 100
-            except ZeroDivisionError:
+            except Exception:
                 pass
 
     async def __onDownloadStart(self, from_queue=False):
@@ -174,9 +160,9 @@ class YoutubeDLHelper:
                     if not entry:
                         continue
                     elif "filesize_approx" in entry:
-                        self.__size += entry.get("filesize_approx", 0) or 0
+                        self.__size += entry["filesize_approx"]
                     elif "filesize" in entry:
-                        self.__size += entry.get("filesize", 0) or 0
+                        self.__size += entry["filesize"]
                     if not self.name:
                         outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
                         self.name, ext = ospath.splitext(
@@ -320,7 +306,7 @@ class YoutubeDLHelper:
             ".m4a",
             ".mp4",
             ".mov",
-            ".m4v",
+            "m4v",
         ]:
             self.opts["postprocessors"].append(
                 {
