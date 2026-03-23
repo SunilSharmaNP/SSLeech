@@ -71,25 +71,27 @@ class YoutubeDLHelper:
             "overwrites": True,
             "writethumbnail": True,
             "trim_file_name": 220,
-            "fragment_retries": 10,
-            "retries": 10,
+            "fragment_retries": 5,
+            "retries": 5,
             "skip_unavailable_fragments": True,
             "retry_sleep_functions": {
-                "http": lambda n: 3,
-                "fragment": lambda n: 3,
-                "file_access": lambda n: 3,
-                "extractor": lambda n: 3,
+                "http": lambda n: 2,
+                "fragment": lambda n: 2,
+                "file_access": lambda n: 2,
+                "extractor": lambda n: 2,
             },
-            # Enhanced YouTube support (wzv3 improvements)
-            "socket_timeout": 30,
+            # Enhanced YouTube support (wzv3 improvements - aggressive SABR handling)
+            "socket_timeout": 15,
             "call_home": False,
             "no_check_certificate": True,
             "hls_prefer_native": True,
-            "youtube_include_dash_manifest": True,
+            "youtube_include_dash_manifest": False,  # Disable - can trigger SABR
             "youtube_include_hls_manifest": True,
+            # Aggressive extractor args to bypass SABR and JS challenges
             "extractor_args": {
                 "youtube": [
                     "player_skip=configs,js",
+                    "player=null",
                     "skip=webpage_url",
                 ]
             },
@@ -250,10 +252,12 @@ class YoutubeDLHelper:
                     error_msg = str(e)
                     # Enhanced error handling for YouTube SABR and format issues
                     if not self.__is_cancelled:
-                        # Check for common YouTube format errors
-                        if "Requested format is not available" in error_msg:
-                            LOGGER.warning(f"Format unavailable, retrying with fallback: {error_msg}")
-                            # Fallback to best format
+                        # Check for specific YouTube errors
+                        error_lower = error_msg.lower()
+                        
+                        if "requested format is not available" in error_lower or "only images" in error_lower:
+                            LOGGER.warning(f"SABR Protection detected, trying fallback format")
+                            # Fallback to best format for SABR-protected videos
                             self.opts["format"] = "best"
                             try:
                                 with YoutubeDL(self.opts) as ydl_retry:
@@ -261,7 +265,13 @@ class YoutubeDLHelper:
                                 return
                             except Exception as retry_err:
                                 LOGGER.error(f"Fallback download also failed: {retry_err}")
-                                self.__onDownloadError(str(retry_err))
+                                self.__onDownloadError(f"SABR Protection + {str(retry_err)[:100]}")
+                        elif "brotli" in error_lower or "decompress" in error_lower:
+                            LOGGER.error(f"Brotli decompression failed: {error_msg}")
+                            self.__onDownloadError("Decompression error - pip install --upgrade brotli")
+                        elif "n challenge" in error_lower or "javascript" in error_lower:
+                            LOGGER.error(f"JS challenge failed: {error_msg}")
+                            self.__onDownloadError("JS Runtime missing - pip install pycryptodome nodejs needed")
                         else:
                             self.__onDownloadError(error_msg)
                     return
