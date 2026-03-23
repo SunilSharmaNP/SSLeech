@@ -564,28 +564,32 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         "verbose": False,
         "ignoreerrors": False,
         "no_warnings": False,
-        "extractor_retries": 5,
-        "retries": 10,
-        "fragment_retries": 10,
+        "extractor_retries": 3,  # Reduced from 5 to avoid timeouts
+        "retries": 5,  # Reduced from 10
+        "fragment_retries": 5,  # Reduced from 10
         "skip_unavailable_fragments": True,
         "quiet": True,
         "no_color": True,
-        "socket_timeout": 30,
+        "socket_timeout": 15,  # Reduced from 30 for faster timeout
         "call_home": False,
         "no_check_certificate": True,
         "hls_prefer_native": True,
         # SABR handling - YouTube special options
-        "youtube_include_dash_manifest": True,
+        "youtube_include_dash_manifest": False,  # Changed to False - can cause issues
         "youtube_include_hls_manifest": True,
         "youtube_prefer_av1": False,
         "youtube_prefer_hd": False,
-        # Extractor args to handle SABR and JS challenges
+        # Aggressive extractor args to bypass SABR and JS challenges
         "extractor_args": {
             "youtube": [
-                "player_skip=configs,js",  # Skip player JS validation
+                "player_skip=configs,js",  # Skip JS validation completely
+                "player=null",  # Use null player (no JS needed)
                 "skip=webpage_url",  # Skip webpage validation
             ]
         },
+        # Disable problematic features that trigger SABR
+        "youtube_flat_playlist": False,
+        "break_on_existing": True,
     }
     
     # Add cookies only if file exists
@@ -649,26 +653,33 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         
         # SABR is the most common issue - check for it first
         if "requested format is not available" in error_lower or "only images" in error_lower:
-            user_msg += "🔒 **YouTube SABR Protection**\n"
-            user_msg += "YouTube is blocking format access for this video.\n"
-            user_msg += "This is a YouTube API limitation, not a bot issue.\n\n"
+            user_msg += "🔒 **YouTube SABR Protection Active**\n"
+            user_msg += "YouTube is restricting format access for this video.\n"
+            user_msg += "This is a YouTube API limitation.\n\n"
             user_msg += "**Possible Solutions:**\n"
             user_msg += "1️⃣ Update YouTube cookies (use GetCookies.txt extension)\n"
             user_msg += "2️⃣ Wait 30+ minutes and try again\n"
-            user_msg += "3️⃣ Try with a different YouTube account\n"
-            user_msg += "4️⃣ Admin: Install Node.js for better n-challenge support"
+            user_msg += "3️⃣ Try with different YouTube account\n"
+            user_msg += "4️⃣ Admin: Install Node.js for better support"
         elif "n challenge" in error_lower or "javascript" in error_lower:
             user_msg += "⚙️ **JavaScript Runtime Missing**\n"
-            user_msg += "YouTube requires Node.js to solve challenges.\n\n"
-            user_msg += "**Admin Fix:**\n"
+            user_msg += "YouTube needs Node.js to verify requests.\n\n"
+            user_msg += "**Admin Setup:**\n"
             user_msg += "`apt install nodejs && npm install -g esbuild`"
         elif "login required" in error_lower or "sign in" in error_lower:
             user_msg += "🔐 **Authentication Required**\n"
-            user_msg += "Update YouTube cookies to access this video.\n"
+            user_msg += "Update YouTube cookies for access.\n"
             user_msg += "Install: GetCookies.txt browser extension"
         elif "age restricted" in error_lower:
             user_msg += "⚠️ **Age-Restricted Content**\n"
             user_msg += "Update YouTube cookies for verification."
+        elif "not available" in error_lower and "region" in error_lower:
+            user_msg += "🌍 **Region-Locked Content**\n"
+            user_msg += "Video is restricted in your region.\n"
+            user_msg += "Try updating cookies or using a VPN."
+        elif "removed" in error_lower or "deleted" in error_lower:
+            user_msg += "❌ **Video Unavailable**\n"
+            user_msg += "Video has been removed or deleted."
         else:
             user_msg += f"❌ Download failed:\n{error_msg[:250]}"
         
@@ -698,6 +709,11 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         LOGGER.info("YouTube video detected, using fallback format strategy")
         qual = "bv*+ba/b"  # Best video + audio fallback
 
+    # For YouTube live streams, use best format if none selected
+    if not qual and is_youtube:
+        LOGGER.info("YouTube video detected, using fallback format strategy")
+        qual = "bv*+ba/b"  # Best video + audio fallback
+
     if not qual:
         try:
             qual = await YtSelection(client, message).get_quality(result)
@@ -707,15 +723,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             LOGGER.error(f"Error in quality selection: {e}")
             qual = "best"
     
-    # Add format fallback for video downloads
+    # Add format fallback for video downloads (wzv3 approach)
     if is_image_only_result:
         LOGGER.warning("Image-only content detected, using image format")
         qual_with_fallback = "image"
     elif qual and not qual.startswith("ba/b"):
-        # Create comprehensive fallback chain
+        # Create comprehensive fallback chain for YouTube
         if is_youtube:
             # YouTube fallback: try requested quality, then best video+audio, then best
             qual_with_fallback = f"{qual}/bv*+ba/best"
+            LOGGER.info(f"YouTube format fallback chain: {qual} -> bv*+ba -> best")
         else:
             # General fallback
             qual_with_fallback = f"{qual}/best"
