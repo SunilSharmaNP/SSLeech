@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     npm \
     && rm -rf /var/lib/apt/lists/*
 
-# Install global npm packages for JavaScript challenge solving
-RUN npm install -g @distutils/pyxform esbuild
+# Install esbuild for JavaScript bundling (needed for yt-dlp challenge solving)
+RUN npm install -g esbuild
 
 COPY requirements.txt .
 RUN pip3 install --upgrade setuptools wheel
@@ -21,3 +21,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY . .
 
 CMD ["bash", "start.sh"]
+y
