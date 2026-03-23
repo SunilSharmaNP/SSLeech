@@ -6,13 +6,11 @@ apscheduler
 aria2p
 asyncio
 beautifulsoup4
-brotli
 cinemagoer
 cloudscraper
 cryptography
 dnspython
 feedparser
-ffmpeg-python
 flask
 gevent
 google-api-python-client
@@ -31,10 +29,8 @@ pillow
 psutil
 pybase64
 pycountry
-pycryptodome
 pymongo
 pyrofork==2.2.11
-pyaml
 python-dotenv
 python-magic
 qbittorrent-api
