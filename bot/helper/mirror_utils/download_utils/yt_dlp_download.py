@@ -73,11 +73,25 @@ class YoutubeDLHelper:
             "trim_file_name": 220,
             "fragment_retries": 10,
             "retries": 10,
+            "skip_unavailable_fragments": True,
             "retry_sleep_functions": {
                 "http": lambda n: 3,
                 "fragment": lambda n: 3,
                 "file_access": lambda n: 3,
                 "extractor": lambda n: 3,
+            },
+            # Enhanced YouTube support (wzv3 improvements)
+            "socket_timeout": 30,
+            "call_home": False,
+            "no_check_certificate": True,
+            "hls_prefer_native": True,
+            "youtube_include_dash_manifest": True,
+            "youtube_include_hls_manifest": True,
+            "extractor_args": {
+                "youtube": [
+                    "player_skip=configs,js",
+                    "skip=webpage_url",
+                ]
             },
         }
         
@@ -158,13 +172,42 @@ class YoutubeDLHelper:
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
         
-        try:
-            with YoutubeDL(self.opts) as ydl:
-                result = ydl.extract_info(link, download=False)
-                if result is None:
-                    return self.__onDownloadError("Cannot retrieve video info")
-        except Exception as e:
-            return self.__onDownloadError(str(e))
+        last_error = None
+        retry_count = 0
+        max_retries = 2
+        
+        while retry_count <= max_retries:
+            try:
+                with YoutubeDL(self.opts) as ydl:
+                    result = ydl.extract_info(link, download=False)
+                    if result is None:
+                        return self.__onDownloadError("Cannot retrieve video info")
+                    break
+            except Exception as e:
+                last_error = e
+                retry_count += 1
+                LOGGER.warning(f"Metadata extraction attempt {retry_count} failed: {str(e)}")
+                
+                # For age-restricted content, try alternative options
+                if retry_count < max_retries:
+                    try:
+                        self.opts["socket_timeout"] = 30 + (retry_count * 10)
+                        continue
+                    except Exception:
+                        pass
+                else:
+                    LOGGER.error(f"Failed to extract metadata after {max_retries} attempts")
+                    if last_error:
+                        error_str = str(last_error)
+                        # Provide helpful error message for YouTube issues
+                        if "age-restricted" in error_str.lower():
+                            error_msg = "Age-restricted content. Update YouTube cookies to access."
+                        elif "requested format" in error_str.lower():
+                            error_msg = "Format not available. This may be a YouTube limitation."
+                        else:
+                            error_msg = error_str
+                        return self.__onDownloadError(error_msg)
+                    return self.__onDownloadError(str(e))
 
         if self.is_playlist:
             self.playlist_count = result.get("playlist_count", 0)
@@ -204,8 +247,23 @@ class YoutubeDLHelper:
                 try:
                     ydl.download([link])
                 except DownloadError as e:
+                    error_msg = str(e)
+                    # Enhanced error handling for YouTube SABR and format issues
                     if not self.__is_cancelled:
-                        self.__onDownloadError(str(e))
+                        # Check for common YouTube format errors
+                        if "Requested format is not available" in error_msg:
+                            LOGGER.warning(f"Format unavailable, retrying with fallback: {error_msg}")
+                            # Fallback to best format
+                            self.opts["format"] = "best"
+                            try:
+                                with YoutubeDL(self.opts) as ydl_retry:
+                                    ydl_retry.download([link])
+                                return
+                            except Exception as retry_err:
+                                LOGGER.error(f"Fallback download also failed: {retry_err}")
+                                self.__onDownloadError(str(retry_err))
+                        else:
+                            self.__onDownloadError(error_msg)
                     return
             
             if self.is_playlist and (
@@ -259,13 +317,22 @@ class YoutubeDLHelper:
             else:
                 self.__ext = f".{audio_format}"
 
-        # Simple format setting - let yt-dlp handle fallback naturally
+        # Enhanced format setting with YouTube fallback chain
         if qual and not qual.startswith("ba/b"):
-            self.opts["format"] = qual
-        elif qual.startswith("ba/b"):
+            # For video formats, add fallback chain for YouTube compatibility
+            if any(x in link for x in ["youtube.com", "youtu.be"]):
+                # YouTube fallback: try requested format, then best video+audio, then best
+                self.opts["format"] = f"{qual}/bv*+ba/best"
+                LOGGER.info(f"YouTube format with fallback: {qual} -> bv*+ba -> best")
+            else:
+                # For non-YouTube, use simple fallback
+                self.opts["format"] = f"{qual}/best"
+                LOGGER.info(f"Format with fallback: {qual} -> best")
+        elif qual and qual.startswith("ba/b"):
             self.opts["format"] = qual
         else:
             self.opts["format"] = "best"
+            LOGGER.info("Using best quality fallback")
 
         if options:
             self.__set_options(options)
