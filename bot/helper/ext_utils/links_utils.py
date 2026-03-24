@@ -69,3 +69,29 @@ def get_link(text, link_type='all'):
     except Exception as e:
         LOGGER.error(f"Error extracting links: {e}")
         return []
+
+
+def is_media(message):
+    """Return the media object contained in `message` or None.
+
+    The returned object is the Pyrogram media object (Document, Video,
+    Photo, Audio, Voice, Sticker, etc.) so callers can access attributes
+    like `file_id`, `file_name`, and `mime_type`.
+    """
+    if message is None:
+        return None
+    # Prefer document (can be subtitle/image/document)
+    if getattr(message, "document", None):
+        return message.document
+    if getattr(message, "video", None):
+        return message.video
+    if getattr(message, "photo", None):
+        return message.photo
+    if getattr(message, "audio", None):
+        return message.audio
+    if getattr(message, "voice", None):
+        return message.voice
+    if getattr(message, "sticker", None):
+        return message.sticker
+    return None
+
