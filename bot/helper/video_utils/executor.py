@@ -21,7 +21,7 @@ from bot import (
     VIDTOOLS_FFPROBE_PATH as FFPROBE_NAME,
 )
 from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec, new_task
-from bot.helper.ext_utils.files_utils import get_path_size, clean_target
+from bot.helper.ext_utils.fs_utils import get_path_size, clean_target
 from bot.helper.ext_utils.links_utils import get_url_name
 from bot.helper.ext_utils.leech_utils import get_document_type, get_media_info
 from bot.helper.ext_utils.task_manager import check_running_tasks
