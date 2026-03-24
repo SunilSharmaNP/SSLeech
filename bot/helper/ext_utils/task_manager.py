@@ -85,6 +85,14 @@ async def is_queued(uid):
     return added_to_queue, event
 
 
+async def check_running_tasks(uid):
+    """Compatibility wrapper used by video tools executor.
+
+    Returns (add_to_queue: bool, Event|None)
+    """
+    return await is_queued(uid)
+
+
 def start_dl_from_queued(uid):
     queued_dl[uid].set()
     del queued_dl[uid]
