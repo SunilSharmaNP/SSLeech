@@ -450,6 +450,21 @@ async def sendStatusMessage(msg):
             )
 
 
+async def update_status_message(chat_id):
+    """Trigger an immediate status update for a single chat id."""
+    try:
+        async with status_reply_dict_lock:
+            if chat_id in status_reply_dict:
+                # reset timestamp to force immediate update
+                status_reply_dict[chat_id][1] = 0
+            else:
+                # nothing to update for this chat
+                return
+        await update_all_messages(force=True)
+    except Exception as e:
+        LOGGER.error(f"Failed updating status for {chat_id}: {e}")
+
+
 async def open_category_btns(message):
     user_id = message.from_user.id
     msg_id = message.id
