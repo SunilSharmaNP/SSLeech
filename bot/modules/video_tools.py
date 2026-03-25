@@ -25,6 +25,10 @@ class VidTools(TaskListener):
 
     @new_task
     async def newEvent(self):
+        if not self.message:
+            LOGGER.error("VidTools.newEvent called with no message")
+            return
+
         raw_text = self.message.text or self.message.caption or (
             self.message.reply_to_message.text if self.message.reply_to_message else ""
         )
