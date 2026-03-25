@@ -205,7 +205,6 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
     await gather(obj.list_buttons(), deleteMessage(message))
 
 
-@new_task
 async def cb_vidtools(client, query: CallbackQuery):
     """Callback for video tools buttons. Retrieves SelectMode from global dict."""
     try:
