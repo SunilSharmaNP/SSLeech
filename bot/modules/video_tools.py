@@ -20,7 +20,7 @@ from bot.helper.video_utils.selector import SelectMode
 class VidTools(TaskListener):
     def __init__(self, client, message, isLeech=False, **kwargs):
         # Call parent init with message to properly initialize TaskListener
-        super().__init__(message=message, isLeech=isLeech)
+        super().__init__(message, isLeech=isLeech)
         # Set client and additional attributes
         self.client = client
         self.isLeech = isLeech
