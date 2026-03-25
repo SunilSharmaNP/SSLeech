@@ -20,6 +20,9 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage
 
+# Global dict to store SelectMode instances by user_id for callback access
+vidtools_modes_dict = {}
+
 
 class SelectMode:
     def __init__(self, listener: task.TaskListener, isLink=False):
@@ -39,9 +42,9 @@ class SelectMode:
     @new_task
     async def _event_handler(self):
         try:
-            pfunc = partial(cb_vidtools, obj=self)
-            handler = self.listener.client.add_handler(CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
-            LOGGER.debug(f"VidTools callback handler registered for user {self.listener.user_id}")
+            # Store this SelectMode instance globally so callback can access it
+            vidtools_modes_dict[self.listener.user_id] = self
+            LOGGER.debug(f"VidTools SelectMode stored for user {self.listener.user_id}")
             # Small delay to ensure handler is fully registered
             await asyncio_sleep(0.1)
             self._event_ready.set()
@@ -52,11 +55,10 @@ class SelectMode:
             self.is_cancelled = True
             self.event.set()
         finally:
-            try:
-                self.listener.client.remove_handler(*handler)
-                LOGGER.debug(f"VidTools callback handler removed")
-            except Exception as e:
-                LOGGER.error(f"Error removing handler: {e}")
+            # Clean up
+            if self.listener.user_id in vidtools_modes_dict:
+                del vidtools_modes_dict[self.listener.user_id]
+            LOGGER.debug(f"VidTools SelectMode cleaned up for user {self.listener.user_id}")
 
     @new_task
     async def message_event_handler(self, mode=''):
@@ -204,9 +206,18 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
 
 
 @new_task
-async def cb_vidtools(_, query: CallbackQuery, obj: SelectMode):
+async def cb_vidtools(client, query: CallbackQuery):
+    """Callback for video tools buttons. Retrieves SelectMode from global dict."""
     try:
-        LOGGER.debug(f"VidTools callback received: {query.data} from user {query.from_user.id}")
+        user_id = query.from_user.id
+        obj = vidtools_modes_dict.get(user_id)
+        
+        if not obj:
+            LOGGER.warning(f"No SelectMode found for user {user_id}")
+            await query.answer("Session expired. Please try again.", True)
+            return
+        
+        LOGGER.debug(f"VidTools callback received: {query.data} from user {user_id}")
         data = query.data.split()
         if len(data) < 2:
             LOGGER.warning(f"Invalid callback data format: {query.data}")
@@ -278,3 +289,18 @@ async def cb_vidtools(_, query: CallbackQuery, obj: SelectMode):
             await query.answer(f"Error: {str(e)}", True)
         except Exception as ans_error:
             LOGGER.error(f"Error answering query: {ans_error}")
+
+
+# Register the callback handler at module level (like in users_settings.py)
+# This must be imported at module level to register the handler
+def register_vidtools_handlers():
+    """Register vidtools callback handler with bot"""
+    from bot import bot as bot_instance
+    bot_instance.add_handler(CallbackQueryHandler(cb_vidtools, filters=regex("^vidtool")))
+    LOGGER.debug("VidTools callback handler registered at module level")
+
+# Call registration when module loads
+try:
+    register_vidtools_handlers()
+except Exception as e:
+    LOGGER.error(f"Failed to register vidtools handlers: {e}")
