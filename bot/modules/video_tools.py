@@ -1,11 +1,12 @@
 from aiofiles.os import path as aiopath
 from asyncio import sleep
 from secrets import token_urlsafe
+from time import time
 
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
 
-from bot import bot, LOGGER
+from bot import bot, LOGGER, user_data, DOWNLOAD_DIR
 from bot.helper.ext_utils.bot_utils import new_task, arg_parser
 from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
 from bot.helper.listeners.tasks_listener import TaskListener
@@ -23,6 +24,11 @@ class VidTools(TaskListener):
         self.client = client
         self.message = message
         self.isLeech = isLeech
+        # Set required attributes that SelectMode expects
+        self.user_id = message.from_user.id if message else None
+        self.user_dict = user_data.get(self.user_id, {}) if self.user_id else {}
+        self.mid = kwargs.get('mid') or self.user_id  # Message unique identifier for tracking
+        self.uid = f"{self.user_id}-{int(time())}"  # Unique task identifier
 
     @new_task
     async def newEvent(self):
