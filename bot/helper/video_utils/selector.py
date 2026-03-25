@@ -108,47 +108,47 @@ class SelectMode:
         if not mode:
             vid_modes = dict(list(VID_MODE.items())[4:]) if self._isLink else VID_MODE
             for key, value in vid_modes.items():
-                buttons.button_data(f"{'🔥 ' if self.mode == key else ''}{value}", f'vidtool {key}')
-            buttons.button_data(f"{'🔥 ' if self.newname else ''}Rename", 'vidtool rename', 'header')
-            buttons.button_data('Cancel', 'vidtool cancel', 'footer')
+                buttons.ibutton(f"{'🔥 ' if self.mode == key else ''}{value}", f'vidtool {key}')
+            buttons.ibutton(f"{'🔥 ' if self.newname else ''}Rename", 'vidtool rename', 'header')
+            buttons.ibutton('Cancel', 'vidtool cancel', 'footer')
             if self.mode:
-                buttons.button_data('Done', 'vidtool done', 'footer')
+                buttons.ibutton('Done', 'vidtool done', 'footer')
             if self.mode in ('vid_sub', 'watermark') and await CustomFilters.sudo('', self.listener.message):
                 hardsub = self.extra_data.get('hardsub')
-                buttons.button_data(f"{'🔥 ' if hardsub else ''}Hardsub", 'vidtool hardsub', 'header')
+                buttons.ibutton(f"{'🔥 ' if hardsub else ''}Hardsub", 'vidtool hardsub', 'header')
                 if hardsub:
                     if self.mode == 'watermark':
-                        buttons.button_data(f"{'🔥 ' if await aiopath.exists(self.extra_data.get('subfile', '')) else ''}Sub File", 'vidtool subfile', 'header')
-                    buttons.button_data('Font Style', 'vidtool fontstyle', 'header')
+                        buttons.ibutton(f"{'🔥 ' if await aiopath.exists(self.extra_data.get('subfile', '')) else ''}Sub File", 'vidtool subfile', 'header')
+                    buttons.ibutton('Font Style', 'vidtool fontstyle', 'header')
             if self.mode in ('compress', 'watermark') or self.extra_data.get('hardsub'):
-                buttons.button_data('Quality', 'vidtool quality', 'header')
+                buttons.ibutton('Quality', 'vidtool quality', 'header')
             if self.mode == 'watermark':
-                buttons.button_data('Popup', 'vidtool popupwm', 'header')
+                buttons.ibutton('Popup', 'vidtool popupwm', 'header')
         else:
             # mode-specific buttons
             if mode == 'quality':
                 bnum = 3
-                [buttons.button_data(f"{'🔥 ' if self.extra_data.get('quality') == key else ''}{key}", f'vidtool quality {key}') for key in ['1080p', '720p', '540p', '480p', '360p']]
-                buttons.button_data('<<', 'vidtool back', 'footer')
-                buttons.button_data('Done', 'vidtool done', 'footer')
+                [buttons.ibutton(f"{'🔥 ' if self.extra_data.get('quality') == key else ''}{key}", f'vidtool quality {key}') for key in ['1080p', '720p', '540p', '480p', '360p']]
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+                buttons.ibutton('Done', 'vidtool done', 'footer')
             elif mode == 'popupwm':
                 bnum = 5
                 popupwm = self.extra_data.get('popupwm', 0)
                 if popupwm:
-                    buttons.button_data('Reset', 'vidtool popupwm 0', 'header')
-                [buttons.button_data(f"{'🔥 ' if popupwm == key else ''}{key}", f'vidtool popupwm {key}') for key in range(2, 21, 2)]
-                buttons.button_data('<<', 'vidtool back', 'footer')
-                buttons.button_data('Done', 'vidtool done', 'footer')
+                    buttons.ibutton('Reset', 'vidtool popupwm 0', 'header')
+                [buttons.ibutton(f"{'🔥 ' if popupwm == key else ''}{key}", f'vidtool popupwm {key}') for key in range(2, 21, 2)]
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+                buttons.ibutton('Done', 'vidtool done', 'footer')
             elif mode == 'wmsize':
                 bnum = 3
-                [buttons.button_data(str(btn), f'vidtool wmsize {btn}') for btn in [5, 10, 15, 20, 25, 30]]
+                [buttons.ibutton(str(btn), f'vidtool wmsize {btn}') for btn in [5, 10, 15, 20, 25, 30]]
             elif mode == 'fontstyle':
                 bnum = 3
-                buttons.button_data('Font Name', 'vidtool fontstyle fontname', 'header')
-                buttons.button_data('Font Size', 'vidtool fontstyle fontsize', 'header')
-                buttons.button_data('Font Colour', 'vidtool fontstyle fontcolour', 'header')
-                buttons.button_data('<<', 'vidtool back', 'footer')
-                buttons.button_data('Done', 'vidtool done', 'footer')
+                buttons.ibutton('Font Name', 'vidtool fontstyle fontname', 'header')
+                buttons.ibutton('Font Size', 'vidtool fontstyle fontsize', 'header')
+                buttons.ibutton('Font Colour', 'vidtool fontstyle fontcolour', 'header')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+                buttons.ibutton('Done', 'vidtool done', 'footer')
         await self._send_message(self._captions(mode), buttons.build_menu(bnum, 3))
 
     async def get_buttons(self):
