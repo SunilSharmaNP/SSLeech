@@ -18,10 +18,11 @@ from bot.helper.video_utils.selector import SelectMode
 
 class VidTools(TaskListener):
     def __init__(self, client, message, isLeech=False, **kwargs):
-        self.message = message
         self.client = client
         self.isLeech = isLeech
         super().__init__()
+        # Keep message reference after super().__init__() to avoid it being overwritten
+        self.message = message
 
     @new_task
     async def newEvent(self):
@@ -68,15 +69,17 @@ class VidTools(TaskListener):
 
 async def mirror_vidtools(client, message):
     if not message:
-        LOGGER.error("mirror_vidtools received None message")
+        LOGGER.error("mirror_vidtools: received None message")
         return
+    LOGGER.info(f"mirror_vidtools: processing message from {message.from_user.id}")
     await VidTools(client, message).newEvent()
 
 
 async def leech_vidtools(client, message):
     if not message:
-        LOGGER.error("leech_vidtools received None message")
+        LOGGER.error("leech_vidtools: received None message")
         return
+    LOGGER.info(f"leech_vidtools: processing message from {message.from_user.id}")
     await VidTools(client, message, isLeech=True).newEvent()
 
 
