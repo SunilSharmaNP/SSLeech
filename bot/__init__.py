@@ -707,7 +707,8 @@ VID_MODE = {
     'watermark': 'Watermark',
     'extract': 'Extract',
     'trim': 'Trim',
-    'rmstream': 'Remove Stream'
+    'rmstream': 'Remove Stream',
+    'merge': 'Merge Videos'
 }
 
 config_dict = {
