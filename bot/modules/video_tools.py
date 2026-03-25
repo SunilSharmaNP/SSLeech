@@ -67,11 +67,17 @@ class VidTools(TaskListener):
 
 
 async def mirror_vidtools(client, message):
-    VidTools(client, message).newEvent()
+    if not message:
+        LOGGER.error("mirror_vidtools received None message")
+        return
+    await VidTools(client, message).newEvent()
 
 
 async def leech_vidtools(client, message):
-    VidTools(client, message, isLeech=True).newEvent()
+    if not message:
+        LOGGER.error("leech_vidtools received None message")
+        return
+    await VidTools(client, message, isLeech=True).newEvent()
 
 
 bot.add_handler(MessageHandler(mirror_vidtools, filters=command(BotCommands.MVidCommand) & CustomFilters.authorized))
