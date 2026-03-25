@@ -1,75 +1,10 @@
+"""Small helpers for detecting media in Pyrogram `Message` objects.
+
+Provides `is_media(message)` which returns the underlying media object
+(e.g., `message.document`, `message.video`, `message.photo`, etc.) or
+`None` when no media is present. This mirrors the expected interface from
+the original ported code.
 """
-Link utilities - Extract and parse links from URLs and messages
-"""
-
-from re import match as re_match, search as re_search, findall
-from urllib.parse import urlparse, parse_qs
-from logging import getLogger
-
-LOGGER = getLogger(__name__)
-
-URL_REGEX = r"^(?!\/)(rtmps?:\/\/|mms:\/\/|rtsp:\/\/|https?:\/\/|ftp:\/\/)?([^\/:]+:[^\/@]+@)?(www\.)?(?=[^\/:\s]+\.[^\/:\s]+)([^\/:\s]+\.[^\/:\s]+)(:\d+)?(\/[^#\s]*[\s\S]*)?(\?[^#\s]*)?(#.*)?$"
-
-
-def is_url(text):
-    """Check if text is a valid URL"""
-    return bool(re_match(URL_REGEX, text))
-
-
-def get_url_name(url):
-    """Extract filename from URL
-    
-    Args:
-        url: URL to extract filename from
-        
-    Returns:
-        Extracted filename or None if not found
-    """
-    try:
-        parsed = urlparse(url)
-        # Get filename from path
-        path = parsed.path
-        if path:
-            filename = path.split('/')[-1]
-            if filename:
-                return filename.split('?')[0] or None  # Remove query string
-        return None
-    except Exception as e:
-        LOGGER.error(f"Error extracting URL name: {e}")
-        return None
-
-
-def get_link(text, link_type='all'):
-    """Extract links from text
-    
-    Args:
-        text: Text to search for links
-        link_type: Type of links to extract ('all', 'url', 'magnet')
-        
-    Returns:
-        List of extracted links
-    """
-    try:
-        links = []
-        
-        if link_type in ['all', 'url']:
-            # Find all URLs
-            url_matches = findall(
-                r'https?://[^\s\)]+|ftp://[^\s\)]+|magnet:\?[^\s\)]+',
-                text
-            )
-            links.extend(url_matches)
-        
-        if link_type in ['all', 'magnet']:
-            # Find magnet links
-            magnet_matches = findall(r'magnet:\?[^\s\)]+', text)
-            links.extend([m for m in magnet_matches if m not in links])
-        
-        return links
-    except Exception as e:
-        LOGGER.error(f"Error extracting links: {e}")
-        return []
-
 
 def is_media(message):
     """Return the media object contained in `message` or None.
@@ -95,3 +30,52 @@ def is_media(message):
         return message.sticker
     return None
 
+
+from urllib.parse import urlparse, unquote
+import re
+
+from bot.helper.ext_utils.bot_utils import is_url as _is_url
+
+
+def is_url(url):
+    return _is_url(url)
+
+
+def get_link(message):
+    """Extract first URL-like token from `message` or its reply.
+
+    Returns empty string when none found.
+    """
+    if message is None:
+        return ""
+    candidates = []
+    if getattr(message, "text", None):
+        candidates.append(message.text)
+    if getattr(message, "caption", None):
+        candidates.append(message.caption)
+    if getattr(message, "reply_to_message", None):
+        r = message.reply_to_message
+        if getattr(r, "text", None):
+            candidates.append(r.text)
+        if getattr(r, "caption", None):
+            candidates.append(r.caption)
+
+    for txt in candidates:
+        for token in re.split(r"\s+", txt):
+            token = token.strip()
+            if token and is_url(token):
+                return token
+    return ""
+
+
+def get_url_name(url):
+    """Return a readable name for `url` (last path segment or hostname)."""
+    if not url:
+        return ""
+    try:
+        parsed = urlparse(url)
+        path = parsed.path or ""
+        name = unquote(path.split("/")[-1]) if path.strip("/") else parsed.netloc
+        return name or parsed.netloc
+    except Exception:
+        return url
