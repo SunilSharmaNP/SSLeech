@@ -4,6 +4,7 @@ from ast import literal_eval
 from asyncio import Event, wait_for, gather
 from functools import partial
 from os import path as ospath
+from time import time
 from PIL import Image
 from pyrogram.filters import regex, user
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
@@ -152,6 +153,7 @@ class SelectMode:
         await self._send_message(self._captions(mode), buttons.build_menu(bnum, 3))
 
     async def get_buttons(self):
+        self._time = time()
         future = self._event_handler()
         await gather(self.list_buttons(), future)
         if self.is_cancelled:
