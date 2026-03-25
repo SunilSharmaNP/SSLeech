@@ -1,7 +1,7 @@
 from __future__ import annotations
 from aiofiles.os import path as aiopath, makedirs
 from ast import literal_eval
-from asyncio import Event, wait_for, gather
+from asyncio import Event, wait_for, gather, sleep as asyncio_sleep
 from functools import partial
 from os import path as ospath
 from time import time
@@ -10,7 +10,7 @@ from pyrogram.filters import regex, user
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.types import Message, CallbackQuery
 
-from bot import config_dict, VID_MODE
+from bot import config_dict, VID_MODE, LOGGER
 from bot.helper.ext_utils.bot_utils import new_task, new_thread, sync_to_async
 from bot.helper.ext_utils.fs_utils import clean_target
 from bot.helper.ext_utils.links_utils import is_media
@@ -38,19 +38,25 @@ class SelectMode:
 
     @new_task
     async def _event_handler(self):
-        pfunc = partial(cb_vidtools, obj=self)
-        handler = self.listener.client.add_handler(CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
-        # Small delay to ensure handler is fully registered
-        await asyncio.sleep(0.05)
-        self._event_ready.set()
         try:
+            pfunc = partial(cb_vidtools, obj=self)
+            handler = self.listener.client.add_handler(CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
+            LOGGER.debug(f"VidTools callback handler registered for user {self.listener.user_id}")
+            # Small delay to ensure handler is fully registered
+            await asyncio_sleep(0.1)
+            self._event_ready.set()
             await wait_for(self.event.wait(), timeout=180)
-        except Exception:
+        except Exception as e:
+            LOGGER.error(f"Event handler error: {e}")
             self.mode = 'Task has been cancelled, time out!'
             self.is_cancelled = True
             self.event.set()
         finally:
-            self.listener.client.remove_handler(*handler)
+            try:
+                self.listener.client.remove_handler(*handler)
+                LOGGER.debug(f"VidTools callback handler removed")
+            except Exception as e:
+                LOGGER.error(f"Error removing handler: {e}")
 
     @new_task
     async def message_event_handler(self, mode=''):
@@ -199,63 +205,76 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
 
 @new_task
 async def cb_vidtools(_, query: CallbackQuery, obj: SelectMode):
-    data = query.data.split()
-    if data[1] in config_dict.get('DISABLE_VIDTOOLS', ''):
-        await query.answer(f"{VID_MODE[data[1]]} has been disabled!", True)
-        return
-    await query.answer()
-    if data[1] == obj.mode:
-        return
-    match data[1]:
-        case 'done':
-            obj.event.set()
-        case 'back':
-            if obj.message_event:
-                obj.message_event.set()
-            await obj.list_buttons()
-        case 'cancel':
-            obj.mode = 'Task has been cancelled!'
-            obj.is_cancelled = True
-            obj.event.set()
-        case 'quality' | 'popupwm' as value:
-            if len(data) == 3:
-                obj.extra_data[value] = data[2] if value == 'quality' else int(data[2])
-            await obj.list_buttons(value)
-        case 'hardsub':
-            hmode = not bool(obj.extra_data.get('hardsub'))
-            if not hmode and obj.mode == 'vid_sub':
-                obj.extra_data.clear()
-            obj.extra_data['hardsub'] = hmode
-            await obj.list_buttons()
-        case 'subfile':
-            future = obj.message_event_handler('subfile')
-            await gather(obj.list_buttons('subfile'), future)
-        case 'fontstyle':
-            mode = 'fontstyle'
-            if len(data) > 2:
-                mode = data[2]
-                is_bold = mode == 'boldstyle'
-                if len(data) == 4:
-                    if not is_bold and obj.extra_data.get(mode) == data[3]:
-                        return
-                    obj.extra_data[mode] = not literal_eval(data[3]) if is_bold else data[3]
-                    if is_bold:
-                        mode = 'fontstyle'
-                await obj.list_buttons(mode)
-        case 'sync_manual' | 'sync_auto' as value:
-            obj.extra_data['type'] = value
-            await obj.list_buttons()
-        case 'wmsize' | 'wmposition' as value:
-            obj.extra_data[value] = data[2]
-            await obj.list_buttons('wmposition' if value == 'wmsize' else None)
-        case value:
-            if value == 'rename':
-                obj.is_rename = True
-            else:
-                obj.mode = value
-                obj.extra_data.clear()
-            if value in ['watermark', 'rename', 'trim']:
-                future = obj.message_event_handler(value)
-                await gather(obj.list_buttons(value), future)
-                return
-            await obj.list_buttons('subsync' if value == 'subsync' else '')
+    try:
+        LOGGER.debug(f"VidTools callback received: {query.data} from user {query.from_user.id}")
+        data = query.data.split()
+        if len(data) < 2:
+            LOGGER.warning(f"Invalid callback data format: {query.data}")
+            await query.answer("Invalid button!", True)
+            return
+        if data[1] in config_dict.get('DISABLE_VIDTOOLS', ''):
+            await query.answer(f"{VID_MODE[data[1]]} has been disabled!", True)
+            return
+        await query.answer()
+        if data[1] == obj.mode:
+            return
+        LOGGER.debug(f"Processing vidtool action: {data[1]}")
+        match data[1]:
+            case 'done':
+                obj.event.set()
+            case 'back':
+                if obj.message_event:
+                    obj.message_event.set()
+                await obj.list_buttons()
+            case 'cancel':
+                obj.mode = 'Task has been cancelled!'
+                obj.is_cancelled = True
+                obj.event.set()
+            case 'quality' | 'popupwm' as value:
+                if len(data) == 3:
+                    obj.extra_data[value] = data[2] if value == 'quality' else int(data[2])
+                await obj.list_buttons(value)
+            case 'hardsub':
+                hmode = not bool(obj.extra_data.get('hardsub'))
+                if not hmode and obj.mode == 'vid_sub':
+                    obj.extra_data.clear()
+                obj.extra_data['hardsub'] = hmode
+                await obj.list_buttons()
+            case 'subfile':
+                future = obj.message_event_handler('subfile')
+                await gather(obj.list_buttons('subfile'), future)
+            case 'fontstyle':
+                mode = 'fontstyle'
+                if len(data) > 2:
+                    mode = data[2]
+                    is_bold = mode == 'boldstyle'
+                    if len(data) == 4:
+                        if not is_bold and obj.extra_data.get(mode) == data[3]:
+                            return
+                        obj.extra_data[mode] = not literal_eval(data[3]) if is_bold else data[3]
+                        if is_bold:
+                            mode = 'fontstyle'
+                    await obj.list_buttons(mode)
+            case 'sync_manual' | 'sync_auto' as value:
+                obj.extra_data['type'] = value
+                await obj.list_buttons()
+            case 'wmsize' | 'wmposition' as value:
+                obj.extra_data[value] = data[2]
+                await obj.list_buttons('wmposition' if value == 'wmsize' else None)
+            case value:
+                if value == 'rename':
+                    obj.is_rename = True
+                else:
+                    obj.mode = value
+                    obj.extra_data.clear()
+                if value in ['watermark', 'rename', 'trim']:
+                    future = obj.message_event_handler(value)
+                    await gather(obj.list_buttons(value), future)
+                    return
+                await obj.list_buttons('subsync' if value == 'subsync' else '')
+    except Exception as e:
+        LOGGER.error(f"Error in cb_vidtools: {e}", exc_info=True)
+        try:
+            await query.answer(f"Error: {str(e)}", True)
+        except Exception as ans_error:
+            LOGGER.error(f"Error answering query: {ans_error}")
