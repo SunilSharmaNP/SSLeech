@@ -9,7 +9,6 @@ from pyrogram.filters import command
 from bot import bot, LOGGER, user_data, DOWNLOAD_DIR
 from bot.helper.ext_utils.bot_utils import new_task, arg_parser
 from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
-from bot.helper.listeners.tasks_listener import TaskListener
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage, auto_delete_message
@@ -17,13 +16,17 @@ from bot.helper.video_utils.executor import VidEcxecutor
 from bot.helper.video_utils.selector import SelectMode
 
 
-class VidTools(TaskListener):
+class VidTools:
     def __init__(self, client, message, isLeech=False, **kwargs):
-        # Call parent init with message only
-        super().__init__(message)
-        # Set client and additional attributes
         self.client = client
+        self.message = message
         self.isLeech = isLeech
+        # Set required attributes for SelectMode and VidEcxecutor
+        self.user_id = message.from_user.id if message else None
+        self.user_dict = user_data.get(self.user_id, {}) if self.user_id else {}
+        self.mid = self.user_id  # Message unique identifier for tracking
+        self.uid = f"{self.user_id}-{int(time())}"  # Unique task identifier
+        self.dir = DOWNLOAD_DIR
 
     @new_task
     async def newEvent(self):
