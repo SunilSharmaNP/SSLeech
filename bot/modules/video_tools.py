@@ -19,21 +19,11 @@ from bot.helper.video_utils.selector import SelectMode
 
 class VidTools(TaskListener):
     def __init__(self, client, message, isLeech=False, **kwargs):
-        super().__init__()
-        # Set client, message, and isLeech AFTER super().__init__() to prevent TaskListener from overwriting them to None
+        # Call parent init with message to properly initialize TaskListener
+        super().__init__(message=message, isLeech=isLeech)
+        # Set client and additional attributes
         self.client = client
-        self.message = message
         self.isLeech = isLeech
-        # Set required attributes that SelectMode expects
-        self.user_id = message.from_user.id if message else None
-        self.user_dict = user_data.get(self.user_id, {}) if self.user_id else {}
-        self.mid = kwargs.get('mid') or self.user_id  # Message unique identifier for tracking
-        self.uid = f"{self.user_id}-{int(time())}"  # Unique task identifier
-        # Initialize required TaskListener attributes to prevent errors
-        self.dir = DOWNLOAD_DIR
-        self.name = ""
-        self.sameDir = None
-        self.source_url = ""
 
     @new_task
     async def newEvent(self):
