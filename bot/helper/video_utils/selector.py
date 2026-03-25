@@ -62,7 +62,7 @@ class SelectMode:
 
     async def _send_message(self, text: str, buttons):
         if not self._reply:
-            self._reply = await sendMessage(text, self.listener.message, buttons)
+            self._reply = await sendMessage(self.listener.message, text, buttons)
         else:
             await editMessage(text, self._reply, buttons)
 
@@ -170,12 +170,12 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
     elif obj.mode == 'watermark' and (media := is_media(message)):
         if is_sub:
             if message.document and not media.file_name.lower().endswith(('.ass', '.srt')):
-                await sendMessage('Only .ass or .srt allowed!', message)
+                await sendMessage(message, 'Only .ass or .srt allowed!')
                 return
             obj.extra_data['subfile'] = await message.download(ospath.join('watermark', media.file_id))
         else:
             if message.document and 'image' not in getattr(media, 'mime_type', 'None'):
-                await sendMessage('Only image document allowed!', message)
+                await sendMessage(message, 'Only image document allowed!')
                 return
             fpath = await message.download(ospath.join('watermark', media.file_id))
             await sync_to_async(Image.open(fpath).convert('RGBA').save, ospath.join('watermark', f'{obj.listener.mid}.png'), 'PNG')
@@ -186,7 +186,7 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
         if match := re.match(r'(\d{2}:\d{2}:\d{2})\s(\d{2}:\d{2}:\d{2})', message.text.strip()):
             obj.extra_data.update({'start_time': match.group(1), 'end_time': match.group(2)})
         else:
-            await sendMessage('Invalid trim duration format!', message)
+            await sendMessage(message, 'Invalid trim duration format!')
             return
     obj.message_event.set()
     await gather(obj.list_buttons(), deleteMessage(message))
