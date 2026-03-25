@@ -25,7 +25,13 @@ class VidTools(TaskListener):
 
     @new_task
     async def newEvent(self):
-        text = self.message.text.split('\n')
+        raw_text = self.message.text or self.message.caption or (
+            self.message.reply_to_message.text if self.message.reply_to_message else ""
+        )
+        if not raw_text:
+            await sendMessage('Send command along with link or by reply to the link!', self.message)
+            return
+        text = raw_text.split('\n')
         input_list = text[0].split(' ')
         arg_base = {'link': ''}
         args = arg_parser(input_list[1:], arg_base)
