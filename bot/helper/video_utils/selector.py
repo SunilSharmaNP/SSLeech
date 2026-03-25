@@ -40,7 +40,9 @@ class SelectMode:
     async def _event_handler(self):
         pfunc = partial(cb_vidtools, obj=self)
         handler = self.listener.client.add_handler(CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
-        await self._event_ready.set()
+        # Small delay to ensure handler is fully registered
+        await asyncio.sleep(0.05)
+        self._event_ready.set()
         try:
             await wait_for(self.event.wait(), timeout=180)
         except Exception:
