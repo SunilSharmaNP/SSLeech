@@ -34,7 +34,7 @@ class SelectMode:
         self.message_event = Event()
         self.is_cancelled = False
 
-    @new_thread
+    @new_task
     async def _event_handler(self):
         pfunc = partial(cb_vidtools, obj=self)
         handler = self.listener.client.add_handler(CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
@@ -47,7 +47,7 @@ class SelectMode:
         finally:
             self.listener.client.remove_handler(*handler)
 
-    @new_thread
+    @new_task
     async def message_event_handler(self, mode=''):
         pfunc = partial(message_handler, obj=self, is_sub=mode == 'subfile')
         handler = self.listener.client.add_handler(MessageHandler(pfunc, user(self.listener.user_id)), group=1)
