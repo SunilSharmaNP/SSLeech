@@ -61,23 +61,19 @@ class VidTools(TaskListener):
         self.name = get_url_name(self.link)
         self.editable = await sendMessage('<i>Checking request, please wait...</i>', self.message)
         await sleep(1)
-        try:
-            await self.beforeStart()
-        except Exception as e:
-            await editMessage(str(e), self.editable)
-            return
-        await deleteMessage(self.editable)
+        # Skip beforeStart() / onDownloadComplete() - just process video
         gid = token_urlsafe(12)
         out_path = await VidEcxecutor(self, self.link, gid, False).execute()
         if not out_path:
-            await sendMessage('<i>Processing failed!</i>', self.message)
+            await editMessage('<i>Processing failed!</i>', self.editable)
             return
         if not await aiopath.exists(str(out_path)):
             self.name = self.vidMode[1] or self.name
-            await sendMessage('No file(s) to upload', self.message)
+            await editMessage(f'❌ No file(s) to process', self.editable)
             return
-        # Simple upload message instead of calling complex onDownloadComplete
-        await sendMessage(f'<b>Processing Complete:</b>\n<code>{self.name}</code>', self.message)
+        await deleteMessage(self.editable)
+        # Simple completion message
+        await sendMessage(f'✅ <b>Processing Complete:</b>\n<code>{self.name}</code>', self.message)
 
 
 async def mirror_vidtools(client, message):
