@@ -33,12 +33,14 @@ class SelectMode:
         self.newname = ''
         self.event = Event()
         self.message_event = Event()
+        self._event_ready = Event()
         self.is_cancelled = False
 
     @new_task
     async def _event_handler(self):
         pfunc = partial(cb_vidtools, obj=self)
         handler = self.listener.client.add_handler(CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
+        await self._event_ready.set()
         try:
             await wait_for(self.event.wait(), timeout=180)
         except Exception:
@@ -155,6 +157,7 @@ class SelectMode:
     async def get_buttons(self):
         self._time = time()
         future = self._event_handler()
+        await self._event_ready.wait()
         await gather(self.list_buttons(), future)
         if self.is_cancelled:
             await editMessage(self.mode, self._reply)
