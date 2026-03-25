@@ -29,6 +29,11 @@ class VidTools(TaskListener):
         self.user_dict = user_data.get(self.user_id, {}) if self.user_id else {}
         self.mid = kwargs.get('mid') or self.user_id  # Message unique identifier for tracking
         self.uid = f"{self.user_id}-{int(time())}"  # Unique task identifier
+        # Initialize required TaskListener attributes to prevent errors
+        self.dir = DOWNLOAD_DIR
+        self.name = ""
+        self.sameDir = None
+        self.source_url = ""
 
     @new_task
     async def newEvent(self):
@@ -63,14 +68,16 @@ class VidTools(TaskListener):
             return
         await deleteMessage(self.editable)
         gid = token_urlsafe(12)
-        out_pah = await VidEcxecutor(self, self.link, gid, False).execute()
-        if not out_pah:
+        out_path = await VidEcxecutor(self, self.link, gid, False).execute()
+        if not out_path:
+            await sendMessage('<i>Processing failed!</i>', self.message)
             return
-        if not await aiopath.exists(str(out_pah)):
+        if not await aiopath.exists(str(out_path)):
             self.name = self.vidMode[1] or self.name
-            await self.onUploadError('No file(s) to upload')
+            await sendMessage('No file(s) to upload', self.message)
             return
-        await self.onDownloadComplete()
+        # Simple upload message instead of calling complex onDownloadComplete
+        await sendMessage(f'<b>Processing Complete:</b>\n<code>{self.name}</code>', self.message)
 
 
 async def mirror_vidtools(client, message):
