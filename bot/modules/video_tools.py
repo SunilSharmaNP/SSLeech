@@ -18,11 +18,11 @@ from bot.helper.video_utils.selector import SelectMode
 
 class VidTools(TaskListener):
     def __init__(self, client, message, isLeech=False, **kwargs):
-        self.client = client
-        self.isLeech = isLeech
         super().__init__()
-        # Keep message reference after super().__init__() to avoid it being overwritten
+        # Set client, message, and isLeech AFTER super().__init__() to prevent TaskListener from overwriting them to None
+        self.client = client
         self.message = message
+        self.isLeech = isLeech
 
     @new_task
     async def newEvent(self):
