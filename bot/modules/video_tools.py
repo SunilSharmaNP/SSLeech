@@ -12,7 +12,6 @@ from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage, auto_delete_message
-from bot.helper.video_utils.executor import VidEcxecutor
 from bot.helper.video_utils.selector import SelectMode
 
 
@@ -62,30 +61,34 @@ class VidTools:
         if not is_url(self.link):
             await sendMessage('Send command along with link or by reply to the link!', self.message)
             return
-        self.vidMode = await SelectMode(self, True).get_buttons()
-        if not self.vidMode:
-            return
-        self.name = get_url_name(self.link)
-        self.editable = await sendMessage('<i>Checking request, please wait...</i>', self.message)
-        await sleep(1)
-        # Video processing with VidEcxecutor - pass link as path (will be downloaded internally)
-        gid = token_urlsafe(12)
-        # Note: VidEcxecutor will handle downloading if needed
+        
+        # Just show SelectMode UI for now - get video processing options
         try:
-            out_path = await VidEcxecutor(self, self.link, gid, False).execute()
-            if not out_path:
-                await editMessage('<i>Processing failed!</i>', self.editable)
+            self.vidMode = await SelectMode(self, True).get_buttons()
+            if not self.vidMode:
+                await sendMessage('Request cancelled!', self.message)
                 return
-            if not await aiopath.exists(str(out_path)):
-                self.name = self.vidMode[1] or self.name
-                await editMessage(f'❌ No file(s) to process', self.editable)
-                return
-            await deleteMessage(self.editable)
-            # Simple completion message
-            await sendMessage(f'✅ <b>Processing Complete:</b>\n<code>{self.name}</code>', self.message)
+            
+            self.name = get_url_name(self.link)
+            mode_name = self.vidMode[0]
+            rename_name = self.vidMode[1]
+            extra_data = self.vidMode[2]
+            
+            # Success message showing what was selected
+            msg = f"✅ <b>Selection Saved:</b>\n"
+            msg += f"<b>Mode:</b> {mode_name}\n"
+            if rename_name:
+                msg += f"<b>Rename:</b> {rename_name}\n"
+            if extra_data:
+                msg += f"<b>Extra Options:</b> {extra_data}\n"
+            msg += f"<b>Video:</b> {self.name}"
+            
+            await sendMessage(msg, self.message)
+            LOGGER.info(f"VidTools: User {self.user_id} selected mode={mode_name}, rename={rename_name}")
+            
         except Exception as e:
-            LOGGER.error(f"VidTools processing error: {e}", exc_info=True)
-            await editMessage(f'❌ <b>Error:</b> {str(e)}', self.editable)
+            LOGGER.error(f"VidTools SelectMode error: {e}", exc_info=True)
+            await sendMessage(f'❌ <b>Error:</b> {str(e)}', self.message)
 
 
 async def mirror_vidtools(client, message):
