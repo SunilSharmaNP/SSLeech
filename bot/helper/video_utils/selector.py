@@ -77,12 +77,16 @@ class SelectMode:
 
     async def _send_message(self, text: str, buttons):
         LOGGER.info(f"SelectMode._send_message for user {self.listener.user_id}: {text[:50]}...")
-        if not self._reply:
-            self._reply = await sendMessage(self.listener.message, text, buttons)
-            LOGGER.info(f"SelectMode UI message SENT for user {self.listener.user_id}")
-        else:
-            await editMessage(text, self._reply, buttons)
-            LOGGER.info(f"SelectMode UI message EDITED for user {self.listener.user_id}")
+        try:
+            if not self._reply:
+                self._reply = await sendMessage(self.listener.message, text, buttons)
+                LOGGER.info(f"SelectMode UI message SENT for user {self.listener.user_id}")
+            else:
+                await editMessage(text, self._reply, buttons)
+                LOGGER.info(f"SelectMode UI message EDITED for user {self.listener.user_id}")
+        except Exception as e:
+            LOGGER.error(f"Error in _send_message: {e}", exc_info=True)
+            raise
 
     def _captions(self, mode: str = None):
         msg = ('<b>VIDEOS TOOL SETTINGS</b>'
@@ -219,10 +223,11 @@ async def cb_vidtools(client, query: CallbackQuery):
     """Callback for video tools buttons. Retrieves SelectMode from global dict."""
     try:
         user_id = query.from_user.id
+        LOGGER.info(f"cb_vidtools callback received from user {user_id} with data: {query.data}")
         obj = vidtools_modes_dict.get(user_id)
         
         if not obj:
-            LOGGER.warning(f"No SelectMode found for user {user_id}")
+            LOGGER.warning(f"No SelectMode found for user {user_id} (dict has: {list(vidtools_modes_dict.keys())})")
             await query.answer("Session expired. Please try again.", True)
             return
         
@@ -238,32 +243,39 @@ async def cb_vidtools(client, query: CallbackQuery):
         await query.answer()
         if data[1] == obj.mode:
             return
-        LOGGER.debug(f"Processing vidtool action: {data[1]}")
+        LOGGER.info(f"Processing vidtool action: {data[1]}")
         match data[1]:
             case 'done':
+                LOGGER.info(f"User {user_id} clicked Done")
                 obj.event.set()
             case 'back':
+                LOGGER.info(f"User {user_id} clicked Back")
                 if obj.message_event:
                     obj.message_event.set()
                 await obj.list_buttons()
             case 'cancel':
+                LOGGER.info(f"User {user_id} clicked Cancel")
                 obj.mode = 'Task has been cancelled!'
                 obj.is_cancelled = True
                 obj.event.set()
             case 'quality' | 'popupwm' as value:
+                LOGGER.info(f"User {user_id} clicked {value}")
                 if len(data) == 3:
                     obj.extra_data[value] = data[2] if value == 'quality' else int(data[2])
                 await obj.list_buttons(value)
             case 'hardsub':
+                LOGGER.info(f"User {user_id} clicked Hardsub")
                 hmode = not bool(obj.extra_data.get('hardsub'))
                 if not hmode and obj.mode == 'vid_sub':
                     obj.extra_data.clear()
                 obj.extra_data['hardsub'] = hmode
                 await obj.list_buttons()
             case 'subfile':
+                LOGGER.info(f"User {user_id} clicked Subfile")
                 future = obj.message_event_handler('subfile')
                 await gather(obj.list_buttons('subfile'), future)
             case 'fontstyle':
+                LOGGER.info(f"User {user_id} clicked Fontstyle")
                 mode = 'fontstyle'
                 if len(data) > 2:
                     mode = data[2]
@@ -276,21 +288,26 @@ async def cb_vidtools(client, query: CallbackQuery):
                             mode = 'fontstyle'
                     await obj.list_buttons(mode)
             case 'sync_manual' | 'sync_auto' as value:
+                LOGGER.info(f"User {user_id} clicked {value}")
                 obj.extra_data['type'] = value
                 await obj.list_buttons()
             case 'wmsize' | 'wmposition' as value:
+                LOGGER.info(f"User {user_id} clicked {value}")
                 obj.extra_data[value] = data[2]
                 await obj.list_buttons('wmposition' if value == 'wmsize' else None)
             case value:
+                LOGGER.info(f"User {user_id} clicked mode: {value}")
                 if value == 'rename':
                     obj.is_rename = True
                 else:
                     obj.mode = value
                     obj.extra_data.clear()
                 if value in ['watermark', 'rename', 'trim']:
+                    LOGGER.info(f"User {user_id}: registering message handler for {value}")
                     future = obj.message_event_handler(value)
                     await gather(obj.list_buttons(value), future)
                     return
+                LOGGER.info(f"User {user_id}: updating list_buttons for mode {value}")
                 await obj.list_buttons('subsync' if value == 'subsync' else '')
     except Exception as e:
         LOGGER.error(f"Error in cb_vidtools: {e}", exc_info=True)
