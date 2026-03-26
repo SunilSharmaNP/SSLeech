@@ -136,6 +136,7 @@ class EncodingSelector:
             'acodec': default_preset.get('acodec', 'aac'),
             'abitrate': default_preset.get('abitrate', '128k'),
             'resolution': default_preset.get('resolution', 'original'),
+            'fps': 'original',
             'profile': default_preset.get('profile'),
             'level': default_preset.get('level'),
             'tune': default_preset.get('tune'),
