@@ -419,35 +419,189 @@ class MirrorLeechListener:
             try:
                 # Check if the path is a file or directory
                 if await aiopath.isfile(proc_path):
-                    # Single file processing
+                    # Single file video processing
                     LOGGER.info(f"Video processing: {video_mode} for file: {proc_path}")
+                    
+                    # Update status to show video processing
                     async with download_dict_lock:
-                        # Update status to show video processing
-                        from bot.helper.mirror_utils.status_utils.metadata_status import MetadataStatus
-                        download_dict[self.uid] = MetadataStatus(
+                        download_dict[self.uid] = ExtractStatus(
                             ospath.basename(proc_path), 
                             await get_path_size(proc_path), 
                             gid, 
                             self
                         )
                     
-                    # For now, log the settings - actual ffmpeg processing will be added later
-                    msg = f"🎬 <b>Video Processing Started</b>\n"
-                    msg += f"<b>Mode:</b> {video_mode}\n"
-                    if extra_data:
-                        msg += f"<b>Quality:</b> {extra_data.get('quality', 'Default')}\n"
+                    await update_all_messages()
                     
-                    await sendMessage(self.message, msg)
-                    LOGGER.info(f"Video processing config: mode={video_mode}, quality={extra_data.get('quality')}, rename={rename_name}")
+                    # Create output path for processed video
+                    base_name = ospath.basename(proc_path)
+                    name_without_ext = ospath.splitext(base_name)[0]
+                    ext = ospath.splitext(base_name)[1]
+                    output_path = f"{ospath.dirname(proc_path)}/{name_without_ext}_processed{ext}"
                     
+                    # Build ffmpeg command based on video mode
+                    ffmpeg_cmd = None
+                    quality = extra_data.get('quality', '360p') if extra_data else '360p'
+                    
+                    if video_mode == 'compress':
+                        # Compression with quality control
+                        quality_map = {
+                            '1080p': '1080',
+                            '720p': '720',
+                            '540p': '540',
+                            '480p': '480',
+                            '360p': '360',
+                        }
+                        scale_height = quality_map.get(quality, '360')
+                        ffmpeg_cmd = [
+                            'ffmpeg',
+                            '-i', proc_path,
+                            '-vf', f'scale=-1:{scale_height}',
+                            '-c:v', 'libx264',
+                            '-preset', 'medium',
+                            '-crf', '23',
+                            '-c:a', 'aac',
+                            '-b:a', '128k',
+                            '-y',
+                            output_path
+                        ]
+                    
+                    elif video_mode == 'convert':
+                        # Video format conversion
+                        ffmpeg_cmd = [
+                            'ffmpeg',
+                            '-i', proc_path,
+                            '-c:v', 'libx264',
+                            '-preset', 'fast',
+                            '-c:a', 'aac',
+                            '-y',
+                            output_path
+                        ]
+                    
+                    elif video_mode == 'extract':
+                        # Extract audio
+                        output_path = f"{name_without_ext}_audio.mp3"
+                        ffmpeg_cmd = [
+                            'ffmpeg',
+                            '-i', proc_path,
+                            '-q:a', '0',
+                            '-map', 'a',
+                            '-y',
+                            output_path
+                        ]
+                    
+                    elif video_mode == 'trim':
+                        # Trim video if start/end time provided
+                        start_time = extra_data.get('start_time', '00:00:00') if extra_data else '00:00:00'
+                        end_time = extra_data.get('end_time') if extra_data else None
+                        
+                        if end_time:
+                            ffmpeg_cmd = [
+                                'ffmpeg',
+                                '-i', proc_path,
+                                '-ss', start_time,
+                                '-to', end_time,
+                                '-c', 'copy',
+                                '-y',
+                                output_path
+                            ]
+                    
+                    elif video_mode == 'watermark':
+                        # Add watermark/logo
+                        watermark_path = extra_data.get('subfile') if extra_data else None
+                        if watermark_path and await aiopath.exists(watermark_path):
+                            ffmpeg_cmd = [
+                                'ffmpeg',
+                                '-i', proc_path,
+                                '-i', watermark_path,
+                                '-filter_complex', '[0:v][1:v] overlay=10:10',
+                                '-c:a', 'copy',
+                                '-y',
+                                output_path
+                            ]
+                    
+                    elif video_mode in ('vid_vid', 'merge'):
+                        # Merge/concatenate videos (placeholder - would need multiple files)
+                        LOGGER.info(f"Merge mode requires multiple video files - not applicable for single file")
+                        ffmpeg_cmd = None
+                    
+                    elif video_mode == 'rmstream':
+                        # Remove audio or video stream
+                        ffmpeg_cmd = [
+                            'ffmpeg',
+                            '-i', proc_path,
+                            '-c:v', 'copy',
+                            '-an',  # Remove audio
+                            '-y',
+                            output_path
+                        ]
+                    
+                    elif video_mode in ('vid_sub', 'subsync'):
+                        # Handle subtitles
+                        sub_file = extra_data.get('subfile') if extra_data else None
+                        if video_mode == 'subsync' and sub_file and await aiopath.exists(sub_file):
+                            # Hardsub - embed subtitles
+                            ffmpeg_cmd = [
+                                'ffmpeg',
+                                '-i', proc_path,
+                                '-vf', f"subtitles={sub_file}",
+                                '-c:a', 'copy',
+                                '-y',
+                                output_path
+                            ]
+                    
+                    elif video_mode == 'rename':
+                        # For rename, don't process - just rename when uploading
+                        ffmpeg_cmd = None
+                    
+                    # Run ffmpeg if command was built
+                    if ffmpeg_cmd:
+                        LOGGER.info(f"Running ffmpeg: {' '.join(ffmpeg_cmd)}")
+                        await sendMessage(self.message, f"🎬 <b>Processing Video ({video_mode})</b>\n⏳ <i>Quality: {quality}</i>")
+                        
+                        if self.suproc == "cancelled":
+                            return
+                        
+                        self.suproc = await create_subprocess_exec(*ffmpeg_cmd)
+                        code = await self.suproc.wait()
+                        
+                        if code == -9:
+                            LOGGER.warning("Video processing cancelled")
+                            return
+                        elif code == 0:
+                            LOGGER.info(f"Video processing completed: {output_path}")
+                            # Replace original with processed
+                            try:
+                                await aioremove(proc_path)
+                                await sync_to_async(
+                                    __import__('shutil').move, 
+                                    output_path, 
+                                    proc_path
+                                )
+                            except Exception as e:
+                                LOGGER.warning(f"Could not replace original: {e}")
+                                proc_path = output_path
+                            
+                            await sendMessage(self.message, f"✅ <b>Video Processing Complete!</b>\n<b>Mode:</b> {video_mode}")
+                        else:
+                            LOGGER.error(f"ffmpeg processing failed with code {code}")
+                            await sendMessage(self.message, f"⚠️ <b>Processing warning:</b> ffmpeg returned error\n<i>Uploading original...</i>")
+                    else:
+                        LOGGER.info(f"No ffmpeg command for mode: {video_mode}")
+                        
                 elif await aiopath.isdir(proc_path):
                     LOGGER.info(f"Video processing: {video_mode} for directory: {proc_path}")
-                    # Directory processing - process all video files
                     await sendMessage(self.message, f"🎬 <b>Processing videos in directory...</b>\n<b>Mode:</b> {video_mode}")
                     
             except Exception as e:
                 LOGGER.error(f"Video processing error: {e}", exc_info=True)
                 await sendMessage(self.message, f"⚠️ <b>Video processing warning:</b> {str(e)}\n<i>Continuing with upload...</i>")
+            
+            # After video processing, recalculate file size
+            proc_path = up_path or dl_path
+            if await aiopath.exists(proc_path):
+                size = await get_path_size(proc_path)
+                LOGGER.info(f"Updated file size after processing: {get_readable_file_size(size)}")
 
         if metadata := self.user_dict.get("lmeta") or config_dict["METADATA"]:
             meta_path = up_path or dl_path
