@@ -12,12 +12,9 @@ from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage, auto_delete_message
-# Register callback handler for SelectMode buttons
-try:
-    register_vidtools_handlers()
-    LOGGER.info("VidTools callback handler registered successfully")
-except Exception as e:
-    LOGGER.error(f"Failed to register vidtools callback handler: {e}", exc_info=True)
+from bot.helper.video_utils.selector import SelectMode, register_vidtools_handlers
+from bot.helper.video_utils.encoding_selector import register_encoding_handlers
+from bot.modules.mirror_leech import _mirror_leech
 
 
 class VidTools:
@@ -107,11 +104,3 @@ try:
     LOGGER.info("VidTools callback handler registered successfully")
 except Exception as e:
     LOGGER.error(f"Failed to register vidtools callback handler: {e}", exc_info=True)
-
-# Register encoding selector handlers
-try:
-    import asyncio
-    asyncio.create_task(register_encoding_handlers(bot))
-    LOGGER.info("Encoding selector handler registered successfully")
-except Exception as e:
-    LOGGER.error(f"Failed to register encoding selector handler: {e}", exc_info=True)
