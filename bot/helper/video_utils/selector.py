@@ -42,15 +42,18 @@ class SelectMode:
     @new_task
     async def _event_handler(self):
         try:
+            LOGGER.info(f"SelectMode._event_handler started for user {self.listener.user_id}")
             # Store this SelectMode instance globally so callback can access it
             vidtools_modes_dict[self.listener.user_id] = self
             LOGGER.debug(f"VidTools SelectMode stored for user {self.listener.user_id}")
             # Small delay to ensure handler is fully registered
             await asyncio_sleep(0.1)
             self._event_ready.set()
+            LOGGER.info(f"SelectMode._event_handler set _event_ready for user {self.listener.user_id}, waiting for event...")
             await wait_for(self.event.wait(), timeout=180)
+            LOGGER.info(f"SelectMode._event_handler received event for user {self.listener.user_id}")
         except Exception as e:
-            LOGGER.error(f"Event handler error: {e}")
+            LOGGER.error(f"Event handler error: {e}", exc_info=True)
             self.mode = 'Task has been cancelled, time out!'
             self.is_cancelled = True
             self.event.set()
@@ -73,10 +76,13 @@ class SelectMode:
             self.message_event.clear()
 
     async def _send_message(self, text: str, buttons):
+        LOGGER.info(f"SelectMode._send_message for user {self.listener.user_id}: {text[:50]}...")
         if not self._reply:
             self._reply = await sendMessage(self.listener.message, text, buttons)
+            LOGGER.info(f"SelectMode UI message SENT for user {self.listener.user_id}")
         else:
             await editMessage(text, self._reply, buttons)
+            LOGGER.info(f"SelectMode UI message EDITED for user {self.listener.user_id}")
 
     def _captions(self, mode: str = None):
         msg = ('<b>VIDEOS TOOL SETTINGS</b>'
@@ -166,9 +172,13 @@ class SelectMode:
 
     async def get_buttons(self):
         self._time = time()
+        LOGGER.info(f"SelectMode.get_buttons() started for user {self.listener.user_id}")
         future = self._event_handler()
+        LOGGER.info(f"SelectMode._event_handler task created for user {self.listener.user_id}")
         await self._event_ready.wait()
+        LOGGER.info(f"SelectMode._event_ready received for user {self.listener.user_id}, displaying buttons...")
         await gather(self.list_buttons(), future)
+        LOGGER.info(f"SelectMode.gather completed for user {self.listener.user_id}, is_cancelled={self.is_cancelled}")
         if self.is_cancelled:
             await editMessage(self.mode, self._reply)
             return
