@@ -13,6 +13,7 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage, auto_delete_message
 from bot.helper.video_utils.selector import SelectMode, register_vidtools_handlers
+from bot.modules.mirror_leech import _mirror_leech
 
 
 class VidTools:
@@ -52,7 +53,7 @@ class VidTools:
             return
         
         LOGGER.info(f"VidTools: Creating SelectMode UI for user {self.user_id} with link {self.link}")
-        # Just show SelectMode UI for now - get video processing options
+        # Show SelectMode UI to collect video processing settings
         try:
             self.vidMode = await SelectMode(self, True).get_buttons()
             LOGGER.info(f"VidTools: SelectMode.get_buttons() returned: {self.vidMode}")
@@ -61,22 +62,16 @@ class VidTools:
                 await sendMessage(self.message, 'Request cancelled!')
                 return
             
-            self.name = get_url_name(self.link)
-            mode_name = self.vidMode[0]
-            rename_name = self.vidMode[1]
-            extra_data = self.vidMode[2]
+            # Store video settings in message for mirror_leech to use
+            self.message.vidMode = self.vidMode
+            LOGGER.info(f"VidTools: Video settings stored - {self.vidMode}")
             
-            # Success message showing what was selected
-            msg = f"✅ <b>Selection Saved:</b>\n"
-            msg += f"<b>Mode:</b> {mode_name}\n"
-            if rename_name:
-                msg += f"<b>Rename:</b> {rename_name}\n"
-            if extra_data:
-                msg += f"<b>Extra Options:</b> {extra_data}\n"
-            msg += f"<b>Video:</b> {self.name}"
+            # Now trigger the actual download/processing using mirror_leech
+            # Pass the message with vidMode embedded so mirror_leech can detect it
+            await sendMessage(self.message, '🎬 <b>Starting Video Processing Task...</b>\n<i>Downloading and processing your video...</i>')
             
-            await sendMessage(self.message, msg)
-            LOGGER.info(f"VidTools: User {self.user_id} selected mode={mode_name}, rename={rename_name}")
+            # Call mirror_leech with the message that now contains video settings
+            await _mirror_leech(self.client, self.message, isQbit=False, isLeech=self.isLeech)
             
         except Exception as e:
             LOGGER.error(f"VidTools SelectMode error for user {self.user_id}: {e}", exc_info=True)
