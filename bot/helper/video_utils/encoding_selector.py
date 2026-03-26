@@ -299,19 +299,22 @@ async def register_encoding_handlers(client):
     from pyrogram.handlers import CallbackQueryHandler
     from pyrogram.filters import regex
     
-    @client.on_callback_query(filters=regex("^enc_"))
     async def encoding_callback_handler(client, callback_query):
         data = callback_query.data
         parts = data.split('_')
         user_id = int(parts[-1])  # Extract user_id from last part
         
+        LOGGER.info(f"Encoding callback received: data={data}, user_id={user_id}")
+        
         selector = encoding_settings_dict.get(user_id)
         if not selector:
+            LOGGER.warning(f"Selector not found for user {user_id}")
             await callback_query.answer("Settings expired", show_alert=True)
             return
         
         # Parse callback
         action = parts[1]
+        LOGGER.info(f"Processing encoding action: {action} for user {user_id}")
         
         try:
             if action == 'main':
@@ -448,5 +451,9 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ Profile applied!")
         
         except Exception as e:
-            LOGGER.error(f"Encoding callback error: {e}")
+            LOGGER.error(f"Encoding callback error: {e}", exc_info=True)
             await callback_query.answer(f"Error: {str(e)}", show_alert=True)
+    
+    # Register the handler using add_handler
+    handler = CallbackQueryHandler(encoding_callback_handler, filters=regex("^enc_"))
+    client.add_handler(handler)
