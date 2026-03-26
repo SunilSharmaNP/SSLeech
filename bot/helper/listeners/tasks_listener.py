@@ -444,27 +444,59 @@ class MirrorLeechListener:
                     quality = extra_data.get('quality', '360p') if extra_data else '360p'
                     
                     if video_mode == 'compress':
-                        # Compression with quality control
+                        # Compression with encoding settings
+                        quality = extra_data.get('quality', '360p') if extra_data else '360p'
+                        preset = extra_data.get('preset', 'fast') if extra_data else 'fast'
+                        crf = extra_data.get('crf', '23') if extra_data else '23'
+                        vcodec = extra_data.get('vcodec', 'libx264') if extra_data else 'libx264'
+                        acodec = extra_data.get('acodec', 'aac') if extra_data else 'aac'
+                        
+                        # Resolution mapping
                         quality_map = {
-                            '1080p': '1080',
-                            '720p': '720',
-                            '540p': '540',
-                            '480p': '480',
-                            '360p': '360',
+                            '1080p': '1920x1080',
+                            '720p': '1280x720',
+                            '540p': '960x540',
+                            '480p': '854x480',
+                            '360p': '640x360',
+                            'original': '-1:-1'
                         }
-                        scale_height = quality_map.get(quality, '360')
+                        scale_res = quality_map.get(quality, '640x360')
+                        
                         ffmpeg_cmd = [
                             'ffmpeg',
                             '-i', proc_path,
-                            '-vf', f'scale=-2:{scale_height}',
-                            '-c:v', 'libx264',
-                            '-preset', 'medium',
-                            '-crf', '23',
-                            '-c:a', 'aac',
-                            '-b:a', '128k',
-                            '-y',
-                            output_path
                         ]
+                        
+                        # Video filter (scale)
+                        if scale_res != '-1:-1':
+                            # Use -2 for height to keep aspect ratio and ensure divisibility
+                            ffmpeg_cmd.extend(['-vf', f'scale={scale_res}'])
+                        
+                        # Video codec settings
+                        ffmpeg_cmd.extend(['-c:v', vcodec])
+                        
+                        # CRF/quality settings
+                        if vcodec in ['libx264', 'libx265']:
+                            ffmpeg_cmd.extend(['-crf', str(crf)])
+                            ffmpeg_cmd.extend(['-preset', preset])
+                        elif vcodec == 'libvpx-vp9':
+                            ffmpeg_cmd.extend(['-crf', str(crf), '-b:v', '0'])
+                        
+                        # Audio codec
+                        ffmpeg_cmd.extend(['-c:a', acodec])
+                        
+                        # Audio bitrate
+                        if acodec == 'aac':
+                            ffmpeg_cmd.extend(['-b:a', '128k'])
+                        elif acodec == 'libopus':
+                            ffmpeg_cmd.extend(['-b:a', '96k'])
+                        elif acodec == 'libmp3lame':
+                            ffmpeg_cmd.extend(['-b:a', '192k'])
+                        
+                        # Copy subtitles
+                        ffmpeg_cmd.extend(['-c:s', 'copy'])
+                        
+                        ffmpeg_cmd.extend(['-y', output_path])
                     
                     elif video_mode == 'convert':
                         # Video format conversion
