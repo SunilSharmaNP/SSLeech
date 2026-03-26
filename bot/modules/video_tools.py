@@ -29,6 +29,7 @@ class VidTools:
 
     @new_task
     async def newEvent(self):
+        LOGGER.info(f"VidTools.newEvent started for user {self.user_id}")
         if not self.message:
             LOGGER.error("VidTools.newEvent called with no message")
             return
@@ -37,6 +38,7 @@ class VidTools:
             self.message.reply_to_message.text if self.message.reply_to_message else ""
         )
         if not raw_text:
+            LOGGER.warning(f"No text found in message for user {self.user_id}")
             await sendMessage('Send command along with link or by reply to the link!', self.message)
             return
         text = raw_text.split('\n')
@@ -45,13 +47,17 @@ class VidTools:
         args = arg_parser(input_list[1:], arg_base)
         self.link = args['link'] or get_link(self.message)
         if not is_url(self.link):
+            LOGGER.warning(f"Invalid URL: {self.link}")
             await sendMessage('Send command along with link or by reply to the link!', self.message)
             return
         
+        LOGGER.info(f"VidTools: Creating SelectMode UI for user {self.user_id} with link {self.link}")
         # Just show SelectMode UI for now - get video processing options
         try:
             self.vidMode = await SelectMode(self, True).get_buttons()
+            LOGGER.info(f"VidTools: SelectMode.get_buttons() returned: {self.vidMode}")
             if not self.vidMode:
+                LOGGER.info(f"VidTools: User {self.user_id} cancelled selection")
                 await sendMessage('Request cancelled!', self.message)
                 return
             
@@ -73,7 +79,7 @@ class VidTools:
             LOGGER.info(f"VidTools: User {self.user_id} selected mode={mode_name}, rename={rename_name}")
             
         except Exception as e:
-            LOGGER.error(f"VidTools SelectMode error: {e}", exc_info=True)
+            LOGGER.error(f"VidTools SelectMode error for user {self.user_id}: {e}", exc_info=True)
             await sendMessage(f'❌ <b>Error:</b> {str(e)}', self.message)
 
 
@@ -95,3 +101,10 @@ async def leech_vidtools(client, message):
 
 bot.add_handler(MessageHandler(mirror_vidtools, filters=command(BotCommands.MVidCommand) & CustomFilters.authorized))
 bot.add_handler(MessageHandler(leech_vidtools, filters=command(BotCommands.LVidCommand) & CustomFilters.authorized))
+
+# Register callback handler for SelectMode buttons
+try:
+    register_vidtools_handlers()
+    LOGGER.info("VidTools callback handler registered successfully")
+except Exception as e:
+    LOGGER.error(f"Failed to register vidtools callback handler: {e}", exc_info=True)
