@@ -145,6 +145,8 @@ class SelectMode:
                     buttons.ibutton('Font Style', 'vidtool fontstyle', 'header')
             if self.mode in ('compress', 'watermark') or self.extra_data.get('hardsub'):
                 buttons.ibutton('Quality', 'vidtool quality', 'header')
+            if self.mode == 'compress':
+                buttons.ibutton('⚡ Encoding', 'vidtool encoding', 'header')
             if self.mode == 'watermark':
                 buttons.ibutton('Popup', 'vidtool popupwm', 'header')
         else:
@@ -263,6 +265,17 @@ async def cb_vidtools(client, query: CallbackQuery):
                 if len(data) == 3:
                     obj.extra_data[value] = data[2] if value == 'quality' else int(data[2])
                 await obj.list_buttons(value)
+            case 'encoding':
+                LOGGER.info(f"User {user_id} clicked Encoding settings")
+                # Import encoding selector and show encoding UI
+                from bot.helper.video_utils.encoding_selector import EncodingSelector
+                enc_selector = EncodingSelector(query.message, is_compress=True)
+                enc_settings = await enc_selector.get_buttons()
+                if enc_settings:
+                    LOGGER.info(f"User {user_id} selected encoding settings: {enc_settings}")
+                    # Merge encoding settings into extra_data
+                    obj.extra_data.update(enc_settings)
+                await obj.list_buttons()
             case 'hardsub':
                 LOGGER.info(f"User {user_id} clicked Hardsub")
                 hmode = not bool(obj.extra_data.get('hardsub'))
