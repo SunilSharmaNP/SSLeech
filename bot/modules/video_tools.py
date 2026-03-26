@@ -12,7 +12,7 @@ from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage, auto_delete_message
-from bot.helper.video_utils.selector import SelectMode
+from bot.helper.video_utils.selector import SelectMode, register_vidtools_handlers
 
 
 class VidTools:
@@ -20,26 +20,12 @@ class VidTools:
         self.client = client
         self.message = message
         self.isLeech = isLeech
-        # Set required attributes for SelectMode and VidEcxecutor
+        # Set required attributes for SelectMode
         self.user_id = message.from_user.id if message else None
         self.user_dict = user_data.get(self.user_id, {}) if self.user_id else {}
         self.mid = self.user_id  # Message unique identifier for tracking
         self.uid = f"{self.user_id}-{int(time())}"  # Unique task identifier
         self.dir = DOWNLOAD_DIR
-        # TaskListener compatibility attributes
-        self.suproc = None
-        self.seed = False
-        self.extensionFilter = ['!.txt', '!.nfo']  # Files to skip
-        # Additional attributes for VidEcxecutor
-        self.tag = f"VidTools_User_{self.user_id}"
-
-    async def onDownloadStart(self):
-        """Stub method for executor compatibility"""
-        pass
-
-    async def onDownloadError(self, error, button=None):
-        """Handle download errors"""
-        await editMessage(f'❌ <b>Error:</b> {error}', getattr(self, 'editable', self.message))
 
     @new_task
     async def newEvent(self):
