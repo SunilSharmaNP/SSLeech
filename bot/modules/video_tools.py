@@ -27,6 +27,20 @@ class VidTools:
         self.mid = self.user_id  # Message unique identifier for tracking
         self.uid = f"{self.user_id}-{int(time())}"  # Unique task identifier
         self.dir = DOWNLOAD_DIR
+        # TaskListener compatibility attributes
+        self.suproc = None
+        self.seed = False
+        self.extensionFilter = ['!.txt', '!.nfo']  # Files to skip
+        # Additional attributes for VidEcxecutor
+        self.tag = f"VidTools_User_{self.user_id}"
+
+    async def onDownloadStart(self):
+        """Stub method for executor compatibility"""
+        pass
+
+    async def onDownloadError(self, error, button=None):
+        """Handle download errors"""
+        await editMessage(f'❌ <b>Error:</b> {error}', getattr(self, 'editable', self.message))
 
     @new_task
     async def newEvent(self):
@@ -54,19 +68,24 @@ class VidTools:
         self.name = get_url_name(self.link)
         self.editable = await sendMessage('<i>Checking request, please wait...</i>', self.message)
         await sleep(1)
-        # Skip beforeStart() / onDownloadComplete() - just process video
+        # Video processing with VidEcxecutor - pass link as path (will be downloaded internally)
         gid = token_urlsafe(12)
-        out_path = await VidEcxecutor(self, self.link, gid, False).execute()
-        if not out_path:
-            await editMessage('<i>Processing failed!</i>', self.editable)
-            return
-        if not await aiopath.exists(str(out_path)):
-            self.name = self.vidMode[1] or self.name
-            await editMessage(f'❌ No file(s) to process', self.editable)
-            return
-        await deleteMessage(self.editable)
-        # Simple completion message
-        await sendMessage(f'✅ <b>Processing Complete:</b>\n<code>{self.name}</code>', self.message)
+        # Note: VidEcxecutor will handle downloading if needed
+        try:
+            out_path = await VidEcxecutor(self, self.link, gid, False).execute()
+            if not out_path:
+                await editMessage('<i>Processing failed!</i>', self.editable)
+                return
+            if not await aiopath.exists(str(out_path)):
+                self.name = self.vidMode[1] or self.name
+                await editMessage(f'❌ No file(s) to process', self.editable)
+                return
+            await deleteMessage(self.editable)
+            # Simple completion message
+            await sendMessage(f'✅ <b>Processing Complete:</b>\n<code>{self.name}</code>', self.message)
+        except Exception as e:
+            LOGGER.error(f"VidTools processing error: {e}", exc_info=True)
+            await editMessage(f'❌ <b>Error:</b> {str(e)}', self.editable)
 
 
 async def mirror_vidtools(client, message):
