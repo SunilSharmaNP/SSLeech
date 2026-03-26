@@ -301,6 +301,9 @@ async def register_encoding_handlers(client):
     
     @client.on_callback_query(filters=regex("^enc_"))
     async def encoding_callback_handler(client, callback_query):
+        data = callback_query.data
+        parts = data.split('_')
+        user_id = int(parts[-1])  # Extract user_id from last part
         
         selector = encoding_settings_dict.get(user_id)
         if not selector:
@@ -308,7 +311,6 @@ async def register_encoding_handlers(client):
             return
         
         # Parse callback
-        parts = data.split('_')
         action = parts[1]
         
         try:
