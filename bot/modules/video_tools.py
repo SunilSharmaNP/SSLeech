@@ -80,7 +80,7 @@ class VidTools:
             
         except Exception as e:
             LOGGER.error(f"VidTools SelectMode error for user {self.user_id}: {e}", exc_info=True)
-            await sendMessage(f'❌ <b>Error:</b> {str(e)}', self.message)
+            await sendMessage(self.message, f'❌ <b>Error:</b> {str(e)}')
 
 
 async def mirror_vidtools(client, message):
