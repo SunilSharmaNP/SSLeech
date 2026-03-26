@@ -296,14 +296,11 @@ def get_profile_settings(profile_id: str) -> dict:
 
 async def register_encoding_handlers(client):
     """Register encoding selector callback handlers"""
+    from pyrogram.handlers import CallbackQueryHandler
+    from pyrogram.filters import regex
     
-    @client.on_callback_query()
+    @client.on_callback_query(filters=regex("^enc_"))
     async def encoding_callback_handler(client, callback_query):
-        data = callback_query.data
-        user_id = callback_query.from_user.id
-        
-        if not data.startswith('enc_'):
-            return
         
         selector = encoding_settings_dict.get(user_id)
         if not selector:
