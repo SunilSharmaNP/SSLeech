@@ -11,6 +11,111 @@ from bot import LOGGER
 # Global storage for encoding settings by user
 encoding_settings_dict = {}
 
+# Professional Encoding Presets - High-quality with optimization
+PROFESSIONAL_PRESETS = {
+    "h264_ultra": {
+        "label": "🏆 H.264 Ultra (Best Quality)",
+        "vcodec": "libx264",
+        "crf": 18,
+        "preset": "veryslow",
+        "tune": "film",
+        "profile": "high",
+        "level": "4.1",
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "192k",
+        "movflags": "+faststart",
+    },
+    "h264_professional": {
+        "label": "💎 H.264 Professional",
+        "vcodec": "libx264",
+        "crf": 20,
+        "preset": "slow",
+        "tune": "film",
+        "profile": "high",
+        "level": "4.1",
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "160k",
+        "movflags": "+faststart",
+    },
+    "h264_balanced": {
+        "label": "⚖️ H.264 Balanced (Default)",
+        "vcodec": "libx264",
+        "crf": 23,
+        "preset": "medium",
+        "tune": "film",
+        "profile": "high",
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "128k",
+        "movflags": "+faststart",
+    },
+    "h265_professional": {
+        "label": "🚀 H.265 Professional (Fast)",
+        "vcodec": "libx265",
+        "crf": 23,
+        "preset": "medium",
+        "tune": None,
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "160k",
+        "movflags": "+faststart",
+    },
+    "h265_fast": {
+        "label": "⚡ H.265 Fast",
+        "vcodec": "libx265",
+        "crf": 26,
+        "preset": "fast",
+        "tune": None,
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "128k",
+        "movflags": "+faststart",
+    },
+    "mobile_480p": {
+        "label": "📱 Mobile (480p)",
+        "vcodec": "libx264",
+        "crf": 25,
+        "preset": "medium",
+        "tune": "film",
+        "profile": "main",
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "96k",
+        "movflags": "+faststart",
+        "resolution": "640x360",
+    },
+    "720p_professional": {
+        "label": "🎬 720p Professional",
+        "vcodec": "libx264",
+        "crf": 22,
+        "preset": "medium",
+        "tune": "film",
+        "profile": "high",
+        "level": "4.0",
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "128k",
+        "movflags": "+faststart",
+        "resolution": "1280x720",
+    },
+    "1080p_professional": {
+        "label": "📹 1080p Professional",
+        "vcodec": "libx264",
+        "crf": 20,
+        "preset": "slow",
+        "tune": "film",
+        "profile": "high",
+        "level": "4.1",
+        "pix_fmt": "yuv420p",
+        "acodec": "aac",
+        "abitrate": "192k",
+        "movflags": "+faststart",
+        "resolution": "1920x1080",
+    },
+}
+
 
 class EncodingSelector:
     """Interactive UI for selecting encoding settings"""
@@ -20,14 +125,22 @@ class EncodingSelector:
         self.user_id = message.from_user.id
         self.is_compress = is_compress
         self.message_obj = None  # Store the sent message object
+        
+        # Initialize with professional preset defaults
+        default_preset = PROFESSIONAL_PRESETS["h264_balanced"]
         self.settings = {
-            'preset': 'fast',
-            'crf': '23',
-            'vcodec': 'libx264',
-            'acodec': 'aac',
-            'resolution': 'original',
-            'fps': 'original',
-            'profile': None
+            'preset_id': 'h264_balanced',  # Track which preset is selected
+            'preset': default_preset.get('preset', 'medium'),
+            'crf': str(default_preset.get('crf', 23)),
+            'vcodec': default_preset.get('vcodec', 'libx264'),
+            'acodec': default_preset.get('acodec', 'aac'),
+            'abitrate': default_preset.get('abitrate', '128k'),
+            'resolution': default_preset.get('resolution', 'original'),
+            'profile': default_preset.get('profile'),
+            'level': default_preset.get('level'),
+            'tune': default_preset.get('tune'),
+            'pix_fmt': default_preset.get('pix_fmt', 'yuv420p'),
+            'movflags': default_preset.get('movflags', '+faststart'),
         }
         self.event = None
         self.is_cancelled = False
@@ -73,14 +186,19 @@ class EncodingSelector:
     
     def _build_message(self):
         """Build settings display message"""
-        msg = "🎬 <b>ENCODING SETTINGS</b>\n\n"
-        msg += f"<b>Preset:</b> {self.settings['preset']} (speed vs quality)\n"
-        msg += f"<b>CRF:</b> {self.settings['crf']} (quality 0-51, lower=better)\n"
+        preset_label = PROFESSIONAL_PRESETS.get(self.settings.get('preset_id'), {}).get('label', 'Custom')
+        msg = "🎬 <b>PROFESSIONAL ENCODING SETTINGS</b>\n\n"
+        msg += f"<b>Preset:</b> {preset_label}\n"
         msg += f"<b>Video Codec:</b> {self.settings['vcodec']}\n"
-        msg += f"<b>Audio Codec:</b> {self.settings['acodec']}\n"
-        msg += f"<b>Resolution:</b> {self.settings['resolution']}\n"
-        msg += f"<b>FPS:</b> {self.settings['fps']}\n\n"
-        msg += "Select options below or use quick presets ⚙️"
+        msg += f"<b>Quality (CRF):</b> {self.settings['crf']} (lower=better)\n"
+        msg += f"<b>Speed (Preset):</b> {self.settings['preset']}\n"
+        if self.settings.get('profile'):
+            msg += f"<b>Profile:</b> {self.settings['profile']}\n"
+        if self.settings.get('tune'):
+            msg += f"<b>Tune:</b> {self.settings['tune']}\n"
+        msg += f"<b>Audio:</b> {self.settings['acodec']} ({self.settings['abitrate']})\n"
+        msg += f"<b>Resolution:</b> {self.settings['resolution']}\n\n"
+        msg += "⚙️ Click presets for quick professional settings!"
         return msg
     
     def _build_main_menu(self):
@@ -202,69 +320,18 @@ class EncodingSelector:
         return buttons.build_menu(2)
     
     def _build_profile_menu(self):
-        """Build quick encoding profiles"""
+        """Build quick encoding profiles from professional presets"""
         from bot.helper.telegram_helper.button_build import ButtonMaker
-        profiles = {
-            'ultra_fast': '⚡ Ultra Fast',
-            'fast': '🚀 Fast',
-            'balanced': '⚖️ Balanced',
-            'quality': '💎 Quality',
-            'web': '🌐 Web (VP9)',
-        }
         buttons = ButtonMaker()
         
-        for profile_id, label in profiles.items():
-            buttons.ibutton(label, f"enc encprof {profile_id}")
+        for preset_id, preset_info in PROFESSIONAL_PRESETS.items():
+            label = preset_info.get('label', preset_id)
+            is_selected = (self.settings.get('preset_id') == preset_id)
+            display = f"✅ {label}" if is_selected else label
+            buttons.ibutton(display, f"enc encprof {preset_id}")
         
         buttons.ibutton("⬅️ Back", f"enc back")
         return buttons.build_menu(1)
-
-
-def get_profile_settings(profile_id: str) -> dict:
-    """Get settings for quick encoding profile"""
-    profiles = {
-        'ultra_fast': {
-            'preset': 'ultrafast',
-            'crf': '28',
-            'vcodec': 'libx264',
-            'acodec': 'aac',
-            'resolution': '480p',
-            'fps': 'original'
-        },
-        'fast': {
-            'preset': 'fast',
-            'crf': '23',
-            'vcodec': 'libx264',
-            'acodec': 'aac',
-            'resolution': '720p',
-            'fps': 'original'
-        },
-        'balanced': {
-            'preset': 'medium',
-            'crf': '23',
-            'vcodec': 'libx265',
-            'acodec': 'aac',
-            'resolution': 'original',
-            'fps': 'original'
-        },
-        'quality': {
-            'preset': 'slow',
-            'crf': '20',
-            'vcodec': 'libx265',
-            'acodec': 'aac',
-            'resolution': 'original',
-            'fps': 'original'
-        },
-        'web': {
-            'preset': 'medium',
-            'crf': '30',
-            'vcodec': 'libvpx-vp9',
-            'acodec': 'libopus',
-            'resolution': '720p',
-            'fps': 'original'
-        }
-    }
-    return profiles.get(profile_id, profiles['balanced'])
 
 
 async def cb_encoding(client, query):
@@ -356,9 +423,22 @@ async def cb_encoding(client, query):
                     selector._build_profile_menu()
                 )
             case 'encprof':
-                profile_settings = get_profile_settings(value)
-                selector.settings.update(profile_settings)
-                LOGGER.info(f"Applied profile: {value}")
+                # Apply professional preset
+                if value in PROFESSIONAL_PRESETS:
+                    preset_data = PROFESSIONAL_PRESETS[value]
+                    selector.settings['preset_id'] = value
+                    selector.settings['preset'] = preset_data.get('preset', 'medium')
+                    selector.settings['crf'] = str(preset_data.get('crf', 23))
+                    selector.settings['vcodec'] = preset_data.get('vcodec', 'libx264')
+                    selector.settings['acodec'] = preset_data.get('acodec', 'aac')
+                    selector.settings['abitrate'] = preset_data.get('abitrate', '128k')
+                    selector.settings['profile'] = preset_data.get('profile')
+                    selector.settings['level'] = preset_data.get('level')
+                    selector.settings['tune'] = preset_data.get('tune')
+                    selector.settings['pix_fmt'] = preset_data.get('pix_fmt', 'yuv420p')
+                    selector.settings['movflags'] = preset_data.get('movflags', '+faststart')
+                    selector.settings['resolution'] = preset_data.get('resolution', 'original')
+                    LOGGER.info(f"Applied professional preset: {value}")
                 await selector._send_message(selector._build_message(), selector._build_main_menu())
             
             case 'back':
