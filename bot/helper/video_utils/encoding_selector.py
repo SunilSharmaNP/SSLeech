@@ -17,6 +17,7 @@ class EncodingSelector:
         self.message = message
         self.user_id = message.from_user.id
         self.is_compress = is_compress
+        self.message_obj = None  # Store the sent message object
         self.settings = {
             'preset': 'fast',
             'crf': '23',
@@ -38,7 +39,8 @@ class EncodingSelector:
         buttons = self._build_main_menu()
         
         try:
-            await self.message.reply(msg_text, reply_markup=buttons)
+            self.message_obj = await self.message.reply(msg_text, reply_markup=buttons)
+            LOGGER.info(f"EncodingSelector: Message sent for user {self.user_id}")
         except Exception as e:
             LOGGER.error(f"Error sending encoding settings UI: {e}")
             return None
@@ -301,10 +303,16 @@ async def register_encoding_handlers(client):
     
     async def encoding_callback_handler(client, callback_query):
         data = callback_query.data
-        parts = data.split('_')
-        user_id = int(parts[-1])  # Extract user_id from last part
         
-        LOGGER.info(f"Encoding callback received: data={data}, user_id={user_id}")
+        # Extract user_id from the end of callback data (after last _)
+        try:
+            last_underscore = data.rfind('_')
+            user_id = int(data[last_underscore+1:])
+        except (ValueError, IndexError):
+            await callback_query.answer("Invalid callback data", show_alert=True)
+            return
+        
+        LOGGER.info(f"Encoding callback: data={data}, user_id={user_id}")
         
         selector = encoding_settings_dict.get(user_id)
         if not selector:
@@ -312,87 +320,91 @@ async def register_encoding_handlers(client):
             await callback_query.answer("Settings expired", show_alert=True)
             return
         
-        # Parse callback
-        action = parts[1]
-        LOGGER.info(f"Processing encoding action: {action} for user {user_id}")
-        
         try:
-            if action == 'main':
-                # Return to main menu
-                buttons = selector._build_main_menu()
-                msg = selector._build_message()
-                await callback_query.edit_message_text(msg, reply_markup=buttons)
-            
-            elif action == 'preset':
-                # Show preset menu
-                buttons = selector._build_preset_menu()
-                await callback_query.edit_message_text(
-                    "⚙️ <b>Select Encoding Preset</b>\n(Faster = lower quality loss)",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'crf':
-                # Show CRF menu
-                buttons = selector._build_crf_menu()
-                await callback_query.edit_message_text(
-                    "📊 <b>Select Quality (CRF)</b>\n18=Best, 28=Fast",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'vcodec':
-                # Show video codec menu
-                buttons = selector._build_vcodec_menu()
-                await callback_query.edit_message_text(
-                    "🎥 <b>Select Video Codec</b>",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'acodec':
-                # Show audio codec menu
-                buttons = selector._build_acodec_menu()
-                await callback_query.edit_message_text(
-                    "🔊 <b>Select Audio Codec</b>",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'res':
-                # Show resolution menu
-                buttons = selector._build_resolution_menu()
-                await callback_query.edit_message_text(
-                    "📐 <b>Select Resolution</b>",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'fps':
-                # Show FPS menu
-                buttons = selector._build_fps_menu()
-                await callback_query.edit_message_text(
-                    "⏱️ <b>Select Frame Rate</b>",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'profile':
-                # Show quick profiles
-                buttons = selector._build_profile_menu()
-                await callback_query.edit_message_text(
-                    "⚡ <b>Quick Encoding Profiles</b>",
-                    reply_markup=buttons
-                )
-            
-            elif action == 'apply':
-                # Apply and return settings
-                selector.event.set()
-                await callback_query.answer("✅ Settings applied!")
-            
-            elif action == 'cancel':
-                # Cancel
-                selector.is_cancelled = True
-                selector.event.set()
-                await callback_query.answer("❌ Cancelled")
-            
-            # Handle value selections (encpreset_, enccrf_, etc)
+            # Check which callback format this is
+            if data.startswith('enc_'):
+                # Menu navigation callbacks: enc_preset_, enc_crf_, etc.
+                parts = data[4:-len(str(user_id))-1].split('_')  # Remove 'enc_' prefix and user_id suffix
+                action = parts[0] if parts else ''
+                
+                LOGGER.info(f"Menu action: {action}")
+                
+                if action == 'main':
+                    buttons = selector._build_main_menu()
+                    msg = selector._build_message()
+                    await callback_query.edit_message_text(msg, reply_markup=buttons)
+                    await callback_query.answer()
+                
+                elif action == 'preset':
+                    buttons = selector._build_preset_menu()
+                    await callback_query.edit_message_text(
+                        "⚙️ <b>Select Encoding Preset</b>\n(Faster = lower quality loss)",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'crf':
+                    buttons = selector._build_crf_menu()
+                    await callback_query.edit_message_text(
+                        "📊 <b>Select Quality (CRF)</b>\n18=Best, 28=Fast",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'vcodec':
+                    buttons = selector._build_vcodec_menu()
+                    await callback_query.edit_message_text(
+                        "🎥 <b>Select Video Codec</b>",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'acodec':
+                    buttons = selector._build_acodec_menu()
+                    await callback_query.edit_message_text(
+                        "🔊 <b>Select Audio Codec</b>",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'res':
+                    buttons = selector._build_resolution_menu()
+                    await callback_query.edit_message_text(
+                        "📐 <b>Select Resolution</b>",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'fps':
+                    buttons = selector._build_fps_menu()
+                    await callback_query.edit_message_text(
+                        "⏱️ <b>Select Frame Rate</b>",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'profile':
+                    buttons = selector._build_profile_menu()
+                    await callback_query.edit_message_text(
+                        "⚡ <b>Quick Encoding Profiles</b>",
+                        reply_markup=buttons
+                    )
+                    await callback_query.answer()
+                
+                elif action == 'apply':
+                    selector.event.set()
+                    await callback_query.answer("✅ Settings applied!")
+                
+                elif action == 'cancel':
+                    selector.is_cancelled = True
+                    selector.event.set()
+                    await callback_query.answer("❌ Cancelled")
+                    
+            # Selection callbacks: encpreset_, enccrf_, etc.
             elif data.startswith('encpreset_'):
-                preset = parts[2]
+                # Format: encpreset_VALUE_userid
+                preset = data[len('encpreset_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected preset: {preset}")
                 selector.settings['preset'] = preset
                 buttons = selector._build_main_menu()
                 msg = selector._build_message()
@@ -400,7 +412,9 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ Preset: {preset}")
             
             elif data.startswith('enccrf_'):
-                crf = parts[2]
+                # Format: enccrf_VALUE_userid
+                crf = data[len('enccrf_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected CRF: {crf}")
                 selector.settings['crf'] = crf
                 buttons = selector._build_main_menu()
                 msg = selector._build_message()
@@ -408,7 +422,9 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ CRF: {crf}")
             
             elif data.startswith('encvcodec_'):
-                codec = parts[2]
+                # Format: encvcodec_VALUE_userid
+                codec = data[len('encvcodec_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected video codec: {codec}")
                 selector.settings['vcodec'] = codec
                 buttons = selector._build_main_menu()
                 msg = selector._build_message()
@@ -416,7 +432,9 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ Codec: {codec}")
             
             elif data.startswith('encacodec_'):
-                codec = parts[2]
+                # Format: encacodec_VALUE_userid
+                codec = data[len('encacodec_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected audio codec: {codec}")
                 selector.settings['acodec'] = codec
                 buttons = selector._build_main_menu()
                 msg = selector._build_message()
@@ -424,8 +442,9 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ Audio: {codec}")
             
             elif data.startswith('encres_'):
-                res = parts[2]
-                # Find resolution name
+                # Format: encres_VALUE_userid
+                res = data[len('encres_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected resolution: {res}")
                 res_map = {'640x360': '360p', '854x480': '480p', '1280x720': '720p', '1920x1080': '1080p', 'original': 'Original'}
                 selector.settings['resolution'] = res_map.get(res, res)
                 buttons = selector._build_main_menu()
@@ -434,7 +453,9 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ Resolution: {res}")
             
             elif data.startswith('encfps_'):
-                fps = parts[2]
+                # Format: encfps_VALUE_userid
+                fps = data[len('encfps_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected FPS: {fps}")
                 selector.settings['fps'] = fps
                 buttons = selector._build_main_menu()
                 msg = selector._build_message()
@@ -442,18 +463,25 @@ async def register_encoding_handlers(client):
                 await callback_query.answer(f"✅ FPS: {fps}")
             
             elif data.startswith('encprof_'):
-                profile_id = parts[2]
+                # Format: encprof_PROFILE_ID_userid
+                profile_id = data[len('encprof_'):-len(str(user_id))-1]
+                LOGGER.info(f"Selected profile: {profile_id}")
                 profile_settings = get_profile_settings(profile_id)
                 selector.settings.update(profile_settings)
                 buttons = selector._build_main_menu()
                 msg = selector._build_message()
                 await callback_query.edit_message_text(msg, reply_markup=buttons)
                 await callback_query.answer(f"✅ Profile applied!")
+            
+            else:
+                LOGGER.warning(f"Unknown callback format: {data}")
+                await callback_query.answer("Unknown button", show_alert=True)
         
         except Exception as e:
             LOGGER.error(f"Encoding callback error: {e}", exc_info=True)
             await callback_query.answer(f"Error: {str(e)}", show_alert=True)
     
     # Register the handler using add_handler
-    handler = CallbackQueryHandler(encoding_callback_handler, filters=regex("^enc_"))
+    handler = CallbackQueryHandler(encoding_callback_handler, filters=regex("^enc"))
     client.add_handler(handler)
+    LOGGER.info("Encoding selector handler registered successfully")
