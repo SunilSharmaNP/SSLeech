@@ -104,3 +104,10 @@ try:
     LOGGER.info("VidTools callback handler registered successfully")
 except Exception as e:
     LOGGER.error(f"Failed to register vidtools callback handler: {e}", exc_info=True)
+
+# Register encoding selector handlers
+try:
+    register_encoding_handlers()
+    LOGGER.info("Encoding selector handler registered successfully")
+except Exception as e:
+    LOGGER.error(f"Failed to register encoding selector handler: {e}", exc_info=True)
