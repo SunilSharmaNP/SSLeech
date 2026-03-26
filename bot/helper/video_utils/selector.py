@@ -82,7 +82,7 @@ class SelectMode:
                 self._reply = await sendMessage(self.listener.message, text, buttons)
                 LOGGER.info(f"SelectMode UI message SENT for user {self.listener.user_id}")
             else:
-                await editMessage(text, self._reply, buttons)
+                await editMessage(self._reply, text, buttons)
                 LOGGER.info(f"SelectMode UI message EDITED for user {self.listener.user_id}")
         except Exception as e:
             LOGGER.error(f"Error in _send_message: {e}", exc_info=True)
