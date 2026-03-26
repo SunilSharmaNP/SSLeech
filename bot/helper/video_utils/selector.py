@@ -268,13 +268,42 @@ async def cb_vidtools(client, query: CallbackQuery):
             case 'encoding':
                 LOGGER.info(f"User {user_id} clicked Encoding settings")
                 # Import encoding selector and show encoding UI
-                from bot.helper.video_utils.encoding_selector import EncodingSelector
-                enc_selector = EncodingSelector(query.message, is_compress=True)
-                enc_settings = await enc_selector.get_buttons()
-                if enc_settings:
-                    LOGGER.info(f"User {user_id} selected encoding settings: {enc_settings}")
-                    # Merge encoding settings into extra_data
-                    obj.extra_data.update(enc_settings)
+                from bot.helper.video_utils.encoding_selector import EncodingSelector, encoding_settings_dict
+                
+                # Create selector instance
+                enc_selector = EncodingSelector(obj.listener.message, is_compress=True)
+                
+                # Show initial message
+                msg_text = enc_selector._build_message()
+                buttons = enc_selector._build_main_menu()
+                
+                # Send encoding settings UI
+                try:
+                    enc_msg = await obj.listener.message.reply(msg_text, reply_markup=buttons)
+                    LOGGER.info(f"Encoding settings UI message sent for user {user_id}")
+                    
+                    # Store selector in global dict for callback access
+                    encoding_settings_dict[user_id] = enc_selector
+                    
+                    # Wait for encoding settings
+                    await asyncio_sleep(0.1)
+                    enc_settings = await enc_selector.get_buttons()
+                    
+                    if enc_settings:
+                        LOGGER.info(f"User {user_id} selected encoding settings: {enc_settings}")
+                        # Merge encoding settings into extra_data
+                        obj.extra_data.update(enc_settings)
+                        
+                        # Delete encoding message
+                        try:
+                            await enc_msg.delete()
+                        except:
+                            pass
+                
+                except Exception as e:
+                    LOGGER.error(f"Error showing encoding settings: {e}", exc_info=True)
+                
+                # Return to main menu
                 await obj.list_buttons()
             case 'hardsub':
                 LOGGER.info(f"User {user_id} clicked Hardsub")
