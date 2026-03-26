@@ -298,8 +298,4 @@ def register_vidtools_handlers():
     bot_instance.add_handler(CallbackQueryHandler(cb_vidtools, filters=regex("^vidtool")))
     LOGGER.debug("VidTools callback handler registered at module level")
 
-# Call registration when module loads
-try:
-    register_vidtools_handlers()
-except Exception as e:
-    LOGGER.error(f"Failed to register vidtools handlers: {e}")
+# NOTE: Handler registration is deferred - done in video_tools.py instead
