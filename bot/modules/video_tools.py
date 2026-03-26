@@ -39,7 +39,7 @@ class VidTools:
         )
         if not raw_text:
             LOGGER.warning(f"No text found in message for user {self.user_id}")
-            await sendMessage('Send command along with link or by reply to the link!', self.message)
+            await sendMessage(self.message, 'Send command along with link or by reply to the link!')
             return
         text = raw_text.split('\n')
         input_list = text[0].split(' ')
@@ -48,7 +48,7 @@ class VidTools:
         self.link = args['link'] or get_link(self.message)
         if not is_url(self.link):
             LOGGER.warning(f"Invalid URL: {self.link}")
-            await sendMessage('Send command along with link or by reply to the link!', self.message)
+            await sendMessage(self.message, 'Send command along with link or by reply to the link!')
             return
         
         LOGGER.info(f"VidTools: Creating SelectMode UI for user {self.user_id} with link {self.link}")
@@ -58,7 +58,7 @@ class VidTools:
             LOGGER.info(f"VidTools: SelectMode.get_buttons() returned: {self.vidMode}")
             if not self.vidMode:
                 LOGGER.info(f"VidTools: User {self.user_id} cancelled selection")
-                await sendMessage('Request cancelled!', self.message)
+                await sendMessage(self.message, 'Request cancelled!')
                 return
             
             self.name = get_url_name(self.link)
@@ -75,7 +75,7 @@ class VidTools:
                 msg += f"<b>Extra Options:</b> {extra_data}\n"
             msg += f"<b>Video:</b> {self.name}"
             
-            await sendMessage(msg, self.message)
+            await sendMessage(self.message, msg)
             LOGGER.info(f"VidTools: User {self.user_id} selected mode={mode_name}, rename={rename_name}")
             
         except Exception as e:
