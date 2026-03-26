@@ -59,6 +59,18 @@ class EncodingSelector:
         
         return None if self.is_cancelled else self.settings
     
+    async def _send_message(self, text: str, buttons):
+        """Send or edit the encoding selector message"""
+        from bot.helper.telegram_helper.message_utils import editMessage
+        try:
+            if self.message_obj:
+                await editMessage(self.message_obj, text, buttons)
+            else:
+                self.message_obj = await self.message.reply(text, reply_markup=buttons)
+        except Exception as e:
+            LOGGER.error(f"Error in _send_message: {e}", exc_info=True)
+            raise
+    
     def _build_message(self):
         """Build settings display message"""
         msg = "🎬 <b>ENCODING SETTINGS</b>\n\n"
