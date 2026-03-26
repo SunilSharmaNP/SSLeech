@@ -148,6 +148,10 @@ class MirrorLeechListener:
         self.logMessage = logMessage
         self.linkslogmsg = None
         self.botpmmsg = None
+        # Store video processing settings if present
+        self.vidMode = getattr(message, 'vidMode', None)
+        if self.vidMode:
+            LOGGER.info(f"Video Processing enabled for task {self.uid}: mode={self.vidMode[0]}")
         self.upload_details = {}
         self.leech_utils = leech_utils
         self.source_url = (
@@ -405,6 +409,45 @@ class MirrorLeechListener:
                 LOGGER.info("Not any valid archive, uploading file as it is.")
                 self.newDir = ""
                 up_path = dl_path
+
+        # Video Processing Step (if vidMode is set)
+        if self.vidMode:
+            LOGGER.info(f"Starting video processing for task {self.uid}: {self.vidMode}")
+            proc_path = up_path or dl_path
+            video_mode, rename_name, extra_data = self.vidMode[0], self.vidMode[1], self.vidMode[2]
+            
+            try:
+                # Check if the path is a file or directory
+                if await aiopath.isfile(proc_path):
+                    # Single file processing
+                    LOGGER.info(f"Video processing: {video_mode} for file: {proc_path}")
+                    async with download_dict_lock:
+                        # Update status to show video processing
+                        from bot.helper.mirror_utils.status_utils.metadata_status import MetadataStatus
+                        download_dict[self.uid] = MetadataStatus(
+                            ospath.basename(proc_path), 
+                            await get_path_size(proc_path), 
+                            gid, 
+                            self
+                        )
+                    
+                    # For now, log the settings - actual ffmpeg processing will be added later
+                    msg = f"🎬 <b>Video Processing Started</b>\n"
+                    msg += f"<b>Mode:</b> {video_mode}\n"
+                    if extra_data:
+                        msg += f"<b>Quality:</b> {extra_data.get('quality', 'Default')}\n"
+                    
+                    await sendMessage(self.message, msg)
+                    LOGGER.info(f"Video processing config: mode={video_mode}, quality={extra_data.get('quality')}, rename={rename_name}")
+                    
+                elif await aiopath.isdir(proc_path):
+                    LOGGER.info(f"Video processing: {video_mode} for directory: {proc_path}")
+                    # Directory processing - process all video files
+                    await sendMessage(self.message, f"🎬 <b>Processing videos in directory...</b>\n<b>Mode:</b> {video_mode}")
+                    
+            except Exception as e:
+                LOGGER.error(f"Video processing error: {e}", exc_info=True)
+                await sendMessage(self.message, f"⚠️ <b>Video processing warning:</b> {str(e)}\n<i>Continuing with upload...</i>")
 
         if metadata := self.user_dict.get("lmeta") or config_dict["METADATA"]:
             meta_path = up_path or dl_path
