@@ -456,7 +456,7 @@ class MirrorLeechListener:
                         ffmpeg_cmd = [
                             'ffmpeg',
                             '-i', proc_path,
-                            '-vf', f'scale=-1:{scale_height}',
+                            '-vf', f'scale=-2:{scale_height}',
                             '-c:v', 'libx264',
                             '-preset', 'medium',
                             '-crf', '23',
