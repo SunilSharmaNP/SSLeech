@@ -20,7 +20,7 @@ from bot import (
     VIDTOOLS_FFMPEG_PATH as FFMPEG_NAME,
     VIDTOOLS_FFPROBE_PATH as FFPROBE_NAME,
 )
-from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec, new_task
+from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec, new_task, handle_ffmpeg_error
 from bot.helper.ext_utils.fs_utils import get_path_size, clean_target
 from bot.helper.ext_utils.links_utils import get_url_name
 from bot.helper.ext_utils.leech_utils import get_document_type, get_media_info
@@ -204,7 +204,23 @@ class VidEcxecutor:
         if self.listener.suproc == 'cancelled' or code == -9:
             self.is_cancel = True
         else:
-            LOGGER.error('%s. Failed to %s: %s', (await self.listener.suproc.stderr.read()).decode().strip(), VID_MODE[self.mode], self.outfile)
+            stderr_output = (await self.listener.suproc.stderr.read()).decode().strip()
+            
+            # Use new error handler to get detailed error information
+            error_info = await handle_ffmpeg_error(stderr_output, self.mode)
+            
+            # Log with detailed error information
+            LOGGER.error(
+                f"FFmpeg failed for {self.mode} mode:\n"
+                f"Category: {error_info.get('category', 'UNKNOWN')}\n"
+                f"Output: {self.outfile}\n"
+                f"Error: {stderr_output[:500]}"
+            )
+            
+            # Store error info for potential user feedback
+            if hasattr(self.listener, 'ffmpeg_error'):
+                self.listener.ffmpeg_error = error_info
+            
             self._files.clear()
 
     async def _progress(self, status='prog'):
