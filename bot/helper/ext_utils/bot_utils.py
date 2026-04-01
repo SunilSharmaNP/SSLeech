@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import platform
+import json
 from base64 import b64encode
 from datetime import datetime
 from os import path as ospath
@@ -580,6 +581,400 @@ async def cmd_exec(cmd, shell=False):
     stdout = stdout.decode().strip()
     stderr = stderr.decode().strip()
     return stdout, stderr, proc.returncode
+
+
+async def get_media_streams(file_path):
+    """
+    Analyze media file using FFprobe to extract detailed stream information.
+    
+    Args:
+        file_path: Path to the media file
+        
+    Returns:
+        Dict with structure:
+        {
+            'video': [
+                {
+                    'index': stream_index,
+                    'codec': codec_name,
+                    'width': resolution_width,
+                    'height': resolution_height,
+                    'fps': frames_per_second,
+                    'bitrate': bitrate_in_kbps,
+                    'duration': duration_in_seconds
+                }
+            ],
+            'audio': [
+                {
+                    'index': stream_index,
+                    'codec': codec_name,
+                    'bitrate': bitrate_in_kbps,
+                    'channels': channel_count,
+                    'sample_rate': sample_rate,
+                    'language': language_tag,
+                    'title': stream_title
+                }
+            ],
+            'subtitle': [
+                {
+                    'index': stream_index,
+                    'codec': codec_name,
+                    'language': language_tag,
+                    'title': stream_title
+                }
+            ],
+            'format': {
+                'duration': total_duration_seconds,
+                'bitrate': overall_bitrate_kbps,
+                'container': container_format
+            }
+        }
+    """
+    try:
+        from bot import LOGGER, VIDTOOLS_FFPROBE_PATH
+    except ImportError:
+        VIDTOOLS_FFPROBE_PATH = "ffprobe"
+        LOGGER = None
+
+    try:
+        # FFprobe command to get JSON output with all streams
+        ffprobe_cmd = [
+            VIDTOOLS_FFPROBE_PATH,
+            "-v", "error",
+            "-print_format", "json",
+            "-show_format",
+            "-show_streams",
+            file_path
+        ]
+
+        proc = await create_subprocess_exec(
+            *ffprobe_cmd,
+            stdout=PIPE,
+            stderr=PIPE
+        )
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            if LOGGER:
+                LOGGER.error(f"FFprobe error for {file_path}: {stderr.decode()}")
+            return None
+
+        # Parse JSON output
+        probe_data = json.loads(stdout.decode().strip())
+        
+        result = {
+            'video': [],
+            'audio': [],
+            'subtitle': [],
+            'format': {}
+        }
+
+        # Extract format information
+        if 'format' in probe_data:
+            fmt = probe_data['format']
+            result['format'] = {
+                'duration': float(fmt.get('duration', 0)),
+                'bitrate': int(fmt.get('bit_rate', 0)) // 1000,
+                'container': fmt.get('format_name', 'unknown')
+            }
+
+        # Extract stream information
+        if 'streams' in probe_data:
+            for stream in probe_data['streams']:
+                stream_type = stream.get('codec_type', 'unknown')
+                stream_index = stream.get('index', -1)
+                codec_name = stream.get('codec_name', 'unknown')
+                
+                if stream_type == 'video':
+                    video_info = {
+                        'index': stream_index,
+                        'codec': codec_name,
+                        'width': stream.get('width', 0),
+                        'height': stream.get('height', 0),
+                        'fps': round(float(stream.get('r_frame_rate', '0/1').split('/')[0]) / 
+                                   float(stream.get('r_frame_rate', '0/1').split('/')[1]) 
+                                   if '/' in stream.get('r_frame_rate', '0/1') else 0, 2),
+                        'bitrate': int(stream.get('bit_rate', 0)) // 1000 if stream.get('bit_rate') else 0,
+                        'duration': float(stream.get('duration', 0))
+                    }
+                    result['video'].append(video_info)
+                    
+                elif stream_type == 'audio':
+                    # Extract language from tags
+                    language = 'und'  # undefined
+                    if 'tags' in stream and 'language' in stream['tags']:
+                        language = stream['tags']['language']
+                    
+                    title = ''
+                    if 'tags' in stream and 'title' in stream['tags']:
+                        title = stream['tags']['title']
+                    
+                    audio_info = {
+                        'index': stream_index,
+                        'codec': codec_name,
+                        'bitrate': int(stream.get('bit_rate', 0)) // 1000 if stream.get('bit_rate') else 0,
+                        'channels': stream.get('channels', 0),
+                        'sample_rate': stream.get('sample_rate', 0),
+                        'language': language,
+                        'title': title
+                    }
+                    result['audio'].append(audio_info)
+                    
+                elif stream_type == 'subtitle':
+                    language = 'und'
+                    if 'tags' in stream and 'language' in stream['tags']:
+                        language = stream['tags']['language']
+                    
+                    title = ''
+                    if 'tags' in stream and 'title' in stream['tags']:
+                        title = stream['tags']['title']
+                    
+                    subtitle_info = {
+                        'index': stream_index,
+                        'codec': codec_name,
+                        'language': language,
+                        'title': title
+                    }
+                    result['subtitle'].append(subtitle_info)
+        
+        return result
+
+    except json.JSONDecodeError as e:
+        if LOGGER:
+            LOGGER.error(f"Failed to parse FFprobe JSON for {file_path}: {e}")
+        return None
+    except Exception as e:
+        if LOGGER:
+            LOGGER.error(f"Error analyzing media streams for {file_path}: {e}")
+        return None
+
+
+async def handle_ffmpeg_error(error_message, video_mode='unknown'):
+    """
+    Analyze FFmpeg error message and provide specific diagnostic information and recovery steps.
+    
+    Args:
+        error_message: FFmpeg stderr output or error string
+        video_mode: The video processing mode (compress, convert, extract, etc.)
+        
+    Returns:
+        Dict with:
+        {
+            'category': error_category,
+            'severity': 'critical' | 'warning' | 'info',
+            'user_message': user_friendly_text,
+            'technical_details': detailed_error_info,
+            'recovery_steps': [list of recovery actions],
+            'admin_commands': [list of setup/fix commands]
+        }
+    """
+    try:
+        from bot import LOGGER
+    except ImportError:
+        LOGGER = None
+
+    error_msg = error_message.lower() if error_message else ''
+    
+    # Define error patterns and their handlers
+    error_handlers = {
+        'unknown encoder': {
+            'category': 'CODEC_ERROR',
+            'severity': 'critical',
+            'user_message': '❌ Video codec/encoder not available on this server',
+            'recovery_steps': [
+                'Try a different output format (MP4 vs MKV)',
+                'Use lower quality or different compression preset',
+                'Contact admin to install missing codec'
+            ],
+            'admin_commands': [
+                'docker exec [container] apt-get update && apt-get install -y libx265-dev libopus-dev',
+                'Rebuild container with updated ffmpeg'
+            ]
+        },
+        'permission denied': {
+            'category': 'PERMISSION_ERROR',
+            'severity': 'critical',
+            'user_message': '❌ Permission denied - cannot write to output location',
+            'recovery_steps': [
+                'Check disk permissions',
+                'Ensure download directory has write access',
+                'Try uploading to different location'
+            ],
+            'admin_commands': [
+                'chmod -R 777 [download_dir]',
+                'Check disk space: df -h',
+                'Verify bot process user has write permissions'
+            ]
+        },
+        'no space left': {
+            'category': 'DISK_SPACE_ERROR',
+            'severity': 'critical',
+            'user_message': '❌ Server disk is full - cannot process video',
+            'recovery_steps': [
+                'Wait for disk cleanup or free up space',
+                'Try smaller video file',
+                'Try different compression settings'
+            ],
+            'admin_commands': [
+                'Check disk usage: df -h',
+                'Clean temp files: rm -rf /tmp/* ~/.cache/*',
+                'Configure disk usage limits'
+            ]
+        },
+        'invalid data': {
+            'category': 'CORRUPT_FILE_ERROR',
+            'severity': 'critical', 
+            'user_message': '❌ Video file appears corrupted or unsupported format',
+            'recovery_steps': [
+                'Re-download the video file',
+                'Try different mirror/source',
+                'Verify file integrity before upload'
+            ],
+            'admin_commands': [
+                'Test file: ffmpeg -i [file] -f null -',
+                'Check mediainfo: ffprobe -show_format -show_streams [file]',
+                'Enable detailed FFmpeg logging'
+            ]
+        },
+        'timeout': {
+            'category': 'TIMEOUT_ERROR',
+            'severity': 'warning',
+            'user_message': '⚠️ Video processing took too long (timeout)',
+            'recovery_steps': [
+                'Try lower quality settings',
+                'Use faster compression preset',
+                'Try again later with less server load'
+            ],
+            'admin_commands': [
+                'Increase FFmpeg timeout settings',
+                'Check server CPU load: top -b -n 1',
+                'Configure: VIDEO_TIMEOUT or similar setting'
+            ]
+        },
+        'input/output error': {
+            'category': 'IO_ERROR',
+            'severity': 'critical',
+            'user_message': '❌ Input/output error - disk or network issue',
+            'recovery_steps': [
+                'Check disk health and connectivity',
+                'Retry the operation',
+                'Try with different file'
+            ],
+            'admin_commands': [
+                'Check disk errors: dmesg | tail -20',
+                'Test disk: fsck -n [device]',
+                'Verify network: ping 8.8.8.8'
+            ]
+        },
+        'unknown filter': {
+            'category': 'FILTER_ERROR',
+            'severity': 'warning',
+            'user_message': '⚠️ Video filter not available - skipping filter',
+            'recovery_steps': [
+                'Try simpler video processing options',
+                'Disable advanced filters/effects',
+                'Use different processing mode'
+            ],
+            'admin_commands': [
+                'Check available filters: ffmpeg -filters',
+                'Rebuild FFmpeg with additional libraries',
+                'Install: libfdk-aac-dev, libopus-dev, etc.'
+            ]
+        },
+        'stream specifier': {
+            'category': 'STREAM_ERROR',
+            'severity': 'warning',
+            'user_message': '⚠️ Video stream selection issue',
+            'recovery_steps': [
+                'Auto-select all streams option',
+                'Try alternative stream selection',
+                'Extract different stream type'
+            ],
+            'admin_commands': [
+                'Inspect streams: ffprobe -show_streams [file]',
+                'Enable verbose FFmpeg logging',
+                'Check stream mapping syntax'
+            ]
+        },
+        'bitstream filter': {
+            'category': 'BITSTREAM_ERROR',
+            'severity': 'warning',
+            'user_message': '⚠️ Video bitstream issue detected',
+            'recovery_steps': [
+                'Try reencoding instead of copying streams',
+                'Use lower bitrate settings',
+                'Try different output format'
+            ],
+            'admin_commands': [
+                'Use: -c:v libx264 -c:a aac (forced reencoding)',
+                'Check: ffprobe -show_format [file]'
+            ]
+        },
+        'frame size mismatch': {
+            'category': 'RESOLUTION_ERROR',
+            'severity': 'warning',
+            'user_message': '⚠️ Video frame size inconsistency detected',
+            'recovery_steps': [
+                'Use auto-scale option',
+                'Specify exact resolution (1280x720)',
+                'Try reencode instead of copy'
+            ],
+            'admin_commands': [
+                'Use: -vf "scale=1280:720:force_original_aspect_ratio=decrease"',
+                'To copy: -codec copy (avoid for mixed resolutions)'
+            ]
+        },
+        'experimental codec': {
+            'category': 'CODEC_WARNING',
+            'severity': 'warning',
+            'user_message': '⚠️ Using experimental codec - may have compatibility issues',
+            'recovery_steps': [
+                'Use stable codec preset',
+                'Try H.264 instead of H.265',
+                'Update FFmpeg version'
+            ],
+            'admin_commands': [
+                'Use: -strict -2 to allow experimental codecs',
+                'Or use stable codec: libx264 or libx265'
+            ]
+        }
+    }
+    
+    # Find matching error pattern
+    result = {
+        'category': 'UNKNOWN_ERROR',
+        'severity': 'warning',
+        'user_message': '⚠️ Unknown video processing error occurred',
+        'recovery_steps': [
+            'Check video file integrity',
+            'Try different compression settings',
+            'Contact admin for support'
+        ],
+        'admin_commands': [
+            'Enable FFmpeg verbose logging: -v debug',
+            'Check server resources and disk space',
+            'Review FFmpeg documentation'
+        ]
+    }
+    
+    for error_pattern, handler_info in error_handlers.items():
+        if error_pattern in error_msg:
+            result.update(handler_info)
+            break
+    
+    # Add context-specific information
+    result['video_mode'] = video_mode
+    result['raw_error'] = error_message[:500]  # First 500 chars of actual error
+    
+    # Log detailed error for admin
+    if LOGGER:
+        LOGGER.error(
+            f"FFmpeg Error [{result['category']}]: {result['user_message']}\n"
+            f"Mode: {video_mode}\n"
+            f"Raw Error: {error_message[:300]}"
+        )
+    
+    return result
 
 
 def new_task(func):
