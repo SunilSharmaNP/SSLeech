@@ -23,6 +23,48 @@ from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, d
 # Global dict to store SelectMode instances by user_id for callback access
 vidtools_modes_dict = {}
 
+# Font Customization Options
+FONT_SIZES = ['10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', '36', '40', '44', '48', '52']
+
+FONT_FAMILIES = {
+    'Arial': 'Arial',
+    'Verdana': 'Verdana',
+    'Courier': 'Courier New',
+    'Times': 'Times New Roman',
+    'DejaVu': 'DejaVuSans',
+    'Helvetica': 'Helvetica',
+}
+
+FONT_COLORS = {
+    '⚪ White': 'white',
+    '🟡 Yellow': 'yellow',
+    '🟢 Green': 'green',
+    '🔴 Red': 'red',
+    '🔵 Cyan': 'cyan',
+    '🟣 Magenta': 'magenta',
+    '⚫ Black': 'black',
+    '🟠 Orange': 'orange',
+}
+
+# Watermark Options
+WATERMARK_POSITIONS = {
+    '↖️ Top-Left': '5:5',
+    '↗️ Top-Right': 'main_w-overlay_w-5:5',
+    '↙️ Bottom-Left': '5:main_h-overlay_h-5',
+    '↘️ Bottom-Right': 'main_w-overlay_w-5:main_h-overlay_h-5',
+    '⊙ Center': '(main_w-overlay_w)/2:(main_h-overlay_h)/2',
+}
+
+WATERMARK_SIZES = ['5', '10', '15', '20', '25', '30']
+
+WATERMARK_OPACITY = {
+    '100% - Fully Opaque': '1.0',
+    '80% - High': '0.8',
+    '60% - Medium-High': '0.6',
+    '40% - Medium-Low': '0.4',
+    '20% - Faint': '0.2',
+}
+
 
 class SelectMode:
     def __init__(self, listener: task.TaskListener, isLink=False):
@@ -123,6 +165,10 @@ class SelectMode:
                 msg += '\n\n<i>Choose watermark size</i>'
             case 'fontsize':
                 msg += ('\n\n<i>Choose font size</i>\n<b>Recommended:</b>\n1080p: <b>21-26 </b>\n720p: <b>16-21</b>\n480p: <b>11-16</b>')
+            case 'encoding':
+                preset = self.extra_data.get('preset', 'fast')
+                acodec = self.extra_data.get('acodec', 'aac')
+                msg += f'\n\n⚙️ <b>Encoding Settings</b>\n<b>Preset:</b> {preset}\n<b>Audio:</b> {acodec}'
         msg += f"\n\n<i>Time Out: {get_readable_time(180 - (time() - self._time))}</i>"
         return msg
 
@@ -156,6 +202,28 @@ class SelectMode:
                 [buttons.ibutton(f"{'🔥 ' if self.extra_data.get('quality') == key else ''}{key}", f'vidtool quality {key}') for key in ['1080p', '720p', '540p', '480p', '360p']]
                 buttons.ibutton('<<', 'vidtool back', 'footer')
                 buttons.ibutton('Done', 'vidtool done', 'footer')
+            elif mode == 'encoding':
+                bnum = 2
+                # Encoding presets
+                presets = {
+                    'ultrafast': '⚡ Ultra Fast',
+                    'fast': '🚀 Fast',
+                    'medium': '⚖️ Balanced',
+                    'slow': '💎 Quality',
+                    'veryslow': '🏆 Best'
+                }
+                current_preset = self.extra_data.get('preset', 'fast')
+                for preset_key, preset_label in presets.items():
+                    label = f"{'✅ ' if current_preset == preset_key else ''}{preset_label}"
+                    buttons.ibutton(label, f'vidtool encpreset {preset_key}')
+                
+                # Audio codec selection
+                buttons.ibutton('Audio: AAC', f'vidtool encaudio aac', 'header')
+                buttons.ibutton('Audio: Opus', f'vidtool encaudio libopus')
+                buttons.ibutton('Audio: MP3', f'vidtool encaudio libmp3lame')
+                
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+                buttons.ibutton('Done', 'vidtool done', 'footer')
             elif mode == 'popupwm':
                 bnum = 5
                 popupwm = self.extra_data.get('popupwm', 0)
@@ -166,14 +234,72 @@ class SelectMode:
                 buttons.ibutton('Done', 'vidtool done', 'footer')
             elif mode == 'wmsize':
                 bnum = 3
-                [buttons.ibutton(str(btn), f'vidtool wmsize {btn}') for btn in [5, 10, 15, 20, 25, 30]]
+                current_size = self.extra_data.get('wmsize', '15')
+                for size in WATERMARK_SIZES:
+                    label = f"{'✅ ' if current_size == size else ''}{size}%"
+                    buttons.ibutton(label, f'vidtool wmsize {size}', 'header')
+                buttons.ibutton('Position', 'vidtool wmposition', 'header')
+                buttons.ibutton('Opacity', 'vidtool wmopacity', 'header')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+                buttons.ibutton('Done', 'vidtool done', 'footer')
+            elif isinstance(mode, str) and mode.startswith('wmposition'):
+                bnum = 2
+                current_pos = self.extra_data.get('wmposition', '5:5')
+                pos_display = {
+                    '5:5': 'Top-Left',
+                    'main_w-overlay_w-5:5': 'Top-Right',
+                    '5:main_h-overlay_h-5': 'Bottom-Left',
+                    'main_w-overlay_w-5:main_h-overlay_h-5': 'Bottom-Right',
+                    '(main_w-overlay_w)/2:(main_h-overlay_h)/2': 'Center',
+                }
+                for pkey, pname in pos_display.items():
+                    label = f"{'✅ ' if current_pos == pkey else ''}{pname}"
+                    buttons.ibutton(label, f'vidtool wmposition {pkey}')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+            elif isinstance(mode, str) and mode.startswith('wmopacity'):
+                bnum = 2
+                current_opacity = self.extra_data.get('wmopacity', '1.0')
+                for olabel, ovalue in WATERMARK_OPACITY.items():
+                    label = f"{'✅ ' if current_opacity == ovalue else ''}{olabel}"
+                    buttons.ibutton(label, f'vidtool wmopacity {ovalue}')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
             elif mode == 'fontstyle':
                 bnum = 3
                 buttons.ibutton('Font Name', 'vidtool fontstyle fontname', 'header')
                 buttons.ibutton('Font Size', 'vidtool fontstyle fontsize', 'header')
                 buttons.ibutton('Font Colour', 'vidtool fontstyle fontcolour', 'header')
+                buttons.ibutton('Font Outline', 'vidtool fontstyle fontoutline', 'header')
                 buttons.ibutton('<<', 'vidtool back', 'footer')
                 buttons.ibutton('Done', 'vidtool done', 'footer')
+            elif isinstance(mode, str) and mode.startswith('fontname'):
+                bnum = 2
+                current_font = self.extra_data.get('fontname', 'Arial')
+                for fname, fvalue in FONT_FAMILIES.items():
+                    label = f"{'✅ ' if current_font == fvalue else ''}{fname}"
+                    buttons.ibutton(label, f'vidtool fontname {fvalue}')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+            elif isinstance(mode, str) and mode.startswith('fontsize'):
+                bnum = 3
+                current_size = self.extra_data.get('fontsize', '20')
+                for size in FONT_SIZES:
+                    label = f"{'✅ ' if current_size == size else ''}{size}px"
+                    buttons.ibutton(label, f'vidtool fontsize {size}')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+            elif isinstance(mode, str) and mode.startswith('fontcolour'):
+                bnum = 2
+                current_color = self.extra_data.get('fontcolour', 'white')
+                for clabel, cvalue in FONT_COLORS.items():
+                    label = f"{'✅ ' if current_color == cvalue else ''}{clabel}"
+                    buttons.ibutton(label, f'vidtool fontcolour {cvalue}')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
+            elif isinstance(mode, str) and mode.startswith('fontoutline'):
+                bnum = 3
+                current_outline = self.extra_data.get('fontoutline', '0')
+                outline_options = {'None': '0', 'Thin (1px)': '1', 'Normal (2px)': '2', 'Bold (3px)': '3'}
+                for oname, ovalue in outline_options.items():
+                    label = f"{'✅ ' if current_outline == ovalue else ''}{oname}"
+                    buttons.ibutton(label, f'vidtool fontoutline {ovalue}')
+                buttons.ibutton('<<', 'vidtool back', 'footer')
         await self._send_message(self._captions(mode), buttons.build_menu(bnum, 3))
 
     async def get_buttons(self):
@@ -267,44 +393,20 @@ async def cb_vidtools(client, query: CallbackQuery):
                 await obj.list_buttons(value)
             case 'encoding':
                 LOGGER.info(f"User {user_id} clicked Encoding settings")
-                # Import encoding selector and show encoding UI
-                from bot.helper.video_utils.encoding_selector import EncodingSelector, encoding_settings_dict
-                
-                # Create selector instance
-                enc_selector = EncodingSelector(obj.listener.message, is_compress=True)
-                
-                # Show initial message
-                msg_text = enc_selector._build_message()
-                buttons = enc_selector._build_main_menu()
-                
-                # Send encoding settings UI
-                try:
-                    enc_msg = await obj.listener.message.reply(msg_text, reply_markup=buttons)
-                    LOGGER.info(f"Encoding settings UI message sent for user {user_id}")
-                    
-                    # Store selector in global dict for callback access
-                    encoding_settings_dict[user_id] = enc_selector
-                    
-                    # Wait for encoding settings
-                    await asyncio_sleep(0.1)
-                    enc_settings = await enc_selector.get_buttons()
-                    
-                    if enc_settings:
-                        LOGGER.info(f"User {user_id} selected encoding settings: {enc_settings}")
-                        # Merge encoding settings into extra_data
-                        obj.extra_data.update(enc_settings)
-                        
-                        # Delete encoding message
-                        try:
-                            await enc_msg.delete()
-                        except:
-                            pass
-                
-                except Exception as e:
-                    LOGGER.error(f"Error showing encoding settings: {e}", exc_info=True)
-                
-                # Return to main menu
-                await obj.list_buttons()
+                # Show encoding options inline
+                await obj.list_buttons('encoding')
+            case 'encpreset':
+                LOGGER.info(f"User {user_id} clicked Encoding preset")
+                if len(data) == 3:
+                    obj.extra_data['preset'] = data[2]
+                    LOGGER.info(f"User {user_id} selected preset: {data[2]}")
+                await obj.list_buttons('encoding')
+            case 'encaudio':
+                LOGGER.info(f"User {user_id} clicked Encoding audio")
+                if len(data) == 3:
+                    obj.extra_data['acodec'] = data[2]
+                    LOGGER.info(f"User {user_id} selected audio codec: {data[2]}")
+                await obj.list_buttons('encoding')
             case 'hardsub':
                 LOGGER.info(f"User {user_id} clicked Hardsub")
                 hmode = not bool(obj.extra_data.get('hardsub'))
@@ -329,14 +431,49 @@ async def cb_vidtools(client, query: CallbackQuery):
                         if is_bold:
                             mode = 'fontstyle'
                     await obj.list_buttons(mode)
+            case 'fontname':
+                LOGGER.info(f"User {user_id} clicked Font Name")
+                if len(data) == 3:
+                    obj.extra_data['fontname'] = data[2]
+                    LOGGER.info(f"User {user_id} selected font: {data[2]}")
+                await obj.list_buttons('fontname')
+            case 'fontsize':
+                LOGGER.info(f"User {user_id} clicked Font Size")
+                if len(data) == 3:
+                    obj.extra_data['fontsize'] = data[2]
+                    LOGGER.info(f"User {user_id} selected font size: {data[2]}")
+                await obj.list_buttons('fontsize')
+            case 'fontcolour':
+                LOGGER.info(f"User {user_id} clicked Font Colour")
+                if len(data) == 3:
+                    obj.extra_data['fontcolour'] = data[2]
+                    LOGGER.info(f"User {user_id} selected font color: {data[2]}")
+                await obj.list_buttons('fontcolour')
+            case 'fontoutline':
+                LOGGER.info(f"User {user_id} clicked Font Outline")
+                if len(data) == 3:
+                    obj.extra_data['fontoutline'] = data[2]
+                    LOGGER.info(f"User {user_id} selected font outline: {data[2]}")
+                await obj.list_buttons('fontoutline')
             case 'sync_manual' | 'sync_auto' as value:
                 LOGGER.info(f"User {user_id} clicked {value}")
                 obj.extra_data['type'] = value
                 await obj.list_buttons()
-            case 'wmsize' | 'wmposition' as value:
+            case 'wmsize' | 'wmposition' | 'wmopacity' as value:
                 LOGGER.info(f"User {user_id} clicked {value}")
-                obj.extra_data[value] = data[2]
-                await obj.list_buttons('wmposition' if value == 'wmsize' else None)
+                if len(data) >= 3:
+                    if value == 'wmposition':
+                        # Handle position with multiple parts
+                        pos_value = ' '.join(data[2:])
+                        obj.extra_data[value] = pos_value
+                    else:
+                        obj.extra_data[value] = data[2]
+                if value == 'wmsize':
+                    await obj.list_buttons('wmsize')
+                elif value == 'wmposition':
+                    await obj.list_buttons('wmposition')
+                elif value == 'wmopacity':
+                    await obj.list_buttons('wmopacity')
             case value:
                 LOGGER.info(f"User {user_id} clicked mode: {value}")
                 if value == 'rename':
