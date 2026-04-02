@@ -194,19 +194,28 @@ class YoutubeDLHelper:
 
     def _redirect_luluvid_domain(self, link):
         """Redirect all luluvid* domain variants to main luluvid.com"""
-        if "luluvi" in link.lower():
+        LOGGER.info(f"🔍 CHECK: Received link: {link}")
+        if "luluv" in link.lower():
             import re
             # Pattern matches luluvid.com, luluvdoo.com, luluvXXX.com, etc.
+            # Match: https?://luluv + (any alphanumeric) + .com
             original_link = link
-            link = re.sub(r'https?://luluvid[a-z0-9]*\.com', 'https://luluvid.com', link, flags=re.IGNORECASE)
+            LOGGER.info(f"🔎 Pattern matching on: {original_link}")
+            # This regex matches: luluvid, luluvdoo, luluvXXX, etc.
+            link = re.sub(r'https?://luluv[a-z0-9]*\.com', 'https://luluvid.com', link, flags=re.IGNORECASE)
+            LOGGER.info(f"📝 After regex: {link}")
             if original_link != link:
-                LOGGER.info(f"🔄 Redirected luluvid domain from {original_link} to {link}")
+                LOGGER.warning(f"🔄 ✅ REDIRECTED: {original_link} → {link}")
+            else:
+                LOGGER.warning(f"⚠️ NO REDIRECT: Pattern didn't match")
+        else:
+            LOGGER.info(f"ℹ️ Not a luluv* link, skipping redirect")
         return link
 
     def _get_referer_for_link(self, link):
         """Extract referer URL from link - handles all luluvid* domain variants"""
-        if "luluvi" in link.lower() and ".com" in link.lower():
-            # All luluvid variants (luluvid.com, luluvdoo.com, etc.) use main domain referer
+        if "luluv" in link.lower() and ".com" in link.lower():
+            # All luluv* variants (luluvid.com, luluvdoo.com, etc.) use main domain referer
             return "https://luluvid.com/"
         elif "youtube.com" in link or "youtu.be" in link:
             return "https://www.youtube.com/"
@@ -566,8 +575,11 @@ class YoutubeDLHelper:
             self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
+        LOGGER.warning(f"📥 add_download called with link: {link}")
         # Redirect luluvid* domain variants to main luluvid.com at the very beginning
+        original = link
         link = self._redirect_luluvid_domain(link)
+        LOGGER.warning(f"📤 After redirect, link is now: {link}")
         
         if playlist:
             self.opts["ignoreerrors"] = True
