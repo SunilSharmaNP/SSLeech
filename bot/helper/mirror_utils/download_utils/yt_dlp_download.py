@@ -262,8 +262,9 @@ class YoutubeDLHelper:
                         if "http error 522" in error_msg or "500 server error" in error_msg:
                             retry_count += 1
                             if retry_count < max_retries:
-                                # Longer wait for CDN blocking (522 = connection timeout at CDN)
-                                wait_times = [15, 30]  # 15s, 30s waits
+                                # Use longer waits for 522 - it means aggressive CDN blocking
+                                # Even longer for metadata extraction since it's the first attempt
+                                wait_times = [30, 60, 120]  # 30s, 60s, 120s waits for CDN 522
                                 wait_time = wait_times[min(retry_count - 1, len(wait_times) - 1)]
                                 LOGGER.warning(f"⚠️ HTTP 522 in metadata (retry {retry_count}/{max_retries}), waiting {wait_time}s...")
                                 # Retry with safe decompression settings
@@ -277,7 +278,7 @@ class YoutubeDLHelper:
                                 sleep(wait_time)
                                 continue  # Retry
                             else:
-                                LOGGER.error(f"❌ HTTP 522 metadata extraction failed after {max_retries} retries")
+                                LOGGER.error(f"❌ HTTP 522 metadata extraction failed after {max_retries} retries ({sum([30,60,120])/60:.1f}min+ wait)")
                         
                         # Retry on decompression/connection errors
                         if any(err in error_msg for err in ["inconsistent stream", "failed to decode", "connection", "timeout"]):
@@ -389,40 +390,44 @@ class YoutubeDLHelper:
                                     else:
                                         LOGGER.error(f"❌ Retry failed with: {str(retry_e)[:100]}")
                     
-                    # NEW: Handle HTTP 522 Cloudflare errors (CDN blocking) - RETRY with backoff
+                    # NEW: Handle HTTP 522 Cloudflare errors (CDN blocking) - RETRY with MUCH longer waits
                     if "http error 522" in error_msg or "500 server error" in error_msg or "failed to download m3u8" in error_msg:
-                        LOGGER.warning(f"⚠️ HTTP 522/5XX error detected (CDN blocking), retrying with aggressive backoff...")
-                        # Use longer waits for rate-limited/blocked CDN
-                        wait_times = [30, 60]  # 30s, 60s waits for persistent CDN blocking
-                        for attempt in range(1, 4):
+                        LOGGER.warning(f"⚠️ HTTP 522/5XX error detected (aggressive CDN blocking), retrying with EXPONENTIAL backoff...")
+                        # Exponential backoff for persistent CDN 522 blocks: 30s → 60s → 120s → 180s → 240s
+                        wait_times = [30, 60, 120, 180, 240]  # Up to 4+ minutes total wait
+                        for attempt in range(1, 6):  # 5 attempts for 522 (more aggressive since it's persistent)
                             try:
                                 retry_opts = self.opts.copy()
-                                retry_opts["socket_timeout"] = 90  # Very long timeout
+                                retry_opts["socket_timeout"] = 90
                                 retry_opts["retries"] = 30  # Many fragment retries
                                 retry_opts["fragment_retries"] = 30
-                                # Use gzip-safe headers (no brotli)
+                                # Use gzip-safe headers
                                 retry_opts["http_headers"] = self.opts["http_headers"].copy()
                                 retry_opts["http_headers"]["Referer"] = referer
                                 retry_opts["http_headers"]["Accept-Encoding"] = "gzip, deflate"
                                 retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
                                 
-                                # Progressive backoff: wait before retry
+                                # Exponential backoff: wait MUCH longer for CDN rate-limit reset
                                 if attempt > 1:
                                     wait_time = wait_times[min(attempt - 2, len(wait_times) - 1)]
-                                    LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3 (CDN blocking backoff)...")
+                                    LOGGER.info(f"⏳ CDN 522 blocking: Waiting {wait_time}s before retry {attempt}/5 (exponential backoff)...")
                                     sleep(wait_time)
                                 
                                 with YoutubeDL(retry_opts) as ydl_retry:
-                                    LOGGER.info(f"🔄 HTTP 522 retry {attempt}/3 with gzip-safe headers...")
+                                    LOGGER.info(f"🔄 HTTP 522 retry {attempt}/5 with gzip-safe headers...")
                                     ydl_retry.download([link])
                                 return  # Success on retry
                             except Exception as retry_e:
                                 retry_msg = str(retry_e).lower()
-                                if attempt < 3:
-                                    LOGGER.warning(f"⚠️ Retry {attempt} failed, trying again...")
+                                if attempt < 5:
+                                    if "522" in retry_msg or "gateway" in retry_msg:
+                                        LOGGER.warning(f"⚠️ Retry {attempt} still getting 522, will wait much longer and retry...")
+                                    else:
+                                        LOGGER.warning(f"⚠️ Retry {attempt} different error, trying again...")
                                     continue
                                 else:
-                                    LOGGER.error(f"❌ HTTP 522 all retries exhausted: {str(retry_e)[:100]}")
+                                    total_wait = sum(wait_times[:4])
+                                    LOGGER.error(f"❌ HTTP 522 all{5} retries exhausted after {total_wait}s+ total wait")
                                     break
                     
                     # NEW: Handle gzip/brotli decompression errors - RETRY with gzip-only
