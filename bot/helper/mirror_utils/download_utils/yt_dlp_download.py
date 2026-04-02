@@ -204,13 +204,6 @@ class YoutubeDLHelper:
             parsed = urlparse(link)
             return f"{parsed.scheme}://{parsed.netloc}/"
 
-    def _normalize_url(self, link: str) -> str:
-        """Replace luluvdoo.com with luluvid.com in the URL."""
-        if "luluvdoo.com" in link:
-            link = link.replace("luluvdoo.com", "luluvid.com")
-            LOGGER.info(f"Normalized URL: {link}")
-        return link
-
     def extractMetaData(self, link, name):
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
@@ -556,8 +549,6 @@ class YoutubeDLHelper:
             self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
-        # Normalize the URL before any processing
-        link = self._normalize_url(link)
         if playlist:
             self.opts["ignoreerrors"] = True
             self.is_playlist = True
