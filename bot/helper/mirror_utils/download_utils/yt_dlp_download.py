@@ -90,8 +90,8 @@ class YoutubeDLHelper:
             "socket_timeout": 30,  # Increased from 15s to handle slow connections
             "call_home": False,
             "no_check_certificate": True,
-            "hls_prefer_native": False,  # Use FFmpeg for HLS (more reliable for CDN handling like luluvid)
-            "hls_use_mpegts": True,  # Better HLS/MPEG-TS support
+            "hls_prefer_native": True,  # Use native HLS (respects http_headers; FFmpeg has TLS issues)
+            "hls_use_mpegts": False,  # Standard MP4 container
             "youtube_include_dash_manifest": False,  # Disable - can trigger SABR
             "youtube_include_hls_manifest": True,
             # HTTP options for better connection handling
@@ -106,11 +106,6 @@ class YoutubeDLHelper:
                 "Sec-Fetch-User": "?1",
                 "Upgrade-Insecure-Requests": "1",
                 # Note: Referer and Origin are set dynamically per link
-            },
-            # FFmpeg external downloader args for HLS fragments
-            "external_downloader_args": {
-                "ffmpeg_i": ["-timeout", "30"],  # 30s timeout on connect
-                "ffmpeg_o": ["-c", "copy"],  # Copy stream without re-encoding
             },
             # Extractor args for YouTube authentication and SABR bypass
             "extractor_args": {
@@ -433,25 +428,45 @@ class YoutubeDLHelper:
                         except Exception as fallback_e:
                             LOGGER.error(f"❌ Fallback failed: {str(fallback_e)}")
                     
-                    # Handle HLS-specific errors - we're already using FFmpeg, but try with more aggressive retry
+                    # Handle TLS connection errors (FFmpeg or network issues)
+                    if "tls" in error_msg or "error in the pull function" in error_msg or "input/output error" in error_msg or "certificate" in error_msg:
+                        LOGGER.warning(f"⚠️ TLS/connection error detected, retrying with native HLS + longer timeout...")
+                        tls_opts = self.opts.copy()
+                        tls_opts["socket_timeout"] = 60  # Longer timeout for TLS handshake
+                        tls_opts["retries"] = 30  # More retries
+                        tls_opts["fragment_retries"] = 30
+                        tls_opts["hls_prefer_native"] = True  # Use native HLS (better TLS handling)
+                        tls_opts["hls_use_mpegts"] = False
+                        tls_opts["http_headers"] = self.opts["http_headers"].copy()
+                        tls_opts["http_headers"]["Referer"] = referer
+                        # Add connection persistence headers
+                        tls_opts["http_headers"]["Connection"] = "keep-alive"
+                        try:
+                            with YoutubeDL(tls_opts) as ydl_tls:
+                                LOGGER.info(f"🔄 Retry with native HLS (TLS fix)...")
+                                ydl_tls.download([link])
+                            return
+                        except Exception as tls_e:
+                            LOGGER.error(f"❌ TLS retry failed: {str(tls_e)[:100]}")
+                    
+                    # Handle HLS-specific errors - we're using native HLS, but try with more aggressive settings
                     if "hls" in error_msg or "m3u8" in error_msg or ("http error" in error_msg and "fragment" in error_msg):
                         LOGGER.warning(f"⚠️ HLS error detected, retrying with more aggressive settings...")
                         hls_opts = self.opts.copy()
-                        hls_opts["socket_timeout"] = 60  # Increased from 45s
-                        hls_opts["retries"] = 30  # Increased fragment retries
+                        hls_opts["socket_timeout"] = 60
+                        hls_opts["retries"] = 30
                         hls_opts["fragment_retries"] = 30
-                        hls_opts["hls_prefer_native"] = False  # Ensure FFmpeg mode
-                        hls_opts["hls_use_mpegts"] = True
-                        # Add aggressive header settings
+                        hls_opts["hls_prefer_native"] = True  # Use native HLS
+                        hls_opts["hls_use_mpegts"] = False
                         hls_opts["http_headers"] = self.opts["http_headers"].copy()
                         hls_opts["http_headers"]["Referer"] = referer
                         try:
                             with YoutubeDL(hls_opts) as ydl_hls:
-                                LOGGER.info(f"🔄 HLS retry with aggressive settings (FFmpeg)...")
+                                LOGGER.info(f"🔄 HLS retry with aggressive settings (native HLS)...")
                                 ydl_hls.download([link])
                             return
                         except Exception as hls_e:
-                            LOGGER.error(f"❌ HLS FFmpeg retry also failed: {str(hls_e)[:100]}")
+                            LOGGER.error(f"❌ HLS native retry also failed: {str(hls_e)[:100]}")
                     
                     # Handle brotli errors
                     if "brotli" in error_msg or "decoder failed" in error_msg or "unknown compression" in error_msg:
