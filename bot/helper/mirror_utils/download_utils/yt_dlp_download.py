@@ -87,7 +87,7 @@ class YoutubeDLHelper:
                 "extractor": lambda n: min(5 * (n + 1), 30),
             },
             # YouTube authentication and SABR bypass
-            "socket_timeout": 30,  # Increased from 15s to handle slow connections
+            "socket_timeout": 60,  # Increased from 30s for heavy gzip/CDN operations
             "call_home": False,
             "no_check_certificate": True,
             "hls_prefer_native": True,  # Use native HLS (respects http_headers; FFmpeg has TLS issues)
@@ -97,7 +97,7 @@ class YoutubeDLHelper:
             # HTTP options for better connection handling
             "http_headers": {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept-Encoding": "gzip, deflate, br",  # Include br for brotli
+                "Accept-Encoding": "gzip, deflate",  # Removed brotli - causes decompression issues on some CDNs
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Sec-Fetch-Dest": "document",
@@ -241,12 +241,39 @@ class YoutubeDLHelper:
                             else:
                                 LOGGER.error(f"❌ HTTP 403 metadata extraction failed after {max_retries} retries")
                         
+                        # NEW: Handle gzip/decompression errors in metadata extraction
+                        if "decompressing" in error_msg or "inconsistent stream" in error_msg or "failed to decode" in error_msg:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                LOGGER.warning(f"⚠️ Gzip decompression error in metadata (retry {retry_count}/{max_retries}), using gzip-safe headers...")
+                                retry_opts = self.opts.copy()
+                                retry_opts["socket_timeout"] = 90
+                                retry_opts["http_headers"] = self.opts["http_headers"].copy()
+                                retry_opts["http_headers"]["Referer"] = referer
+                                # Force gzip only, disable brotli
+                                retry_opts["http_headers"]["Accept-Encoding"] = "gzip"
+                                self.opts = retry_opts
+                                sleep(5)  # Brief wait before retry
+                                continue  # Retry
+                            else:
+                                LOGGER.error(f"❌ Gzip decompression failed after {max_retries} retries")
+                        
                         # NEW: Handle HTTP 522 errors in metadata extraction
                         if "http error 522" in error_msg or "500 server error" in error_msg:
                             retry_count += 1
                             if retry_count < max_retries:
-                                wait_time = 5 * retry_count
+                                # Longer wait for CDN blocking (522 = connection timeout at CDN)
+                                wait_times = [15, 30]  # 15s, 30s waits
+                                wait_time = wait_times[min(retry_count - 1, len(wait_times) - 1)]
                                 LOGGER.warning(f"⚠️ HTTP 522 in metadata (retry {retry_count}/{max_retries}), waiting {wait_time}s...")
+                                # Retry with safe decompression settings
+                                retry_opts = self.opts.copy()
+                                retry_opts["socket_timeout"] = 90  # Very long timeout for slow CDN
+                                retry_opts["http_headers"] = self.opts["http_headers"].copy()
+                                retry_opts["http_headers"]["Referer"] = referer
+                                # Remove brotli from encoding to avoid decompression issues
+                                retry_opts["http_headers"]["Accept-Encoding"] = "gzip, deflate"
+                                self.opts = retry_opts
                                 sleep(wait_time)
                                 continue  # Retry
                             else:
@@ -364,27 +391,29 @@ class YoutubeDLHelper:
                     
                     # NEW: Handle HTTP 522 Cloudflare errors (CDN blocking) - RETRY with backoff
                     if "http error 522" in error_msg or "500 server error" in error_msg or "failed to download m3u8" in error_msg:
-                        LOGGER.warning(f"⚠️ HTTP 522/5XX error detected (CDN blocking), retrying with backoff...")
-                        # Retry with progressive backoff and better headers
+                        LOGGER.warning(f"⚠️ HTTP 522/5XX error detected (CDN blocking), retrying with aggressive backoff...")
+                        # Use longer waits for rate-limited/blocked CDN
+                        wait_times = [30, 60]  # 30s, 60s waits for persistent CDN blocking
                         for attempt in range(1, 4):
                             try:
                                 retry_opts = self.opts.copy()
-                                retry_opts["socket_timeout"] = 45  # Increased timeout
-                                retry_opts["retries"] = 20  # More fragment retries
-                                retry_opts["fragment_retries"] = 20
-                                # Add referer-based headers to bypass CDN blocking
+                                retry_opts["socket_timeout"] = 90  # Very long timeout
+                                retry_opts["retries"] = 30  # Many fragment retries
+                                retry_opts["fragment_retries"] = 30
+                                # Use gzip-safe headers (no brotli)
                                 retry_opts["http_headers"] = self.opts["http_headers"].copy()
                                 retry_opts["http_headers"]["Referer"] = referer
+                                retry_opts["http_headers"]["Accept-Encoding"] = "gzip, deflate"
                                 retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
                                 
                                 # Progressive backoff: wait before retry
                                 if attempt > 1:
-                                    wait_time = 5 * attempt
-                                    LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3...")
+                                    wait_time = wait_times[min(attempt - 2, len(wait_times) - 1)]
+                                    LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3 (CDN blocking backoff)...")
                                     sleep(wait_time)
                                 
                                 with YoutubeDL(retry_opts) as ydl_retry:
-                                    LOGGER.info(f"🔄 HTTP 522 retry {attempt}/3 for link...")
+                                    LOGGER.info(f"🔄 HTTP 522 retry {attempt}/3 with gzip-safe headers...")
                                     ydl_retry.download([link])
                                 return  # Success on retry
                             except Exception as retry_e:
@@ -396,25 +425,33 @@ class YoutubeDLHelper:
                                     LOGGER.error(f"❌ HTTP 522 all retries exhausted: {str(retry_e)[:100]}")
                                     break
                     
-                    # NEW: Handle gzip/brotli decompression errors - RETRY
+                    # NEW: Handle gzip/brotli decompression errors - RETRY with gzip-only
                     if "inconsistent stream state" in error_msg or "error -2 while decompressing" in error_msg or "failed to decode" in error_msg:
-                        LOGGER.warning(f"🔄 Decompression error detected, retrying with adjusted headers...")
-                        # Retry with modified options
-                        retry_opts = self.opts.copy()
-                        retry_opts["http_headers"] = self.opts["http_headers"].copy()
-                        retry_opts["http_headers"]["Accept-Encoding"] = "gzip"  # Try single encoding
-                        retry_opts["http_headers"]["Referer"] = referer
-                        retry_opts["socket_timeout"] = 45  # Increase timeout on retry
-                        retry_opts["retries"] = 15  # More retries
-                        
-                        try:
-                            with YoutubeDL(retry_opts) as ydl_retry:
-                                LOGGER.info(f"🔄 Retry attempt for link: {link}")
-                                ydl_retry.download([link])
-                            return  # Success on retry
-                        except Exception as retry_e:
-                            LOGGER.error(f"❌ Retry failed: {str(retry_e)[:100]}")
-                            # Fall through to handle with fallback format
+                        LOGGER.warning(f"🔄 Gzip decompression error detected, retrying with gzip-only headers...")
+                        # Retry with modified options - force gzip only
+                        for attempt in range(1, 3):  # 2 attempts for decompression
+                            try:
+                                retry_opts = self.opts.copy()
+                                retry_opts["http_headers"] = self.opts["http_headers"].copy()
+                                # CRITICAL: Use gzip only, no brotli
+                                retry_opts["http_headers"]["Accept-Encoding"] = "gzip"
+                                retry_opts["http_headers"]["Referer"] = referer
+                                retry_opts["socket_timeout"] = 90  # Very long timeout
+                                retry_opts["retries"] = 20
+                                
+                                if attempt > 1:
+                                    sleep(5)  # Brief wait
+                                
+                                with YoutubeDL(retry_opts) as ydl_retry:
+                                    LOGGER.info(f"🔄 Gzip retry {attempt}/2 (gzip-only mode)...")
+                                    ydl_retry.download([link])
+                                return  # Success on retry
+                            except Exception as retry_e:
+                                if attempt < 2:
+                                    LOGGER.warning(f"⚠️ Gzip retry {attempt} failed, trying once more...")
+                                    continue
+                                else:
+                                    LOGGER.error(f"❌ Gzip retry failed: {str(retry_e)[:100]}")
                     
                     # Handle SABR + n-challenge (only images available)
                     if "only images" in error_msg or "requested format is not available" in error_msg:
