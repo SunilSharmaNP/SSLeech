@@ -90,8 +90,8 @@ class YoutubeDLHelper:
             "socket_timeout": 30,  # Increased from 15s to handle slow connections
             "call_home": False,
             "no_check_certificate": True,
-            "hls_prefer_native": True,  # Use native HLS downloader (respects http_headers for fragments)
-            "hls_use_mpegts": False,  # Standard MP4 container for better compatibility
+            "hls_prefer_native": False,  # Use FFmpeg for HLS (more reliable for CDN handling like luluvid)
+            "hls_use_mpegts": True,  # Better HLS/MPEG-TS support
             "youtube_include_dash_manifest": False,  # Disable - can trigger SABR
             "youtube_include_hls_manifest": True,
             # HTTP options for better connection handling
@@ -106,6 +106,11 @@ class YoutubeDLHelper:
                 "Sec-Fetch-User": "?1",
                 "Upgrade-Insecure-Requests": "1",
                 # Note: Referer and Origin are set dynamically per link
+            },
+            # FFmpeg external downloader args for HLS fragments
+            "external_downloader_args": {
+                "ffmpeg_i": ["-timeout", "30"],  # 30s timeout on connect
+                "ffmpeg_o": ["-c", "copy"],  # Copy stream without re-encoding
             },
             # Extractor args for YouTube authentication and SABR bypass
             "extractor_args": {
@@ -226,8 +231,10 @@ class YoutubeDLHelper:
                         if "http error 403" in error_msg or "403" in error_msg:
                             retry_count += 1
                             if retry_count < max_retries:
-                                wait_time = 5 * retry_count
-                                LOGGER.warning(f"⚠️ HTTP 403 in metadata (retry {retry_count}/{max_retries}), adding referer headers...")
+                                # Longer wait for CDN rate-limiting
+                                wait_times = [30, 60]  # 30s, 60s waits
+                                wait_time = wait_times[min(retry_count - 1, len(wait_times) - 1)]
+                                LOGGER.warning(f"⚠️ HTTP 403 in metadata (retry {retry_count}/{max_retries}), waiting {wait_time}s...")
                                 # Retry with explicit referer headers
                                 retry_opts = self.opts.copy()
                                 retry_opts["http_headers"] = self.opts["http_headers"].copy()
@@ -311,40 +318,54 @@ class YoutubeDLHelper:
                 except DownloadError as e:
                     error_msg = str(e).lower()
                     
-                    # NEW: Handle HTTP 403 Forbidden errors (CDN denying access)
+                    # NEW: Handle HTTP 403 Forbidden errors (CDN rate-limiting or authentication)
                     if "http error 403" in error_msg or "403" in error_msg:
-                        LOGGER.warning(f"⚠️ HTTP 403 error detected (CDN denying fragment access), retrying with HLS native mode + referer...")
-                        # Retry with native HLS mode (yt-dlp's downloader respects http_headers)
+                        LOGGER.warning(f"⚠️ HTTP 403 error detected (CDN rate-limit or blocking), retrying with longer delays...")
+                        # CDN is likely rate-limiting - use MUCH longer waits
+                        wait_times = [30, 60, 90]  # 30s, 60s, 90s waits for rate-limited CDN
                         for attempt in range(1, 4):
                             try:
+                                # Progressive wait times - long delays for rate-limited CDN
+                                if attempt > 1:
+                                    wait_time = wait_times[attempt - 2]
+                                    LOGGER.info(f"⏳ CDN 403 rate-limit: Waiting {wait_time}s before retry {attempt}/3...")
+                                    sleep(wait_time)
+                                
                                 retry_opts = self.opts.copy()
-                                retry_opts["socket_timeout"] = 45
-                                retry_opts["retries"] = 20
-                                retry_opts["fragment_retries"] = 20
-                                # Set proper referer headers
+                                retry_opts["socket_timeout"] = 60  # Longer timeout for slow CDN
+                                retry_opts["retries"] = 25  # More retries for fragments
+                                retry_opts["fragment_retries"] = 25
+                                retry_opts["hls_prefer_native"] = False  # Use FFmpeg (more compatible)
+                                retry_opts["hls_use_mpegts"] = True
+                                
+                                # Set proper referer and origin headers for CDN
                                 retry_opts["http_headers"] = self.opts["http_headers"].copy()
                                 retry_opts["http_headers"]["Referer"] = referer
                                 retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
-                                
-                                # Switch to native HLS mode for CDN fragment access
-                                retry_opts["hls_prefer_native"] = True  # Use yt-dlp's HLS downloader (respects headers)
-                                
-                                if attempt > 1:
-                                    wait_time = 5 * attempt
-                                    LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3...")
-                                    sleep(wait_time)
+                                # Add connection persistence headers
+                                retry_opts["http_headers"]["Connection"] = "keep-alive"
+                                retry_opts["http_headers"]["Cache-Control"] = "no-cache"
                                 
                                 with YoutubeDL(retry_opts) as ydl_retry:
-                                    LOGGER.info(f"🔄 HTTP 403 retry {attempt}/3 with native HLS + referer headers...")
+                                    LOGGER.info(f"🔄 HTTP 403 retry {attempt}/3 with FFmpeg + rate-limit backoff...")
                                     ydl_retry.download([link])
                                 return  # Success on retry
                             except Exception as retry_e:
-                                if attempt < 3:
-                                    LOGGER.warning(f"⚠️ Retry {attempt} failed, trying again...")
-                                    continue
+                                retry_msg = str(retry_e).lower()
+                                if "403" in retry_msg or "forbidden" in retry_msg:
+                                    if attempt < 3:
+                                        LOGGER.warning(f"⚠️ Retry {attempt} still getting 403, will wait longer and retry...")
+                                        continue
+                                    else:
+                                        LOGGER.error(f"❌ HTTP 403 all retries exhausted after {sum(wait_times[:2])}s total wait")
+                                        break
                                 else:
-                                    LOGGER.error(f"❌ HTTP 403 all retries exhausted: {str(retry_e)[:100]}")
-                                    break
+                                    # Different error, not just 403
+                                    if attempt < 3:
+                                        LOGGER.warning(f"⚠️ Retry {attempt} different error: {str(retry_e)[:80]}")
+                                        continue
+                                    else:
+                                        LOGGER.error(f"❌ Retry failed with: {str(retry_e)[:100]}")
                     
                     # NEW: Handle HTTP 522 Cloudflare errors (CDN blocking) - RETRY with backoff
                     if "http error 522" in error_msg or "500 server error" in error_msg or "failed to download m3u8" in error_msg:
@@ -412,22 +433,25 @@ class YoutubeDLHelper:
                         except Exception as fallback_e:
                             LOGGER.error(f"❌ Fallback failed: {str(fallback_e)}")
                     
-                    # Handle HLS-specific errors - fallback to FFmpeg mode
+                    # Handle HLS-specific errors - we're already using FFmpeg, but try with more aggressive retry
                     if "hls" in error_msg or "m3u8" in error_msg or ("http error" in error_msg and "fragment" in error_msg):
-                        LOGGER.warning(f"⚠️ HLS native mode failed, switching to FFmpeg mode for better compatibility...")
+                        LOGGER.warning(f"⚠️ HLS error detected, retrying with more aggressive settings...")
                         hls_opts = self.opts.copy()
-                        hls_opts["hls_prefer_native"] = False  # Switch to FFmpeg
+                        hls_opts["socket_timeout"] = 60  # Increased from 45s
+                        hls_opts["retries"] = 30  # Increased fragment retries
+                        hls_opts["fragment_retries"] = 30
+                        hls_opts["hls_prefer_native"] = False  # Ensure FFmpeg mode
                         hls_opts["hls_use_mpegts"] = True
-                        hls_opts["socket_timeout"] = 45
-                        hls_opts["retries"] = 20
-                        hls_opts["fragment_retries"] = 20
-                        hls_opts["external_downloader"] = "ffmpeg"
+                        # Add aggressive header settings
+                        hls_opts["http_headers"] = self.opts["http_headers"].copy()
+                        hls_opts["http_headers"]["Referer"] = referer
                         try:
                             with YoutubeDL(hls_opts) as ydl_hls:
+                                LOGGER.info(f"🔄 HLS retry with aggressive settings (FFmpeg)...")
                                 ydl_hls.download([link])
                             return
                         except Exception as hls_e:
-                            LOGGER.error(f"❌ HLS FFmpeg mode also failed: {str(hls_e)[:100]}")
+                            LOGGER.error(f"❌ HLS FFmpeg retry also failed: {str(hls_e)[:100]}")
                     
                     # Handle brotli errors
                     if "brotli" in error_msg or "decoder failed" in error_msg or "unknown compression" in error_msg:
