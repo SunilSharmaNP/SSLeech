@@ -90,8 +90,8 @@ class YoutubeDLHelper:
             "socket_timeout": 30,  # Increased from 15s to handle slow connections
             "call_home": False,
             "no_check_certificate": True,
-            "hls_prefer_native": False,  # Use ffmpeg for HLS (more reliable)
-            "hls_use_mpegts": True,  # Better HLS handling
+            "hls_prefer_native": True,  # Use native HLS downloader (respects http_headers for fragments)
+            "hls_use_mpegts": False,  # Standard MP4 container for better compatibility
             "youtube_include_dash_manifest": False,  # Disable - can trigger SABR
             "youtube_include_hls_manifest": True,
             # HTTP options for better connection handling
@@ -313,8 +313,8 @@ class YoutubeDLHelper:
                     
                     # NEW: Handle HTTP 403 Forbidden errors (CDN denying access)
                     if "http error 403" in error_msg or "403" in error_msg:
-                        LOGGER.warning(f"⚠️ HTTP 403 error detected (CDN denying access), retrying with proper referer...")
-                        # Retry with explicit referer headers for CDN
+                        LOGGER.warning(f"⚠️ HTTP 403 error detected (CDN denying fragment access), retrying with HLS native mode + referer...")
+                        # Retry with native HLS mode (yt-dlp's downloader respects http_headers)
                         for attempt in range(1, 4):
                             try:
                                 retry_opts = self.opts.copy()
@@ -326,13 +326,16 @@ class YoutubeDLHelper:
                                 retry_opts["http_headers"]["Referer"] = referer
                                 retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
                                 
+                                # Switch to native HLS mode for CDN fragment access
+                                retry_opts["hls_prefer_native"] = True  # Use yt-dlp's HLS downloader (respects headers)
+                                
                                 if attempt > 1:
                                     wait_time = 5 * attempt
                                     LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3...")
                                     sleep(wait_time)
                                 
                                 with YoutubeDL(retry_opts) as ydl_retry:
-                                    LOGGER.info(f"🔄 HTTP 403 retry {attempt}/3 for link...")
+                                    LOGGER.info(f"🔄 HTTP 403 retry {attempt}/3 with native HLS + referer headers...")
                                     ydl_retry.download([link])
                                 return  # Success on retry
                             except Exception as retry_e:
@@ -409,19 +412,22 @@ class YoutubeDLHelper:
                         except Exception as fallback_e:
                             LOGGER.error(f"❌ Fallback failed: {str(fallback_e)}")
                     
-                    # Handle HLS-specific errors
-                    if "hls" in error_msg and "not supported" in error_msg:
-                        LOGGER.warning(f"⚠️ HLS stream detected, switching to ffmpeg mode...")
+                    # Handle HLS-specific errors - fallback to FFmpeg mode
+                    if "hls" in error_msg or "m3u8" in error_msg or ("http error" in error_msg and "fragment" in error_msg):
+                        LOGGER.warning(f"⚠️ HLS native mode failed, switching to FFmpeg mode for better compatibility...")
                         hls_opts = self.opts.copy()
-                        hls_opts["hls_prefer_native"] = False
+                        hls_opts["hls_prefer_native"] = False  # Switch to FFmpeg
                         hls_opts["hls_use_mpegts"] = True
+                        hls_opts["socket_timeout"] = 45
+                        hls_opts["retries"] = 20
+                        hls_opts["fragment_retries"] = 20
                         hls_opts["external_downloader"] = "ffmpeg"
                         try:
                             with YoutubeDL(hls_opts) as ydl_hls:
                                 ydl_hls.download([link])
                             return
                         except Exception as hls_e:
-                            LOGGER.error(f"❌ HLS download failed: {str(hls_e)}")
+                            LOGGER.error(f"❌ HLS FFmpeg mode also failed: {str(hls_e)[:100]}")
                     
                     # Handle brotli errors
                     if "brotli" in error_msg or "decoder failed" in error_msg or "unknown compression" in error_msg:
