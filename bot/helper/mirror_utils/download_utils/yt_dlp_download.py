@@ -15,7 +15,6 @@ from bot.helper.ext_utils.task_manager import (
     stop_duplicate_check,
     limit_checker,
 )
-from bot.core.config_manager import BinConfig  # if available, otherwise fallback
 
 LOGGER = getLogger(__name__)
 
@@ -118,8 +117,9 @@ class YoutubeDLHelper:
 
         # Add ffmpeg_location if BinConfig exists
         try:
+            from bot.core.config_manager import BinConfig
             self.opts["ffmpeg_location"] = f"/bin/{BinConfig.FFMPEG_NAME}"
-        except:
+        except (ModuleNotFoundError, ImportError, AttributeError):
             pass
         
         # Log cookie usage
