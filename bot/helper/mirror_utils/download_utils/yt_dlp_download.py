@@ -3,6 +3,7 @@ from os import path as ospath, listdir
 from secrets import token_hex
 from logging import getLogger
 from time import sleep
+from urllib.parse import urlparse
 from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
 
@@ -104,10 +105,7 @@ class YoutubeDLHelper:
                 "Sec-Fetch-Site": "none",
                 "Sec-Fetch-User": "?1",
                 "Upgrade-Insecure-Requests": "1",
-                # CDN-specific headers to prevent 522 errors
-                "Referer": "https://luluvid.com/",
-                "Origin": "https://luluvid.com",
-                "Cache-Control": "max-age=0",
+                # Note: Referer and Origin are set dynamically per link
             },
             # Extractor args for YouTube authentication and SABR bypass
             "extractor_args": {
@@ -193,6 +191,18 @@ class YoutubeDLHelper:
         self.__is_cancelled = True
         async_to_sync(self.__listener.onDownloadError, error)
 
+    def _get_referer_for_link(self, link):
+        """Extract referer URL from link"""
+        if "luluvid.com" in link:
+            # For luluvid, use the main domain
+            return "https://luluvid.com/"
+        elif "youtube.com" in link or "youtu.be" in link:
+            return "https://www.youtube.com/"
+        else:
+            # Generic: use domain only
+            parsed = urlparse(link)
+            return f"{parsed.scheme}://{parsed.netloc}/"
+
     def extractMetaData(self, link, name):
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
@@ -200,6 +210,7 @@ class YoutubeDLHelper:
         # Use custom extractMetaData with retry logic
         max_retries = 3
         retry_count = 0
+        referer = self._get_referer_for_link(link)
         
         while retry_count < max_retries:
             try:
@@ -210,6 +221,23 @@ class YoutubeDLHelper:
                             raise ValueError("Info result is None")
                     except Exception as extract_e:
                         error_msg = str(extract_e).lower()
+                        
+                        # NEW: Handle HTTP 403 Forbidden errors (CDN denying access)
+                        if "http error 403" in error_msg or "403" in error_msg:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                wait_time = 5 * retry_count
+                                LOGGER.warning(f"⚠️ HTTP 403 in metadata (retry {retry_count}/{max_retries}), adding referer headers...")
+                                # Retry with explicit referer headers
+                                retry_opts = self.opts.copy()
+                                retry_opts["http_headers"] = self.opts["http_headers"].copy()
+                                retry_opts["http_headers"]["Referer"] = referer
+                                retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
+                                self.opts = retry_opts
+                                sleep(wait_time)
+                                continue  # Retry
+                            else:
+                                LOGGER.error(f"❌ HTTP 403 metadata extraction failed after {max_retries} retries")
                         
                         # NEW: Handle HTTP 522 errors in metadata extraction
                         if "http error 522" in error_msg or "500 server error" in error_msg:
@@ -276,11 +304,44 @@ class YoutubeDLHelper:
 
     def __download(self, link, path):
         try:
+            referer = self._get_referer_for_link(link)
             with YoutubeDL(self.opts) as ydl:
                 try:
                     ydl.download([link])
                 except DownloadError as e:
                     error_msg = str(e).lower()
+                    
+                    # NEW: Handle HTTP 403 Forbidden errors (CDN denying access)
+                    if "http error 403" in error_msg or "403" in error_msg:
+                        LOGGER.warning(f"⚠️ HTTP 403 error detected (CDN denying access), retrying with proper referer...")
+                        # Retry with explicit referer headers for CDN
+                        for attempt in range(1, 4):
+                            try:
+                                retry_opts = self.opts.copy()
+                                retry_opts["socket_timeout"] = 45
+                                retry_opts["retries"] = 20
+                                retry_opts["fragment_retries"] = 20
+                                # Set proper referer headers
+                                retry_opts["http_headers"] = self.opts["http_headers"].copy()
+                                retry_opts["http_headers"]["Referer"] = referer
+                                retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
+                                
+                                if attempt > 1:
+                                    wait_time = 5 * attempt
+                                    LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3...")
+                                    sleep(wait_time)
+                                
+                                with YoutubeDL(retry_opts) as ydl_retry:
+                                    LOGGER.info(f"🔄 HTTP 403 retry {attempt}/3 for link...")
+                                    ydl_retry.download([link])
+                                return  # Success on retry
+                            except Exception as retry_e:
+                                if attempt < 3:
+                                    LOGGER.warning(f"⚠️ Retry {attempt} failed, trying again...")
+                                    continue
+                                else:
+                                    LOGGER.error(f"❌ HTTP 403 all retries exhausted: {str(retry_e)[:100]}")
+                                    break
                     
                     # NEW: Handle HTTP 522 Cloudflare errors (CDN blocking) - RETRY with backoff
                     if "http error 522" in error_msg or "500 server error" in error_msg or "failed to download m3u8" in error_msg:
@@ -294,8 +355,8 @@ class YoutubeDLHelper:
                                 retry_opts["fragment_retries"] = 20
                                 # Add referer-based headers to bypass CDN blocking
                                 retry_opts["http_headers"] = self.opts["http_headers"].copy()
-                                retry_opts["http_headers"]["Referer"] = "https://luluvid.com/"
-                                retry_opts["http_headers"]["Origin"] = "https://luluvid.com"
+                                retry_opts["http_headers"]["Referer"] = referer
+                                retry_opts["http_headers"]["Origin"] = referer.rstrip('/').rsplit('/', 1)[0] if referer.count('/') > 2 else referer
                                 
                                 # Progressive backoff: wait before retry
                                 if attempt > 1:
@@ -323,6 +384,7 @@ class YoutubeDLHelper:
                         retry_opts = self.opts.copy()
                         retry_opts["http_headers"] = self.opts["http_headers"].copy()
                         retry_opts["http_headers"]["Accept-Encoding"] = "gzip"  # Try single encoding
+                        retry_opts["http_headers"]["Referer"] = referer
                         retry_opts["socket_timeout"] = 45  # Increase timeout on retry
                         retry_opts["retries"] = 15  # More retries
                         
