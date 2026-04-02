@@ -196,18 +196,39 @@ class YoutubeDLHelper:
         """Redirect all luluvid* domain variants to main luluvid.com"""
         LOGGER.error(f"🔍 CHECK: Received link: {link}")
         if "luluv" in link.lower():
-            import re
-            # Pattern matches luluvid.com, luluvdoo.com, luluvXXX.com, etc.
-            # Match: https?://luluv + (any alphanumeric) + .com
             original_link = link
-            LOGGER.error(f"🔎 Pattern matching on: {original_link}")
-            # This regex matches: luluvid, luluvdoo, luluvXXX, etc.
-            link = re.sub(r'https?://luluv[a-z0-9]*\.com', 'https://luluvid.com', link, flags=re.IGNORECASE)
-            LOGGER.error(f"📝 After regex: {link}")
+            LOGGER.error(f"🔎 Found 'luluv' in link, processing redirect...")
+            
+            # Simple approach: extract domain from link
+            # Link format: https://luluvXXX.com/d/videoID
+            try:
+                # Split by :// to separate protocol
+                if "://" in link:
+                    protocol, rest = link.split("://", 1)
+                    # Get domain (part before first /)
+                    if "/" in rest:
+                        domain, path = rest.split("/", 1)
+                        path = "/" + path
+                    else:
+                        domain = rest
+                        path = ""
+                    
+                    # Check if domain contains luluv
+                    if "luluv" in domain.lower():
+                        # Replace any luluv* domain with luluvid.com
+                        new_domain = "luluvid.com"
+                        link = f"{protocol}://{new_domain}{path}"
+                        LOGGER.error(f"📝 Replaced domain: {domain} → {new_domain}")
+                else:
+                    LOGGER.error(f"⚠️ Not a valid URL format (no ://)")
+            except Exception as e:
+                LOGGER.error(f"❌ Error processing link: {str(e)}")
+            
+            LOGGER.error(f"✅ After redirect: {link}")
             if original_link != link:
-                LOGGER.error(f"🔄 ✅ REDIRECTED: {original_link} → {link}")
+                LOGGER.error(f"🔄 REDIRECTED: {original_link} → {link}")
             else:
-                LOGGER.error(f"⚠️ NO REDIRECT: Pattern didn't match")
+                LOGGER.error(f"⚠️ NO CHANGE: Link already luluvid.com or error occurred")
         else:
             LOGGER.error(f"ℹ️ Not a luluv* link, skipping redirect")
         return link
@@ -575,11 +596,11 @@ class YoutubeDLHelper:
             self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
-        LOGGER.warning(f"📥 add_download called with link: {link}")
+        LOGGER.error(f"📥 add_download called with link: {link}")
         # Redirect luluvid* domain variants to main luluvid.com at the very beginning
         original = link
         link = self._redirect_luluvid_domain(link)
-        LOGGER.warning(f"📤 After redirect, link is now: {link}")
+        LOGGER.error(f"📤 After redirect, link is now: {link}")
         
         if playlist:
             self.opts["ignoreerrors"] = True
