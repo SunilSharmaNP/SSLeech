@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 from os import path as ospath, listdir
 from secrets import token_hex
@@ -192,10 +193,9 @@ class YoutubeDLHelper:
         async_to_sync(self.__listener.onDownloadError, error)
 
     def _get_referer_for_link(self, link):
-        """Extract referer URL from link - handles multiple CDN variants"""
-        # Handle luluvid variants - map all to main luluvid.com for consistency
-        if "luluvi" in link.lower() and ".com" in link:
-            # All luluvid variants (luluvid.com, luluvdoo.com, etc.) use luluvid.com referer
+        """Extract referer URL from link"""
+        if "luluvid.com" in link:
+            # For luluvid, use the main domain
             return "https://luluvid.com/"
         elif "youtube.com" in link or "youtu.be" in link:
             return "https://www.youtube.com/"
