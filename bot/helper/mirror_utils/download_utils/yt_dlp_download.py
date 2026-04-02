@@ -192,9 +192,10 @@ class YoutubeDLHelper:
         async_to_sync(self.__listener.onDownloadError, error)
 
     def _get_referer_for_link(self, link):
-        """Extract referer URL from link"""
-        if "luluvid.com" in link:
-            # For luluvid, use the main domain
+        """Extract referer URL from link - handles multiple CDN variants"""
+        # Handle luluvid variants - map all to main luluvid.com for consistency
+        if "luluvi" in link.lower() and ".com" in link:
+            # All luluvid variants (luluvid.com, luluvdoo.com, etc.) use luluvid.com referer
             return "https://luluvid.com/"
         elif "youtube.com" in link or "youtu.be" in link:
             return "https://www.youtube.com/"
