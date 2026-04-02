@@ -2,6 +2,7 @@
 from os import path as ospath, listdir
 from secrets import token_hex
 from logging import getLogger
+from time import sleep
 from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
 
@@ -79,10 +80,10 @@ class YoutubeDLHelper:
             "fragment_retries": 10,
             "retries": 10,
             "retry_sleep_functions": {
-                "http": lambda n: 3,
-                "fragment": lambda n: 3,
-                "file_access": lambda n: 3,
-                "extractor": lambda n: 3,
+                "http": lambda n: min(5 * (n + 1), 30),  # Progressive backoff: 5s, 10s, 15s... capped at 30s
+                "fragment": lambda n: min(3 * (n + 1), 20),
+                "file_access": lambda n: min(3 * (n + 1), 20),
+                "extractor": lambda n: min(5 * (n + 1), 30),
             },
             # YouTube authentication and SABR bypass
             "socket_timeout": 30,  # Increased from 15s to handle slow connections
@@ -94,11 +95,19 @@ class YoutubeDLHelper:
             "youtube_include_hls_manifest": True,
             # HTTP options for better connection handling
             "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Accept-Encoding": "gzip, deflate",  # Properly handle encoding
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-us,en;q=0.5",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept-Encoding": "gzip, deflate, br",  # Include br for brotli
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+                # CDN-specific headers to prevent 522 errors
+                "Referer": "https://luluvid.com/",
+                "Origin": "https://luluvid.com",
+                "Cache-Control": "max-age=0",
             },
             # Extractor args for YouTube authentication and SABR bypass
             "extractor_args": {
@@ -202,6 +211,17 @@ class YoutubeDLHelper:
                     except Exception as extract_e:
                         error_msg = str(extract_e).lower()
                         
+                        # NEW: Handle HTTP 522 errors in metadata extraction
+                        if "http error 522" in error_msg or "500 server error" in error_msg:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                wait_time = 5 * retry_count
+                                LOGGER.warning(f"⚠️ HTTP 522 in metadata (retry {retry_count}/{max_retries}), waiting {wait_time}s...")
+                                sleep(wait_time)
+                                continue  # Retry
+                            else:
+                                LOGGER.error(f"❌ HTTP 522 metadata extraction failed after {max_retries} retries")
+                        
                         # Retry on decompression/connection errors
                         if any(err in error_msg for err in ["inconsistent stream", "failed to decode", "connection", "timeout"]):
                             retry_count += 1
@@ -262,11 +282,46 @@ class YoutubeDLHelper:
                 except DownloadError as e:
                     error_msg = str(e).lower()
                     
+                    # NEW: Handle HTTP 522 Cloudflare errors (CDN blocking) - RETRY with backoff
+                    if "http error 522" in error_msg or "500 server error" in error_msg or "failed to download m3u8" in error_msg:
+                        LOGGER.warning(f"⚠️ HTTP 522/5XX error detected (CDN blocking), retrying with backoff...")
+                        # Retry with progressive backoff and better headers
+                        for attempt in range(1, 4):
+                            try:
+                                retry_opts = self.opts.copy()
+                                retry_opts["socket_timeout"] = 45  # Increased timeout
+                                retry_opts["retries"] = 20  # More fragment retries
+                                retry_opts["fragment_retries"] = 20
+                                # Add referer-based headers to bypass CDN blocking
+                                retry_opts["http_headers"] = self.opts["http_headers"].copy()
+                                retry_opts["http_headers"]["Referer"] = "https://luluvid.com/"
+                                retry_opts["http_headers"]["Origin"] = "https://luluvid.com"
+                                
+                                # Progressive backoff: wait before retry
+                                if attempt > 1:
+                                    wait_time = 5 * attempt
+                                    LOGGER.info(f"⏳ Waiting {wait_time}s before retry {attempt}/3...")
+                                    sleep(wait_time)
+                                
+                                with YoutubeDL(retry_opts) as ydl_retry:
+                                    LOGGER.info(f"🔄 HTTP 522 retry {attempt}/3 for link...")
+                                    ydl_retry.download([link])
+                                return  # Success on retry
+                            except Exception as retry_e:
+                                retry_msg = str(retry_e).lower()
+                                if attempt < 3:
+                                    LOGGER.warning(f"⚠️ Retry {attempt} failed, trying again...")
+                                    continue
+                                else:
+                                    LOGGER.error(f"❌ HTTP 522 all retries exhausted: {str(retry_e)[:100]}")
+                                    break
+                    
                     # NEW: Handle gzip/brotli decompression errors - RETRY
                     if "inconsistent stream state" in error_msg or "error -2 while decompressing" in error_msg or "failed to decode" in error_msg:
                         LOGGER.warning(f"🔄 Decompression error detected, retrying with adjusted headers...")
                         # Retry with modified options
                         retry_opts = self.opts.copy()
+                        retry_opts["http_headers"] = self.opts["http_headers"].copy()
                         retry_opts["http_headers"]["Accept-Encoding"] = "gzip"  # Try single encoding
                         retry_opts["socket_timeout"] = 45  # Increase timeout on retry
                         retry_opts["retries"] = 15  # More retries
@@ -277,7 +332,7 @@ class YoutubeDLHelper:
                                 ydl_retry.download([link])
                             return  # Success on retry
                         except Exception as retry_e:
-                            LOGGER.error(f"❌ Retry failed: {str(retry_e)}")
+                            LOGGER.error(f"❌ Retry failed: {str(retry_e)[:100]}")
                             # Fall through to handle with fallback format
                     
                     # Handle SABR + n-challenge (only images available)
