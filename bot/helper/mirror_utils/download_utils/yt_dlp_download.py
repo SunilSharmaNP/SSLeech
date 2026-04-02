@@ -192,51 +192,10 @@ class YoutubeDLHelper:
         self.__is_cancelled = True
         async_to_sync(self.__listener.onDownloadError, error)
 
-    def _redirect_luluvid_domain(self, link):
-        """Redirect all luluvid* domain variants to main luluvid.com"""
-        LOGGER.error(f"🔍 CHECK: Received link: {link}")
-        if "luluv" in link.lower():
-            original_link = link
-            LOGGER.error(f"🔎 Found 'luluv' in link, processing redirect...")
-            
-            # Simple approach: extract domain from link
-            # Link format: https://luluvXXX.com/d/videoID
-            try:
-                # Split by :// to separate protocol
-                if "://" in link:
-                    protocol, rest = link.split("://", 1)
-                    # Get domain (part before first /)
-                    if "/" in rest:
-                        domain, path = rest.split("/", 1)
-                        path = "/" + path
-                    else:
-                        domain = rest
-                        path = ""
-                    
-                    # Check if domain contains luluv
-                    if "luluv" in domain.lower():
-                        # Replace any luluv* domain with luluvid.com
-                        new_domain = "luluvid.com"
-                        link = f"{protocol}://{new_domain}{path}"
-                        LOGGER.error(f"📝 Replaced domain: {domain} → {new_domain}")
-                else:
-                    LOGGER.error(f"⚠️ Not a valid URL format (no ://)")
-            except Exception as e:
-                LOGGER.error(f"❌ Error processing link: {str(e)}")
-            
-            LOGGER.error(f"✅ After redirect: {link}")
-            if original_link != link:
-                LOGGER.error(f"🔄 REDIRECTED: {original_link} → {link}")
-            else:
-                LOGGER.error(f"⚠️ NO CHANGE: Link already luluvid.com or error occurred")
-        else:
-            LOGGER.error(f"ℹ️ Not a luluv* link, skipping redirect")
-        return link
-
     def _get_referer_for_link(self, link):
-        """Extract referer URL from link - handles all luluvid* domain variants"""
-        if "luluv" in link.lower() and ".com" in link.lower():
-            # All luluv* variants (luluvid.com, luluvdoo.com, etc.) use main domain referer
+        """Extract referer URL from link"""
+        if "luluvid.com" in link:
+            # For luluvid, use the main domain
             return "https://luluvid.com/"
         elif "youtube.com" in link or "youtu.be" in link:
             return "https://www.youtube.com/"
@@ -246,9 +205,6 @@ class YoutubeDLHelper:
             return f"{parsed.scheme}://{parsed.netloc}/"
 
     def extractMetaData(self, link, name):
-        # Redirect luluvid* domain variants to main luluvid.com before processing
-        link = self._redirect_luluvid_domain(link)
-        
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
         
@@ -379,9 +335,6 @@ class YoutubeDLHelper:
 
     def __download(self, link, path):
         try:
-            # Redirect luluvid* domain variants to main luluvid.com before downloading
-            link = self._redirect_luluvid_domain(link)
-            
             referer = self._get_referer_for_link(link)
             with YoutubeDL(self.opts) as ydl:
                 try:
@@ -596,12 +549,6 @@ class YoutubeDLHelper:
             self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
-        LOGGER.error(f"📥 add_download called with link: {link}")
-        # Redirect luluvid* domain variants to main luluvid.com at the very beginning
-        original = link
-        link = self._redirect_luluvid_domain(link)
-        LOGGER.error(f"📤 After redirect, link is now: {link}")
-        
         if playlist:
             self.opts["ignoreerrors"] = True
             self.is_playlist = True
