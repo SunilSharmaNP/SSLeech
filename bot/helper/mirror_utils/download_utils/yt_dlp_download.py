@@ -566,6 +566,9 @@ class YoutubeDLHelper:
             self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
+        # Redirect luluvid* domain variants to main luluvid.com at the very beginning
+        link = self._redirect_luluvid_domain(link)
+        
         if playlist:
             self.opts["ignoreerrors"] = True
             self.is_playlist = True
