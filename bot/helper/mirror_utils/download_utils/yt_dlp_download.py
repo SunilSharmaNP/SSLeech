@@ -4,7 +4,6 @@ from secrets import token_hex
 from logging import getLogger
 from yt_dlp import YoutubeDL, DownloadError
 from re import search as re_search
-from contextlib import suppress
 
 from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
@@ -16,25 +15,26 @@ from bot.helper.ext_utils.task_manager import (
     stop_duplicate_check,
     limit_checker,
 )
+from bot.core.config_manager import BinConfig  # if available, otherwise fallback
 
 LOGGER = getLogger(__name__)
 
 
 class MyLogger:
     def __init__(self, obj, listener):
-        self._obj = obj
+        self.obj = obj
         self._listener = listener
 
     def debug(self, msg):
         # Hack to fix changing extension
-        if not self._obj.is_playlist:
+        if not self.obj.is_playlist:
             if match := re_search(
                 r".Merger..Merging formats into..(.*?).$", msg
             ) or re_search(r".ExtractAudio..Destination..(.*?)$", msg):
                 LOGGER.info(msg)
                 newname = match.group(1)
                 newname = newname.rsplit("/", 1)[-1]
-                self._listener.name = newname
+                self.obj.name = newname
 
     @staticmethod
     def warning(msg):
@@ -57,15 +57,19 @@ class YoutubeDLHelper:
         self.__listener = listener
         self.__gid = ""
         self.__is_cancelled = False
+        self.__downloading = False
         self.__ext = ""
         self.name = ""
         self.is_playlist = False
-        self.keep_thumb = False
         self.playlist_count = 0
+        self.keep_thumb = False
+
+        # Base options (similar to wzv3 but keep original cookie file)
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self, self.__listener),
             "usenetrc": True,
+            "cookiefile": "cookies.txt",  # Always set cookies file
             "allow_multiple_video_streams": True,
             "allow_multiple_audio_streams": True,
             "noprogress": True,
@@ -81,14 +85,45 @@ class YoutubeDLHelper:
                 "file_access": lambda n: 3,
                 "extractor": lambda n: 3,
             },
+            # YouTube authentication and SABR bypass
+            "socket_timeout": 30,  # Increased from 15s to handle slow connections
+            "call_home": False,
+            "no_check_certificate": True,
+            "hls_prefer_native": False,  # Use ffmpeg for HLS (more reliable)
+            "hls_use_mpegts": True,  # Better HLS handling
+            "youtube_include_dash_manifest": False,  # Disable - can trigger SABR
+            "youtube_include_hls_manifest": True,
+            # HTTP options for better connection handling
+            "http_headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept-Encoding": "gzip, deflate",  # Properly handle encoding
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-us,en;q=0.5",
+                "Sec-Fetch-Mode": "navigate",
+            },
+            # Extractor args for YouTube authentication and SABR bypass
+            "extractor_args": {
+                "youtube": [
+                    "player_skip=configs,js",  # Skip JS validation
+                    "player=null",  # Use null player
+                    "skip=webpage_url",  # Skip webpage validation
+                    "raise_for_unavailable_formats=false",  # Don't fail on format issues
+                    "player_client=android",  # Bypass web_safari n-challenge
+                    "po_token_provider=java",  # SABR bypass token provider
+                ]
+            },
+            # JavaScript runtime configuration
+            "js_runtimes": {"deno": {}},  # Deno for JS challenges
         }
-        # Handle cookie file - check if exists
-        cookie_to_use = "cookies.txt" if ospath.exists("cookies.txt") else None
-        if cookie_to_use:
-            self.opts["cookiefile"] = cookie_to_use
-            LOGGER.info(f"Using cookies file: {cookie_to_use}")
-        else:
-            LOGGER.warning("Cookies file not found. Some downloads may fail.")
+
+        # Add ffmpeg_location if BinConfig exists
+        try:
+            self.opts["ffmpeg_location"] = f"/bin/{BinConfig.FFMPEG_NAME}"
+        except:
+            pass
+        
+        # Log cookie usage
+        LOGGER.info(f"Using cookies file: cookies.txt")
 
     @property
     def download_speed(self):
@@ -111,15 +146,16 @@ class YoutubeDLHelper:
         return self.__eta
 
     def __onDownloadProgress(self, d):
+        self.__downloading = True
         if self.__is_cancelled:
             raise ValueError("Cancelling...")
         if d["status"] == "finished":
             if self.is_playlist:
                 self.__last_downloaded = 0
         elif d["status"] == "downloading":
-            self.__download_speed = d.get("speed") or 0
+            self.__download_speed = d["speed"] or 0
             if self.is_playlist:
-                downloadedBytes = d.get("downloaded_bytes") or 0
+                downloadedBytes = d["downloaded_bytes"] or 0
                 chunk_size = downloadedBytes - self.__last_downloaded
                 self.__last_downloaded = downloadedBytes
                 self.__downloaded_bytes += chunk_size
@@ -128,7 +164,7 @@ class YoutubeDLHelper:
                     self.__size = d["total_bytes"] or 0
                 elif d.get("total_bytes_estimate"):
                     self.__size = d["total_bytes_estimate"] or 0
-                self.__downloaded_bytes = d.get("downloaded_bytes") or 0
+                self.__downloaded_bytes = d["downloaded_bytes"] or 0
                 self.__eta = d.get("eta", "-") or "-"
             try:
                 self.__progress = (self.__downloaded_bytes / self.__size) * 100
@@ -151,93 +187,161 @@ class YoutubeDLHelper:
     def extractMetaData(self, link, name):
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
-        with YoutubeDL(self.opts) as ydl:
-            try:
-                result = ydl.extract_info(link, download=False)
-                if result is None:
-                    raise ValueError("Info result is None")
-            except Exception as e:
-                error_str = str(e)
-                # Check if it's an age restriction or format issue
-                if "Sign in" in error_str or "age" in error_str.lower():
-                    LOGGER.warning(f"Age-restricted content detected. Trying with different player client...")
-                    # Update opts for age-restricted content
-                    if "extractor_args" not in self.opts:
-                        self.opts["extractor_args"] = {}
-                    if "youtube" not in self.opts["extractor_args"]:
-                        self.opts["extractor_args"]["youtube"] = {}
-                    self.opts["extractor_args"]["youtube"]["player_client"] = ["android", "web_creator"]
-                    try:
-                        with YoutubeDL(self.opts) as ydl_retry:
-                            result = ydl_retry.extract_info(link, download=False)
-                            if result is None:
-                                raise ValueError("Info result is None")
-                    except Exception as e2:
-                        return self.__onDownloadError(f"Age-restricted content cannot be downloaded: {str(e2)}")
-                else:
-                    return self.__onDownloadError(error_str)
-            if self.is_playlist:
-                self.playlist_count = result.get("playlist_count", 0)
-            if "entries" in result:
-                self.name = name
-                for entry in result["entries"]:
-                    if not entry:
-                        continue
-                    elif "filesize_approx" in entry:
-                        self.__size += entry.get("filesize_approx", 0) or 0
-                    elif "filesize" in entry:
-                        self.__size += entry.get("filesize", 0) or 0
-                    if not self.name:
-                        outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
-                        self.name, ext = ospath.splitext(
-                            ydl.prepare_filename(entry, outtmpl=outtmpl_)
-                        )
-                        if not self.__ext:
-                            self.__ext = ext
-            else:
-                outtmpl_ = "%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s"
-                realName = ydl.prepare_filename(result, outtmpl=outtmpl_)
-                ext = ospath.splitext(realName)[-1]
-                self.name = f"{name}{ext}" if name else realName
-                if not self.__ext:
-                    self.__ext = ext
-                if result.get("filesize"):
-                    self.__size = result.get("filesize", 0) or 0
-                elif result.get("filesize_approx"):
-                    self.__size = result.get("filesize_approx", 0) or 0
-
-    def __download(self, link, path):
-        with suppress(Exception):
+        
+        # Use custom extractMetaData with retry logic
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
             try:
                 with YoutubeDL(self.opts) as ydl:
                     try:
-                        ydl.download([link])
-                    except DownloadError as e:
-                        error_str = str(e)
-                        # If format not available, try with best format
-                        if "Requested format is not available" in error_str or "not a valid format" in error_str:
-                            LOGGER.warning(f"Format not available, trying with best format. Error: {error_str}")
-                            self.opts["format"] = "best"
-                            with YoutubeDL(self.opts) as ydl_retry:
+                        result = ydl.extract_info(link, download=False)
+                        if result is None:
+                            raise ValueError("Info result is None")
+                    except Exception as extract_e:
+                        error_msg = str(extract_e).lower()
+                        
+                        # Retry on decompression/connection errors
+                        if any(err in error_msg for err in ["inconsistent stream", "failed to decode", "connection", "timeout"]):
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                LOGGER.warning(f"⚠️ extractMetaData error (retry {retry_count}/{max_retries}): {error_msg[:100]}")
+                                continue  # Retry
+                            else:
+                                LOGGER.error(f"❌ extractMetaData failed after {max_retries} retries")
+                        
+                        LOGGER.error(f"extractMetaData error: {str(extract_e)[:200]}")
+                        return self.__onDownloadError(str(extract_e))
+                    
+                    # Success - process results
+                    if self.is_playlist:
+                        self.playlist_count = result.get("playlist_count", 0)
+                    if "entries" in result:
+                        self.name = name
+                        for entry in result["entries"]:
+                            if not entry:
+                                continue
+                            elif "filesize_approx" in entry:
+                                self.__size += entry.get("filesize_approx", 0) or 0
+                            elif "filesize" in entry:
+                                self.__size += entry.get("filesize", 0) or 0
+                            if not self.name:
+                                outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
+                                self.name, ext = ospath.splitext(
+                                    ydl.prepare_filename(entry, outtmpl=outtmpl_)
+                                )
+                                if not self.__ext:
+                                    self.__ext = ext
+                    else:
+                        outtmpl_ = "%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s"
+                        realName = ydl.prepare_filename(result, outtmpl=outtmpl_)
+                        ext = ospath.splitext(realName)[-1]
+                        self.name = f"{name}{ext}" if name else realName
+                        if not self.__ext:
+                            self.__ext = ext
+                        if result.get("filesize"):
+                            self.__size = result["filesize"]
+                        elif result.get("filesize_approx"):
+                            self.__size = result["filesize_approx"]
+                    
+                    return  # Success
+                    
+            except Exception as e:
+                retry_count += 1
+                if retry_count < max_retries:
+                    LOGGER.warning(f"⚠️ Unexpected error in extractMetaData (retry {retry_count}): {str(e)[:100]}")
+                else:
+                    return self.__onDownloadError(f"Failed to extract metadata: {str(e)}")
+
+    def __download(self, link, path):
+        try:
+            with YoutubeDL(self.opts) as ydl:
+                try:
+                    ydl.download([link])
+                except DownloadError as e:
+                    error_msg = str(e).lower()
+                    
+                    # NEW: Handle gzip/brotli decompression errors - RETRY
+                    if "inconsistent stream state" in error_msg or "error -2 while decompressing" in error_msg or "failed to decode" in error_msg:
+                        LOGGER.warning(f"🔄 Decompression error detected, retrying with adjusted headers...")
+                        # Retry with modified options
+                        retry_opts = self.opts.copy()
+                        retry_opts["http_headers"]["Accept-Encoding"] = "gzip"  # Try single encoding
+                        retry_opts["socket_timeout"] = 45  # Increase timeout on retry
+                        retry_opts["retries"] = 15  # More retries
+                        
+                        try:
+                            with YoutubeDL(retry_opts) as ydl_retry:
+                                LOGGER.info(f"🔄 Retry attempt for link: {link}")
                                 ydl_retry.download([link])
-                        else:
-                            if not self.__is_cancelled:
-                                self.__onDownloadError(error_str)
+                            return  # Success on retry
+                        except Exception as retry_e:
+                            LOGGER.error(f"❌ Retry failed: {str(retry_e)}")
+                            # Fall through to handle with fallback format
+                    
+                    # Handle SABR + n-challenge (only images available)
+                    if "only images" in error_msg or "requested format is not available" in error_msg:
+                        LOGGER.warning(f"⚠️ SABR/n-challenge detected, trying fallback format...")
+                        fallback_opts = self.opts.copy()
+                        fallback_opts["format"] = "best"
+                        try:
+                            with YoutubeDL(fallback_opts) as ydl_fallback:
+                                ydl_fallback.download([link])
+                            return  # Success with fallback
+                        except Exception as fallback_e:
+                            LOGGER.error(f"❌ Fallback failed: {str(fallback_e)}")
+                    
+                    # Handle HLS-specific errors
+                    if "hls" in error_msg and "not supported" in error_msg:
+                        LOGGER.warning(f"⚠️ HLS stream detected, switching to ffmpeg mode...")
+                        hls_opts = self.opts.copy()
+                        hls_opts["hls_prefer_native"] = False
+                        hls_opts["hls_use_mpegts"] = True
+                        hls_opts["external_downloader"] = "ffmpeg"
+                        try:
+                            with YoutubeDL(hls_opts) as ydl_hls:
+                                ydl_hls.download([link])
                             return
-                if self.is_playlist and (
-                    not ospath.exists(path) or len(listdir(path)) == 0
-                ):
-                    self.__onDownloadError(
-                        "No video available to download from this playlist. Check logs for more details"
-                    )
+                        except Exception as hls_e:
+                            LOGGER.error(f"❌ HLS download failed: {str(hls_e)}")
+                    
+                    # Handle brotli errors
+                    if "brotli" in error_msg or "decoder failed" in error_msg or "unknown compression" in error_msg:
+                        LOGGER.error("❌ brotli decoder error. Admin must fix:\n  apt-get install -y python3-brotli\n  pip install --upgrade brotli")
+                    
+                    # Handle n-challenge JS errors
+                    if "n challenge" in error_msg or "javascript" in error_msg or "js runtime" in error_msg:
+                        LOGGER.error("❌ n-challenge JS solving failed.\n  Admin setup: apt-get install -y nodejs npm && npm install -g deno")
+                    
+                    # Handle connection timeout errors - retry once more
+                    if "timeout" in error_msg or "connection reset" in error_msg or "connection refused" in error_msg:
+                        LOGGER.warning(f"⚠️ Connection timeout, retrying...")
+                        timeout_opts = self.opts.copy()
+                        timeout_opts["socket_timeout"] = 60
+                        timeout_opts["retries"] = 20
+                        try:
+                            with YoutubeDL(timeout_opts) as ydl_timeout:
+                                ydl_timeout.download([link])
+                            return
+                        except Exception:
+                            pass  # Continue to error reporting
+                    
+                    if not self.__is_cancelled:
+                        self.__onDownloadError(str(e))
                     return
-                if self.__is_cancelled:
-                    return
-                async_to_sync(self.__listener.onDownloadComplete)
-            except ValueError:
-                if not self.__is_cancelled:
-                    self.__onDownloadError("Download Stopped by User!")
-        return
+            if self.is_playlist and (
+                not ospath.exists(path) or len(listdir(path)) == 0
+            ):
+                self.__onDownloadError(
+                    "No video available to download from this playlist. Check logs for more details"
+                )
+                return
+            if self.__is_cancelled:
+                raise ValueError
+            async_to_sync(self.__listener.onDownloadComplete)
+        except ValueError:
+            self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
         if playlist:
@@ -245,22 +349,9 @@ class YoutubeDLHelper:
             self.is_playlist = True
 
         self.__gid = token_hex(5)
-        
-        # Setup YouTube extractor arguments for better compatibility
-        if "youtube" in link or "youtu.be" in link:
-            self.opts["extractor_args"] = {
-                "youtube": {
-                    "player_client": ["android", "web", "tv", "web_creator"],
-                    "player_skip": ["js", "configs"],
-                    "skip": ["dash", "hls"],
-                }
-            }
-            # Try to handle age-restricted content
-            self.opts["call_home"] = False
-            self.opts["no_check_certificate"] = True
-        
         await self.__onDownloadStart()
 
+        # Set postprocessors
         self.opts["postprocessors"] = [
             {
                 "add_chapters": True,
@@ -289,19 +380,9 @@ class YoutubeDLHelper:
             else:
                 self.__ext = f".{audio_format}"
 
-        # Use format string with fallback options
-        if qual and not qual.startswith("ba/b"):
-            # Add fallback formats to handle unavailable quality
-            if qual == "best":
-                self.opts["format"] = "best"
-            else:
-                # Create fallback chain for video downloads
-                self.opts["format"] = f"{qual}/best"
-        elif qual.startswith("ba/b"):
-            self.opts["format"] = qual
-        else:
-            self.opts["format"] = "best"
+        self.opts["format"] = qual
 
+        # Process user options (string)
         if options:
             self.__set_options(options)
 
@@ -317,10 +398,17 @@ class YoutubeDLHelper:
             )
             base_name = ospath.splitext(self.name)[0]
 
+        start_path = path if self.keep_thumb else f"{path}/yt-dlp-thumb"
         if self.is_playlist:
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
-                "thumbnail": f"{path}/yt-dlp-thumb/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
+                "thumbnail": f"{start_path}/%(title,fulltitle,alt_title)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d%(episode_number&E|)s%(episode_number|)02d%(height& |)s%(height|)s%(height&p|)s%(fps|)s%(fps&fps|)s%(tbr& |)s%(tbr|)d.%(ext)s",
+            }
+        elif "download_ranges" in options:
+            # This case may not be used in original, but kept for compatibility
+            self.opts["outtmpl"] = {
+                "default": f"{path}/{base_name}/%(section_number|)s%(section_number&.|)s%(section_title|)s%(section_title&-|)s%(title,fulltitle,alt_title)s %(section_start)s to %(section_end)s.%(ext)s",
+                "thumbnail": f"{start_path}/%(section_number|)s%(section_number&.|)s%(section_title|)s%(section_title&-|)s%(title,fulltitle,alt_title)s %(section_start)s to %(section_end)s.%(ext)s",
             }
         elif any(
             key in options
@@ -337,12 +425,12 @@ class YoutubeDLHelper:
         ):
             self.opts["outtmpl"] = {
                 "default": f"{path}/{base_name}/{self.name}",
-                "thumbnail": f"{path}/yt-dlp-thumb/{base_name}.%(ext)s",
+                "thumbnail": f"{start_path}/{base_name}.%(ext)s",
             }
         else:
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}",
-                "thumbnail": f"{path}/yt-dlp-thumb/{base_name}.%(ext)s",
+                "thumbnail": f"{start_path}/{base_name}.%(ext)s",
             }
 
         if qual.startswith("ba/b"):
@@ -410,54 +498,33 @@ class YoutubeDLHelper:
     async def cancel_download(self):
         self.__is_cancelled = True
         LOGGER.info(f"Cancelling Download: {self.name}")
-        await self.__listener.onDownloadError("Download Stopped by User!")
+        if not self.__downloading:
+            await self.__listener.onDownloadError("Download Cancelled by User!")
 
     def __set_options(self, options):
-        # Keep original options string format but parse safely
-        import ast
-        if isinstance(options, str):
-            options_list = options.split("|")
-        else:
-            options_list = []
-        
-        for opt in options_list:
-            if not opt.strip():
-                continue
-            try:
-                key, value = map(str.strip, opt.split(":", 1))
-            except ValueError:
-                continue
-                
+        options = options.split("|")
+        for opt in options:
+            key, value = map(str.strip, opt.split(":", 1))
             if key == "format" and value.startswith("ba/b-"):
                 continue
-            
-            # Safe type conversion
             if value.startswith("^"):
-                try:
-                    if "." in value or value == "^inf":
-                        value = float(value.split("^", 1)[1])
-                    else:
-                        value = int(value.split("^", 1)[1])
-                except (ValueError, IndexError):
-                    pass
+                if "." in value or value == "^inf":
+                    value = float(value.split("^", 1)[1])
+                else:
+                    value = int(value.split("^", 1)[1])
             elif value.lower() == "true":
                 value = True
             elif value.lower() == "false":
                 value = False
             elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
-                try:
-                    value = ast.literal_eval(value)
-                except (ValueError, SyntaxError):
-                    pass
+                value = eval(value)
 
-            # Set option safely
             if key == "postprocessors":
                 if isinstance(value, list):
                     self.opts[key].extend(tuple(value))
                 elif isinstance(value, dict):
                     self.opts[key].append(value)
-            elif key == "writethumbnail" and value is True:
-                self.keep_thumb = True
-                self.opts[key] = value
             else:
+                if key == "writethumbnail" and value is True:
+                    self.keep_thumb = True
                 self.opts[key] = value
