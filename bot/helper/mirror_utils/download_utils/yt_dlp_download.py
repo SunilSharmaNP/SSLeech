@@ -192,10 +192,21 @@ class YoutubeDLHelper:
         self.__is_cancelled = True
         async_to_sync(self.__listener.onDownloadError, error)
 
+    def _redirect_luluvid_domain(self, link):
+        """Redirect all luluvid* domain variants to main luluvid.com"""
+        if "luluvi" in link.lower():
+            import re
+            # Pattern matches luluvid.com, luluvdoo.com, luluvXXX.com, etc.
+            original_link = link
+            link = re.sub(r'https?://luluvid[a-z0-9]*\.com', 'https://luluvid.com', link, flags=re.IGNORECASE)
+            if original_link != link:
+                LOGGER.info(f"🔄 Redirected luluvid domain from {original_link} to {link}")
+        return link
+
     def _get_referer_for_link(self, link):
-        """Extract referer URL from link"""
-        if "luluvid.com" in link:
-            # For luluvid, use the main domain
+        """Extract referer URL from link - handles all luluvid* domain variants"""
+        if "luluvi" in link.lower() and ".com" in link.lower():
+            # All luluvid variants (luluvid.com, luluvdoo.com, etc.) use main domain referer
             return "https://luluvid.com/"
         elif "youtube.com" in link or "youtu.be" in link:
             return "https://www.youtube.com/"
@@ -204,14 +215,10 @@ class YoutubeDLHelper:
             parsed = urlparse(link)
             return f"{parsed.scheme}://{parsed.netloc}/"
 
-    def _normalize_url(self, link: str) -> str:
-        """Replace luluvdoo.com with luluvid.com in the URL."""
-        if "luluvdoo.com" in link:
-            link = link.replace("luluvdoo.com", "luluvid.com")
-            LOGGER.info(f"Normalized URL: {link}")
-        return link
-
     def extractMetaData(self, link, name):
+        # Redirect luluvid* domain variants to main luluvid.com before processing
+        link = self._redirect_luluvid_domain(link)
+        
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
             self.opts["external_downloader"] = "ffmpeg"
         
@@ -342,6 +349,9 @@ class YoutubeDLHelper:
 
     def __download(self, link, path):
         try:
+            # Redirect luluvid* domain variants to main luluvid.com before downloading
+            link = self._redirect_luluvid_domain(link)
+            
             referer = self._get_referer_for_link(link)
             with YoutubeDL(self.opts) as ydl:
                 try:
@@ -556,8 +566,6 @@ class YoutubeDLHelper:
             self.__onDownloadError("Download Stopped by User!")
 
     async def add_download(self, link, path, name, qual, playlist, options):
-        # Normalize the URL before any processing
-        link = self._normalize_url(link)
         if playlist:
             self.opts["ignoreerrors"] = True
             self.is_playlist = True
