@@ -192,10 +192,22 @@ class YoutubeDLHelper:
         self.__is_cancelled = True
         async_to_sync(self.__listener.onDownloadError, error)
 
+    def _redirect_luluvid_domain(self, link):
+        """Redirect all luluvid* domain variants to main luluvid.com"""
+        # Check if link contains any luluvi* domain
+        if "luluvi" in link.lower():
+            # Replace any luluvXX*.com with luluvid.com
+            import re
+            # Pattern matches luluvid.com, luluvdoo.com, luluvXXX.com, etc.
+            link = re.sub(r'https?://luluvid[a-z0-9]*\.com', 'https://luluvid.com', link, flags=re.IGNORECASE)
+            LOGGER.info(f"🔄 Redirected luluvid* domain variant to: {link}")
+        return link
+
     def _get_referer_for_link(self, link):
-        """Extract referer URL from link"""
-        if "luluvid.com" in link:
-            # For luluvid, use the main domain
+        """Extract referer URL from link - handles all luluvid* domain variants"""
+        # Check if link is any luluvi* domain variant
+        if "luluvi" in link.lower() and ".com" in link.lower():
+            # All luluvid variants (luluvid.com, luluvdoo.com, etc.) use main domain referer
             return "https://luluvid.com/"
         elif "youtube.com" in link or "youtu.be" in link:
             return "https://www.youtube.com/"
