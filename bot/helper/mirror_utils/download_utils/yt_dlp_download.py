@@ -194,22 +194,22 @@ class YoutubeDLHelper:
 
     def _redirect_luluvid_domain(self, link):
         """Redirect all luluvid* domain variants to main luluvid.com"""
-        LOGGER.info(f"🔍 CHECK: Received link: {link}")
+        LOGGER.error(f"🔍 CHECK: Received link: {link}")
         if "luluv" in link.lower():
             import re
             # Pattern matches luluvid.com, luluvdoo.com, luluvXXX.com, etc.
             # Match: https?://luluv + (any alphanumeric) + .com
             original_link = link
-            LOGGER.info(f"🔎 Pattern matching on: {original_link}")
+            LOGGER.error(f"🔎 Pattern matching on: {original_link}")
             # This regex matches: luluvid, luluvdoo, luluvXXX, etc.
             link = re.sub(r'https?://luluv[a-z0-9]*\.com', 'https://luluvid.com', link, flags=re.IGNORECASE)
-            LOGGER.info(f"📝 After regex: {link}")
+            LOGGER.error(f"📝 After regex: {link}")
             if original_link != link:
-                LOGGER.warning(f"🔄 ✅ REDIRECTED: {original_link} → {link}")
+                LOGGER.error(f"🔄 ✅ REDIRECTED: {original_link} → {link}")
             else:
-                LOGGER.warning(f"⚠️ NO REDIRECT: Pattern didn't match")
+                LOGGER.error(f"⚠️ NO REDIRECT: Pattern didn't match")
         else:
-            LOGGER.info(f"ℹ️ Not a luluv* link, skipping redirect")
+            LOGGER.error(f"ℹ️ Not a luluv* link, skipping redirect")
         return link
 
     def _get_referer_for_link(self, link):
