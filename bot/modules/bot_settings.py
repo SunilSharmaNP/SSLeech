@@ -103,23 +103,23 @@ async def load_config():
 
     BOT_TOKEN = environ.get("BOT_TOKEN", "")
     if len(BOT_TOKEN) == 0:
-        BOT_TOKEN = config_dict["BOT_TOKEN"]
+        BOT_TOKEN = config_dict.get("BOT_TOKEN", "")
 
     TELEGRAM_API = environ.get("TELEGRAM_API", "")
     if len(TELEGRAM_API) == 0:
-        TELEGRAM_API = config_dict["TELEGRAM_API"]
+        TELEGRAM_API = config_dict.get("TELEGRAM_API", "")
     else:
         TELEGRAM_API = int(TELEGRAM_API)
 
     TELEGRAM_HASH = environ.get("TELEGRAM_HASH", "")
     if len(TELEGRAM_HASH) == 0:
-        TELEGRAM_HASH = config_dict["TELEGRAM_HASH"]
+        TELEGRAM_HASH = config_dict.get("TELEGRAM_HASH", "")
 
     BOT_MAX_TASKS = environ.get("BOT_MAX_TASKS", "")
     BOT_MAX_TASKS = int(BOT_MAX_TASKS) if BOT_MAX_TASKS.isdigit() else ""
 
     OWNER_ID = environ.get("OWNER_ID", "")
-    OWNER_ID = config_dict["OWNER_ID"] if len(OWNER_ID) == 0 else int(OWNER_ID)
+    OWNER_ID = config_dict.get("OWNER_ID", 0) if len(OWNER_ID) == 0 else int(OWNER_ID)
 
     DATABASE_URL = environ.get("DATABASE_URL", "")
     if len(DATABASE_URL) == 0:
@@ -958,7 +958,7 @@ async def edit_variable(_, message, pre_message, key):
             value = "code"
     elif key == "BASE_URL_PORT":
         value = int(value)
-        if config_dict["BASE_URL"]:
+        if config_dict.get("BASE_URL"):
             await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
             await create_subprocess_shell(
                 f"gunicorn web.wserver:app --bind 0.0.0.0:{value} --worker-class gevent"
@@ -974,19 +974,19 @@ async def edit_variable(_, message, pre_message, key):
     elif key == "GDRIVE_ID":
         list_drives_dict["Main"] = {
             "drive_id": value,
-            "index_link": config_dict["INDEX_URL"],
+            "index_link": config_dict.get("INDEX_URL", ""),
         }
         categories_dict["Root"] = {
             "drive_id": value,
-            "index_link": config_dict["INDEX_URL"],
+            "index_link": config_dict.get("INDEX_URL", ""),
         }
     elif key == "INDEX_URL":
         list_drives_dict["Main"] = {
-            "drive_id": config_dict["GDRIVE_ID"],
+            "drive_id": config_dict.get("GDRIVE_ID", ""),
             "index_link": value,
         }
         categories_dict["Root"] = {
-            "drive_id": config_dict["GDRIVE_ID"],
+            "drive_id": config_dict.get("GDRIVE_ID", ""),
             "index_link": value,
         }
     elif value.isdigit():
@@ -1083,17 +1083,17 @@ async def update_private_file(_, message, pre_message):
             extra_buttons.clear()
         elif file_name in ["categories.txt", "categories"]:
             categories_dict.clear()
-            if GDRIVE_ID := config_dict["GDRIVE_ID"]:
+            if GDRIVE_ID := config_dict.get("GDRIVE_ID"):
                 categories_dict["Root"] = {
                     "drive_id": GDRIVE_ID,
-                    "index_link": config_dict["INDEX_URL"],
+                    "index_link": config_dict.get("INDEX_URL", ""),
                 }
         elif file_name in ["list_drives.txt", "list_drives"]:
             list_drives_dict.clear()
-            if GDRIVE_ID := config_dict["GDRIVE_ID"]:
+            if GDRIVE_ID := config_dict.get("GDRIVE_ID"):
                 list_drives_dict["Main"] = {
                     "drive_id": GDRIVE_ID,
-                    "index_link": config_dict["INDEX_URL"],
+                    "index_link": config_dict.get("INDEX_URL", ""),
                 }
         elif file_name in ["shorteners.txt", "shorteners"]:
             shorteners_list.clear()
@@ -1119,10 +1119,10 @@ async def update_private_file(_, message, pre_message):
             ).wait()
         elif file_name == "list_drives.txt":
             list_drives_dict.clear()
-            if GDRIVE_ID := config_dict["GDRIVE_ID"]:
+            if GDRIVE_ID := config_dict.get("GDRIVE_ID"):
                 list_drives_dict["Main"] = {
                     "drive_id": GDRIVE_ID,
-                    "index_link": config_dict["INDEX_URL"],
+                    "index_link": config_dict.get("INDEX_URL", ""),
                 }
             async with aiopen("list_drives.txt", "r+") as f:
                 lines = await f.readlines()
@@ -1136,10 +1136,10 @@ async def update_private_file(_, message, pre_message):
                     }
         elif file_name == "categories.txt":
             categories_dict.clear()
-            if GDRIVE_ID := config_dict["GDRIVE_ID"]:
+            if GDRIVE_ID := config_dict.get("GDRIVE_ID"):
                 categories_dict["Root"] = {
                     "drive_id": GDRIVE_ID,
-                    "index_link": config_dict["INDEX_URL"],
+                    "index_link": config_dict.get("INDEX_URL", ""),
                 }
             async with aiopen("categories.txt", "r+") as f:
                 lines = await f.readlines()
@@ -1178,7 +1178,7 @@ async def update_private_file(_, message, pre_message):
         elif file_name == "config.env":
             load_dotenv("config.env", override=True)
             await load_config()
-        if "@github.com" in config_dict["UPSTREAM_REPO"]:
+        if "@github.com" in (config_dict.get("UPSTREAM_REPO") or ""):
             buttons = ButtonMaker()
             msg = "<i>Do you want to Upload (Git Push) your file to <b>UPSTREAM_REPO</b> ?</i>"
             buttons.ibutton("Yes!", f"botset push {file_name}")
@@ -1272,7 +1272,7 @@ async def edit_bot_settings(client, query):
             await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
         elif data[2] == "BASE_URL_PORT":
             value = 80
-            if config_dict["BASE_URL"]:
+            if config_dict.get("BASE_URL"):
                 await (
                     await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")
                 ).wait()
@@ -1285,9 +1285,9 @@ async def edit_bot_settings(client, query):
             if "Root" in categories_dict:
                 del categories_dict["Root"]
         elif data[2] == "INDEX_URL":
-            if (GDRIVE_ID := config_dict["GDRIVE_ID"]) and "Main" in list_drives_dict:
+            if (GDRIVE_ID := config_dict.get("GDRIVE_ID")) and "Main" in list_drives_dict:
                 list_drives_dict["Main"] = {"drive_id": GDRIVE_ID, "index_link": ""}
-            if (GDRIVE_ID := config_dict["GDRIVE_ID"]) and "Root" in categories_dict:
+            if (GDRIVE_ID := config_dict.get("GDRIVE_ID")) and "Root" in categories_dict:
                 categories_dict["Root"] = {"drive_id": GDRIVE_ID, "index_link": ""}
         elif data[2] == "INCOMPLETE_TASK_NOTIFIER" and DATABASE_URL:
             await DbManger().trunc_table("tasks")
