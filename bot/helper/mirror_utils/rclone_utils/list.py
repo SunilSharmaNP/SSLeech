@@ -18,6 +18,7 @@ from bot.helper.telegram_helper.message_utils import (
     deleteMessage,
 )
 from bot.helper.ext_utils.bot_utils import (
+from bot import BinConfig
     cmd_exec,
     new_thread,
     get_readable_file_size,
@@ -219,7 +220,7 @@ class RcloneList:
         elif self.list_status == "rcu":
             self.item_type == "--dirs-only"
         cmd = [
-            "rclone",
+            BinConfig.RCLONE_NAME,
             "lsjson",
             self.item_type,
             "--fast-list",
