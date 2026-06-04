@@ -11,11 +11,11 @@ from ..status_utils.yt_dlp_download_status import YtDlpDownloadStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.ext_utils.bot_utils import sync_to_async, async_to_sync
 from bot.helper.ext_utils.task_manager import (
-from bot import BinConfig
     is_queued,
     stop_duplicate_check,
     limit_checker,
 )
+from bot import BinConfig
 
 LOGGER = getLogger(__name__)
 
