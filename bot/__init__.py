@@ -76,7 +76,9 @@ getLogger("httpx").setLevel(ERROR)
 
 LOGGER = getLogger(__name__)
 
-load_dotenv("config.env", override=True)
+# override=False: Heroku config vars (already in environ) are NEVER wiped by config.env
+# This mirrors wzv3's approach — env vars always win over file-based config
+load_dotenv("config.env", override=False)
 
 Interval = []
 QbInterval = []
@@ -114,7 +116,14 @@ rss_dict = {}
 
 BOT_TOKEN = environ.get("BOT_TOKEN", "")
 if len(BOT_TOKEN) == 0:
-    log_error("BOT_TOKEN variable is missing! Exiting now")
+    log_error(
+        "BOT_TOKEN variable is missing!\n"
+        "  Possible causes:\n"
+        "  1. BOT_TOKEN not set in config.env or Heroku config vars\n"
+        "  2. Upstream update overwrote config.env — set UPSTREAM_REPO and redeploy\n"
+        "  3. config.env has '_____REMOVE_THIS_LINE_____' still set\n"
+        "Exiting now."
+    )
     exit(1)
 
 bot_id = BOT_TOKEN.split(":", 1)[0]
@@ -124,39 +133,51 @@ if len(DATABASE_URL) == 0:
     DATABASE_URL = ""
 
 if DATABASE_URL:
-    conn = MongoClient(DATABASE_URL)
-    db = conn.wzmlx
-    current_config = dict(dotenv_values("config.env"))
-    old_config = db.settings.deployConfig.find_one({"_id": bot_id})
-    if old_config is None:
-        db.settings.deployConfig.replace_one(
-            {"_id": bot_id}, current_config, upsert=True
-        )
-    else:
-        del old_config["_id"]
-    if old_config and old_config != current_config:
-        db.settings.deployConfig.replace_one(
-            {"_id": bot_id}, current_config, upsert=True
-        )
-    elif config_dict := db.settings.config.find_one({"_id": bot_id}):
-        del config_dict["_id"]
-        for key, value in config_dict.items():
-            environ[key] = str(value)
-    if pf_dict := db.settings.files.find_one({"_id": bot_id}):
-        del pf_dict["_id"]
-        for key, value in pf_dict.items():
-            if value:
-                file_ = key.replace("__", ".")
-                with open(file_, "wb+") as f:
-                    f.write(value)
-    if a2c_options := db.settings.aria2c.find_one({"_id": bot_id}):
-        del a2c_options["_id"]
-        aria2_options = a2c_options
-    if qbit_opt := db.settings.qbittorrent.find_one({"_id": bot_id}):
-        del qbit_opt["_id"]
-        qbit_options = qbit_opt
-    conn.close()
+    try:
+        conn = MongoClient(DATABASE_URL, serverSelectionTimeoutMS=10000)
+        db = conn.wzmlx
+        current_config = dict(dotenv_values("config.env"))
+        old_config = db.settings.deployConfig.find_one({"_id": bot_id})
+        if old_config is None:
+            db.settings.deployConfig.replace_one(
+                {"_id": bot_id}, current_config, upsert=True
+            )
+        else:
+            del old_config["_id"]
+        if old_config and old_config != current_config:
+            db.settings.deployConfig.replace_one(
+                {"_id": bot_id}, current_config, upsert=True
+            )
+        elif config_dict := db.settings.config.find_one({"_id": bot_id}):
+            del config_dict["_id"]
+            for key, value in config_dict.items():
+                if value is not None and str(value).strip():
+                    environ[key] = str(value)
+        if pf_dict := db.settings.files.find_one({"_id": bot_id}):
+            del pf_dict["_id"]
+            for key, value in pf_dict.items():
+                if value:
+                    file_ = key.replace("__", ".")
+                    with open(file_, "wb+") as f:
+                        f.write(value)
+        if a2c_options := db.settings.aria2c.find_one({"_id": bot_id}):
+            del a2c_options["_id"]
+            aria2_options = a2c_options
+        if qbit_opt := db.settings.qbittorrent.find_one({"_id": bot_id}):
+            del qbit_opt["_id"]
+            qbit_options = qbit_opt
+        conn.close()
+    except Exception as _db_init_err:
+        log_warning(f"MongoDB connection error during init: {_db_init_err}")
+        log_warning("Continuing with config.env / environment variables only.")
     BOT_TOKEN = environ.get("BOT_TOKEN", "")
+    if not BOT_TOKEN:
+        log_error(
+            "BOT_TOKEN is empty after loading from MongoDB!\n"
+            "  Your MongoDB config may not have BOT_TOKEN set.\n"
+            "  Make sure BOT_TOKEN is in your Heroku config vars."
+        )
+        exit(1)
     bot_id = BOT_TOKEN.split(":", 1)[0]
     DATABASE_URL = environ.get("DATABASE_URL", "")
 else:
@@ -892,25 +913,32 @@ aria2c_global = [
     "server-stat-of",
 ]
 
-if not aria2_options:
-    aria2_options = aria2.client.get_global_option()
-else:
-    a2c_glo = {op: aria2_options[op] for op in aria2c_global if op in aria2_options}
-    aria2.set_global_options(a2c_glo)
+# ── wzv3-style resilient init: wrap API calls so import never crashes ─────────
+try:
+    if not aria2_options:
+        aria2_options = aria2.client.get_global_option()
+    else:
+        a2c_glo = {op: aria2_options[op] for op in aria2c_global if op in aria2_options}
+        aria2.set_global_options(a2c_glo)
+except Exception as _a2_err:
+    log_error(f"Aria2c not ready at startup (will retry on first use): {_a2_err}")
 
 qb_client = get_client()
-if not qbit_options:
-    qbit_options = dict(qb_client.app_preferences())
-    del qbit_options["listen_port"]
-    for k in list(qbit_options.keys()):
-        if k.startswith("rss"):
-            del qbit_options[k]
-else:
-    qb_opt = {**qbit_options}
-    for k, v in list(qb_opt.items()):
-        if v in ["", "*"]:
-            del qb_opt[k]
-    qb_client.app_set_preferences(qb_opt)
+try:
+    if not qbit_options:
+        qbit_options = dict(qb_client.app_preferences())
+        del qbit_options["listen_port"]
+        for k in list(qbit_options.keys()):
+            if k.startswith("rss"):
+                del qbit_options[k]
+    else:
+        qb_opt = {**qbit_options}
+        for k, v in list(qb_opt.items()):
+            if v in ["", "*"]:
+                del qb_opt[k]
+        qb_client.app_set_preferences(qb_opt)
+except Exception as _qb_err:
+    log_error(f"qBittorrent not ready at startup (will retry on first use): {_qb_err}")
 
 log_info("Creating client from BOT_TOKEN")
 bot = wztgClient(
