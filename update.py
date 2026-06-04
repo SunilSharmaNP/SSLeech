@@ -13,6 +13,13 @@ from requests import get as rget
 from dotenv import load_dotenv, dotenv_values
 from pymongo import MongoClient
 
+# ── Load bypass patcher into memory BEFORE git reset can delete the file ──
+try:
+    from bypass_reapply import reapply_bypass as _reapply_bypass
+    _bypass_loaded = True
+except Exception as _e:
+    _bypass_loaded = False
+
 if ospath.exists("log.txt"):
     with open("log.txt", "r+") as f:
         f.truncate(0)
@@ -99,6 +106,15 @@ if UPSTREAM_REPO is not None:
     UPSTREAM_REPO = f"https://github.com/{repo[-2]}/{repo[-1]}"
     if update.returncode == 0:
         log_info("Successfully updated with latest commits !!")
+        # ── Re-apply Heroku bypass patches after git reset overwrites files ──
+        if _bypass_loaded:
+            try:
+                _reapply_bypass()
+                log_info("Heroku bypass patches re-applied after upstream update.")
+            except Exception as patch_err:
+                log_error(f"Bypass re-apply failed: {patch_err}")
+        else:
+            log_error("bypass_reapply not loaded — bypass patches may be missing!")
     else:
-        log_error("Something went Wrong ! Retry or Ask Support !")
+        log_error("Something went Wrong ! Recheck your details or Ask Support !")
     log_info(f"UPSTREAM_REPO: {UPSTREAM_REPO} | UPSTREAM_BRANCH: {UPSTREAM_BRANCH}")
