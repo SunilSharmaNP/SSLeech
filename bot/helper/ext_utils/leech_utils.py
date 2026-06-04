@@ -22,6 +22,7 @@ from bot.helper.ext_utils.bot_utils import (
 )
 from bot.helper.ext_utils.fs_utils import ARCH_EXT, get_mime_type
 from bot.helper.ext_utils.telegraph_helper import telegraph
+from bot import BinConfig
 
 
 async def is_multi_streams(path):
@@ -161,7 +162,7 @@ async def get_audio_thumb(audio_file):
         await mkdir(des_dir)
     des_dir = ospath.join(des_dir, f"{time()}.jpg")
     cmd = [
-        "ffmpeg",
+        BinConfig.FFMPEG_NAME,
         "-hide_banner",
         "-loglevel",
         "error",
@@ -191,7 +192,7 @@ async def take_ss(video_file, duration=None, total=1, gen_ss=False):
         duration = 3
     duration = duration - (duration * 2 / 100)
     cmd = [
-        "ffmpeg",
+        BinConfig.FFMPEG_NAME,
         "-hide_banner",
         "-loglevel",
         "error",
@@ -276,7 +277,7 @@ async def split_file(
             parted_name = f"{base_name}.part{i:03}{extension}"
             out_path = ospath.join(dirpath, parted_name)
             cmd = [
-                "ffmpeg",
+                BinConfig.FFMPEG_NAME,
                 "-hide_banner",
                 "-loglevel",
                 "error",
