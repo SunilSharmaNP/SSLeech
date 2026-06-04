@@ -11,6 +11,7 @@ from logging import getLogger
 from bot import config_dict, GLOBAL_EXTENSION_FILTER
 from bot.helper.ext_utils.bot_utils import cmd_exec, sync_to_async
 from bot.helper.ext_utils.fs_utils import get_mime_type, count_files_and_folders
+from bot import BinConfig
 
 
 LOGGER = getLogger(__name__)
@@ -199,7 +200,7 @@ class RcloneTransferHelper:
             destination = epath
 
         cmd = [
-            "rclone",
+            BinConfig.RCLONE_NAME,
             "lsjson",
             "--fast-list",
             "--no-mimetype",
@@ -347,7 +348,7 @@ class RcloneTransferHelper:
             else:
                 destination = f"{oremote}:{self.name}"
 
-            cmd = ["rclone", "link", "--config", oconfig_path, destination]
+            cmd = [BinConfig.RCLONE_NAME, "link", "--config", oconfig_path, destination]
             res, err, code = await cmd_exec(cmd)
 
             if code == 0:
@@ -417,7 +418,7 @@ class RcloneTransferHelper:
                 if mime_type != "Folder":
                     destination += f"/{self.name}" if dst_path else self.name
 
-                cmd = ["rclone", "link", "--config", config_path, destination]
+                cmd = [BinConfig.RCLONE_NAME, "link", "--config", config_path, destination]
                 res, err, code = await cmd_exec(cmd)
 
                 if self.__is_cancelled:
@@ -436,7 +437,7 @@ class RcloneTransferHelper:
     def __getUpdatedCommand(config_path, source, destination, rcflags, method):
         ext = "*.{" + ",".join(GLOBAL_EXTENSION_FILTER) + "}"
         cmd = [
-            "rclone",
+            BinConfig.RCLONE_NAME,
             method,
             "--fast-list",
             "--config",
