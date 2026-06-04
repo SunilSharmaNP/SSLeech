@@ -168,8 +168,12 @@ class DbManger:
     async def update_pm_users(self, user_id):
         if self.__err:
             return
-        if not bool(await self.__db.pm_users[bot_id].find_one({"_id": user_id})):
-            await self.__db.pm_users[bot_id].insert_one({"_id": user_id})
+        result = await self.__db.pm_users[bot_id].update_one(
+            {"_id": user_id},
+            {"$setOnInsert": {"_id": user_id}},
+            upsert=True,
+        )
+        if result.upserted_id is not None:
             LOGGER.info(f"New PM User Added : {user_id}")
         self.__conn.close
 
