@@ -16,6 +16,7 @@ from bot.helper.ext_utils.task_manager import is_queued, stop_duplicate_check
 from bot.helper.mirror_utils.status_utils.rclone_status import RcloneStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.mirror_utils.rclone_utils.transfer import RcloneTransferHelper
+from bot import BinConfig
 
 
 async def add_rclone_download(rc_path, config_path, path, name, listener):
@@ -23,7 +24,7 @@ async def add_rclone_download(rc_path, config_path, path, name, listener):
     rc_path = rc_path.strip("/")
 
     cmd1 = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "lsjson",
         "--fast-list",
         "--stat",
@@ -34,7 +35,7 @@ async def add_rclone_download(rc_path, config_path, path, name, listener):
         f"{remote}:{rc_path}",
     ]
     cmd2 = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "size",
         "--fast-list",
         "--json",
