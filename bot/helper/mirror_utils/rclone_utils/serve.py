@@ -4,6 +4,7 @@ from aiofiles import open as aiopen
 from configparser import ConfigParser
 
 from bot import config_dict, bot_loop
+from bot import BinConfig
 
 RcloneServe = []
 
@@ -35,7 +36,7 @@ async def rclone_serve_booter():
         except Exception:
             pass
     cmd = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "serve",
         "http",
         "--config",
