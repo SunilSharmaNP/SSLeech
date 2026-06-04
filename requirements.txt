@@ -2,6 +2,7 @@ aiohttp[speedups]
 aiofiles
 aioshutil
 anytree==2.8.0
+imdbinfo
 apscheduler
 aria2p
 asyncio
