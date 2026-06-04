@@ -12,7 +12,7 @@ from sys import exit as sexit
 from bot import bot_cache
 
 from .exceptions import NotSupportedExtractionArchive
-from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER
+from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER, BinConfig
 from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec
 
 ARCH_EXT = [
@@ -118,7 +118,7 @@ def exit_clean_up(signal, frame):
     try:
         LOGGER.info("Please wait, while we clean up and stop the running downloads")
         clean_all()
-        srun(["pkill", "-9", "-f", "gunicorn|aria2c|qbittorrent-nox|ffmpeg"])
+        srun(["pkill", "-9", "-f", f"gunicorn|{BinConfig.ARIA2_NAME}|{BinConfig.QBIT_NAME}|{BinConfig.FFMPEG_NAME}"])
         sexit(0)
     except KeyboardInterrupt:
         LOGGER.warning("Force Exiting before the cleanup finishes!")
