@@ -861,7 +861,7 @@ def get_client():
 
 def aria2c_init():
     try:
-        log_info("Initializing Aria2c")
+        log_info("Initializing download engine")
         link = "https://linuxmint.com/torrents/lmde-5-cinnamon-64bit.iso.torrent"
         dire = DOWNLOAD_DIR.rstrip("/")
         aria2.add_uris([link], {"dir": dire})
@@ -870,7 +870,7 @@ def aria2c_init():
         sleep(10)
         aria2.remove(downloads, force=True, files=True, clean=True)
     except Exception as e:
-        log_error(f"Aria2c initializing error: {e}")
+        log_error(f"Download engine initializing error: {e}")
 
 
 Thread(target=aria2c_init).start()
