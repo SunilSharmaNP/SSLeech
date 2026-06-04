@@ -2,7 +2,12 @@
 from secrets import token_hex
 from aiofiles.os import makedirs
 from asyncio import Event
-from mega import MegaApi, MegaListener, MegaRequest, MegaTransfer, MegaError
+try:
+    from mega import MegaApi, MegaListener, MegaRequest, MegaTransfer, MegaError
+    MEGA_AVAILABLE = True
+except ImportError:
+    MegaApi = MegaListener = MegaRequest = MegaTransfer = MegaError = None
+    MEGA_AVAILABLE = False
 
 from bot import (
     LOGGER,
