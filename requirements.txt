@@ -11,12 +11,10 @@ cloudscraper
 cryptography
 dnspython
 feedparser
-flask
-gevent
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+fastapi
+uvicorn
 gunicorn
+uvloop
 git+https://github.com/zevtyardt/lk21.git
 httpx
 langcodes[data]
@@ -38,9 +36,9 @@ requests
 speedtest-cli
 telegraph
 tenacity
-tgcrypto
+pytgcrypto
 uv
-uvloop==0.21.0
 xattr
 yt-dlp[default,curl-cffi]
 pytz
+tzlocal
