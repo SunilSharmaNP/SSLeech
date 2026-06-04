@@ -3,7 +3,7 @@ import platform
 from base64 import b64encode
 from datetime import datetime
 from os import path as ospath
-from pkg_resources import get_distribution, DistributionNotFound
+from importlib.metadata import version as pkg_version, PackageNotFoundError
 from aiofiles import open as aiopen
 from aiofiles.os import remove as aioremove, path as aiopath, mkdir
 from re import match as re_match
@@ -219,23 +219,23 @@ def get_all_versions():
     except FileNotFoundError:
         vr = ""
     try:
-        vpy = get_distribution("pyrogram").version
-    except DistributionNotFound:
+        vpy = pkg_version("pyrogram")
+    except PackageNotFoundError:
         try:
-            vpy = get_distribution("pyrofork").version
-        except DistributionNotFound:
+            vpy = pkg_version("pyrofork")
+        except PackageNotFoundError:
             vpy = "2.xx.xx"
     bot_cache["eng_versions"] = {
         "p7zip": vp,
         "ffmpeg": vf,
         "rclone": vr,
         "aria": aria2.client.get_version()["version"],
-        "aiohttp": get_distribution("aiohttp").version,
-        "gapi": get_distribution("google-api-python-client").version,
+        "aiohttp": pkg_version("aiohttp"),
+        "gapi": pkg_version("google-api-python-client"),
         "mega": MegaApi("test").getVersion() if MegaApi else "N/A",
         "qbit": get_client().app.version,
         "pyro": vpy,
-        "ytdlp": get_distribution("yt-dlp").version,
+        "ytdlp": pkg_version("yt-dlp"),
     }
 
 
@@ -1041,4 +1041,285 @@ async def set_commands(client):
         await client.set_bot_commands(bot_cmds)
         LOGGER.info("Bot Commands have been Set & Updated")
     except Exception as err:
+        wdate.year
+            and userdate.month <= nowdate.month
+            and userdate.day < nowdate.day
+        ):
+            task, lsize, msize = 0, 0, 0
+            if increase_task:
+                task = 1
+            elif upleech != 0:
+                lsize += upleech
+            elif upmirror != 0:
+                msize += upmirror
+        elif increase_task:
+            task += 1
+        elif upleech != 0:
+            lsize += upleech
+        elif upmirror != 0:
+            msize += upmirror
+    elif increase_task:
+        task += 1
+    elif upleech != 0:
+        lsize += upleech
+    elif upmirror != 0:
+        msize += upmirror
+    update_user_ldata(user_id, "dly_tasks", [datetime.now(), task, lsize, msize])
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+    if check_leech:
+        return lsize
+    elif check_mirror:
+        return msize
+    return task
+
+
+async def fetch_user_tds(user_id, force=False):
+    user_dict = user_data.get(user_id, {})
+    if config_dict["USER_TD_MODE"] and user_dict.get("td_mode", False) or force:
+        return user_dict.get("user_tds", {})
+    return {}
+
+
+async def fetch_user_dumps(user_id):
+    user_dict = user_data.get(user_id, {})
+    if dumps := user_dict.get("ldump", False):
+        if not isinstance(dumps, dict):
+            update_user_ldata(user_id, "ldump", {})
+            return {}
+        return dumps
+    return {}
+
+
+async def checking_access(user_id, button=None):
+    if not config_dict["TOKEN_TIMEOUT"] or bool(
+        user_id == OWNER_ID
+        or user_id in user_data
+        and user_data[user_id].get("is_sudo")
+    ):
+        return None, button
+    user_data.setdefault(user_id, {})
+    data = user_data[user_id]
+    expire = data.get("time")
+    if (
+        config_dict["LOGIN_PASS"] is not None
+        and data.get("token", "") == config_dict["LOGIN_PASS"]
+    ):
+        return None, button
+    isExpired = (
+        expire is None
+        or expire is not None
+        and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
+    )
+    if isExpired:
+        token = data["token"] if expire is None and "token" in data else str(uuid4())
+        if expire is not None:
+            del data["time"]
+        data["token"] = token
+        user_data[user_id].update(data)
+        if button is None:
+            button = ButtonMaker()
+        encrypt_url = b64encode(f"{token}&&{user_id}".encode()).decode()
+        button.ubutton(
+            "Generate New Token",
+            short_url(f"https://t.me/{bot_name}?start={encrypt_url}"),
+        )
+        return (
+            f'<i>Temporary Token has been expired,</i> Kindly generate a New Temp Token to start using bot Again.\n<b>Validity :</b> <code>{get_readable_time(config_dict["TOKEN_TIMEOUT"])}</code>',
+            button,
+        )
+    return None, button
+
+
+def extra_btns(buttons, already=False):
+    if extra_buttons and not already:
+        for btn_name, btn_url in extra_buttons.items():
+            buttons.ubutton(btn_name, btn_url, "l_body")
+    return buttons, True
+
+
+async def set_commands(client):
+    if not config_dict["SET_COMMANDS"]:
+        return
+    try:
+        bot_cmds = [
+            BotCommand(
+                BotCommands.MirrorCommand[0],
+                f"or /{BotCommands.MirrorCommand[1]} Mirror [links/media/rclone_path]",
+            ),
+            BotCommand(
+                BotCommands.LeechCommand[0],
+                f"or /{BotCommands.LeechCommand[1]} Leech [links/media/rclone_path]",
+            ),
+            BotCommand(
+                BotCommands.QbMirrorCommand[0],
+                f"or /{BotCommands.QbMirrorCommand[1]} Mirror magnet/torrent using qBittorrent",
+            ),
+            BotCommand(
+                BotCommands.QbLeechCommand[0],
+                f"or /{BotCommands.QbLeechCommand[1]} Leech magnet/torrent using qBittorrent",
+            ),
+            BotCommand(
+                BotCommands.YtdlCommand[0],
+                f"or /{BotCommands.YtdlCommand[1]} Mirror yt-dlp supported links via bot",
+            ),
+            BotCommand(
+                BotCommands.YtdlLeechCommand[0],
+                f"or /{BotCommands.YtdlLeechCommand[1]} Leech yt-dlp supported links via bot",
+            ),
+            BotCommand(
+                BotCommands.CloneCommand[0],
+                f"or /{BotCommands.CloneCommand[1]} Copy file/folder to Drive (GDrive/RClone)",
+            ),
+            BotCommand(
+                BotCommands.CountCommand,
+                "[drive_url]: Count file/folder of Google Drive/RClone Drives",
+            ),
+            BotCommand(
+                BotCommands.StatusCommand[0],
+                f"or /{BotCommands.StatusCommand[1]} Get Bot All Status Stats Message",
+            ),
+            BotCommand(
+                BotCommands.StatsCommand[0],
+                f"or /{BotCommands.StatsCommand[1]} Check Bot & System stats",
+            ),
+            BotCommand(
+                BotCommands.BtSelectCommand,
+                "Select files to download only torrents/magnet qbit/aria2c",
+            ),
+            BotCommand(
+                BotCommands.CategorySelect,
+                "Select Upload Category with UserTD or Bot Categories to upload only GDrive upload",
+            ),
+            BotCommand(BotCommands.CancelMirror, "Cancel a Task of yours!"),
+            BotCommand(
+                BotCommands.CancelAllCommand[0],
+                "Cancel all Tasks in whole Bots.",
+            ),
+            BotCommand(BotCommands.ListCommand, "Search in Drive(s)"),
+            BotCommand(
+                BotCommands.SearchCommand,
+                "Search in Torrent via qBit clients!",
+            ),
+            BotCommand(
+                BotCommands.HelpCommand,
+                "Get detailed help about the WZML-X Bot",
+            ),
+            BotCommand(
+                BotCommands.UserSetCommand[0],
+                f"or /{BotCommands.UserSetCommand[1]} User's Personal Settings (Open in PM)",
+            ),
+            BotCommand(
+                BotCommands.IMDBCommand,
+                "Search Movies/Series on IMDB.com and fetch details",
+            ),
+            BotCommand(
+                BotCommands.AniListCommand,
+                "Search Animes on AniList.com and fetch details",
+            ),
+            BotCommand(
+                BotCommands.MyDramaListCommand,
+                "Search Dramas on MyDramaList.com and fetch details",
+            ),
+            BotCommand(
+                BotCommands.SpeedCommand[0],
+                f"or /{BotCommands.SpeedCommand[1]} Check Server Up & Down Speed & Details",
+            ),
+            BotCommand(
+                BotCommands.MediaInfoCommand[0],
+                f"or /{BotCommands.MediaInfoCommand[1]} Generate Mediainfo for Replied Media or DL links",
+            ),
+            BotCommand(
+                BotCommands.BotSetCommand[0],
+                f"or /{BotCommands.BotSetCommand[1]} Bot's Personal Settings (Owner or Sudo Only)",
+            ),
+            BotCommand(
+                BotCommands.RestartCommand[0],
+                f"or /{BotCommands.RestartCommand[1]} Restart & Update the Bot (Owner or Sudo Only)",
+            ),
+        ]
+        if config_dict["SHOW_EXTRA_CMDS"]:
+            bot_cmds.insert(
+                1,
+                BotCommand(
+                    BotCommands.MirrorCommand[2],
+                    f"or /{BotCommands.MirrorCommand[3]} Mirror and UnZip [links/media/rclone_path]",
+                ),
+            )
+            bot_cmds.insert(
+                1,
+                BotCommand(
+                    BotCommands.MirrorCommand[4],
+                    f"or /{BotCommands.MirrorCommand[5]} Mirror and Zip [links/media/rclone_path]",
+                ),
+            )
+            bot_cmds.insert(
+                4,
+                BotCommand(
+                    BotCommands.LeechCommand[2],
+                    f"or /{BotCommands.LeechCommand[3]} Leech and UnZip [links/media/rclone_path]",
+                ),
+            )
+            bot_cmds.insert(
+                4,
+                BotCommand(
+                    BotCommands.LeechCommand[4],
+                    f"or /{BotCommands.LeechCommand[5]} Leech and Zip [links/media/rclone_path]",
+                ),
+            )
+            bot_cmds.insert(
+                7,
+                BotCommand(
+                    BotCommands.QbMirrorCommand[2],
+                    f"or /{BotCommands.QbMirrorCommand[3]} Mirror magnet/torrent and UnZip using qBit",
+                ),
+            )
+            bot_cmds.insert(
+                7,
+                BotCommand(
+                    BotCommands.QbMirrorCommand[4],
+                    f"or /{BotCommands.QbMirrorCommand[5]} Mirror magnet/torrent and Zip using qBit",
+                ),
+            )
+            bot_cmds.insert(
+                10,
+                BotCommand(
+                    BotCommands.QbLeechCommand[2],
+                    f"or /{BotCommands.QbLeechCommand[3]} Leech magnet/torrent and UnZip using qBit",
+                ),
+            )
+            bot_cmds.insert(
+                10,
+                BotCommand(
+                    BotCommands.QbLeechCommand[4],
+                    f"or /{BotCommands.QbLeechCommand[5]} Leech magnet/torrent and Zip using qBit",
+                ),
+            )
+            bot_cmds.insert(
+                13,
+                BotCommand(
+                    BotCommands.YtdlCommand[2],
+                    f"or /{BotCommands.YtdlCommand[3]} Mirror yt-dlp supported links and Zip via bot",
+                ),
+            )
+            bot_cmds.insert(
+                13,
+                BotCommand(
+                    BotCommands.YtdlLeechCommand[2],
+                    f"or /{BotCommands.YtdlLeechCommand[3]} Leech yt-dlp supported links and Zip via bot",
+                ),
+            )
+        await client.set_bot_commands(bot_cmds)
+        LOGGER.info("Bot Commands have been Set & Updated")
+    except Exception as err:
+        LOGGER.error(err)
+  await client.set_bot_commands(bot_cmds)
+        LOGGER  await client.set_bot_commands(bot_cmds)
+        LOGGER.set_bot_commands(bot_cmds)
+        LOGGER          ),
+            )
+        await client.set_bot_commands(bot_cmds)
+        LOGGER      )
+        await client.set_bot_commands(bot_cmds)
+        LOGGERclient.set_bot_commands(bot_cmds)
         LOGGER.error(err)
