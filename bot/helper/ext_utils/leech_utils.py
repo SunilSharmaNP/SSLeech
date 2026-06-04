@@ -421,7 +421,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
     if remname:
         if not remname.startswith("|"):
             remname = f"|{remname}"
-        remname = remname.replace("\s", " ")
+        remname = remname.replace("\\s", " ")
         slit = remname.split("|")
         __newFileName = ospath.splitext(file_)[0]
         for rep in range(1, len(slit)):
@@ -437,13 +437,13 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
 
     nfile_ = file_
     if prefix:
-        nfile_ = prefix.replace("\s", " ") + file_
-        prefix = re_sub(r"<.*?>", "", prefix).replace("\s", " ")
+        nfile_ = prefix.replace("\\s", " ") + file_
+        prefix = re_sub(r"<.*?>", "", prefix).replace("\\s", " ")
         if not file_.startswith(prefix):
             file_ = f"{prefix}{file_}"
 
     if suffix and not isMirror:
-        suffix = suffix.replace("\s", " ")
+        suffix = suffix.replace("\\s", " ")
         sufLen = len(suffix)
         fileDict = file_.split(".")
         _extIn = 1 + len(fileDict[-1])
@@ -455,7 +455,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
             )
         file_ = _newExtFileName
     elif suffix:
-        suffix = suffix.replace("\s", " ")
+        suffix = suffix.replace("\\s", " ")
         file_ = (
             f"{ospath.splitext(file_)[0]}{suffix}{ospath.splitext(file_)[1]}"
             if "." in file_
@@ -473,10 +473,10 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
             return f"{{{match.group(1).lower()}}}"
 
         lcaption = (
-            lcaption.replace("\|", "%%")
-            .replace("\{", "&%&")
-            .replace("\}", "$%$")
-            .replace("\s", " ")
+            lcaption.replace("\\|", "%%")
+            .replace("\\{", "&%&")
+            .replace("\\}", "$%$")
+            .replace("\\s", " ")
         )
         slit = lcaption.split("|")
         slit[0] = re_sub(r"\{([^}]+)\}", lowerVars, slit[0])
