@@ -7,6 +7,7 @@ from aiofiles.os import path as aiopath
 from cloudscraper import create_scraper as cget
 from json import loads, dumps as jdumps
 
+from bot import BinConfig
 from bot import (
     LOGGER,
     download_dict,
@@ -99,7 +100,7 @@ async def rcloneNode(client, message, link, dst_path, rcf, tag):
     src_path = src_path.strip("/")
 
     cmd = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "lsjson",
         "--fast-list",
         "--stat",
@@ -143,7 +144,7 @@ async def rcloneNode(client, message, link, dst_path, rcf, tag):
         return
     LOGGER.info(f"𝐂ʟᴏɴɪɴɢ 𝐃ᴏɴᴇ: {name}")
     cmd1 = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "lsf",
         "--fast-list",
         "-R",
@@ -153,7 +154,7 @@ async def rcloneNode(client, message, link, dst_path, rcf, tag):
         destination,
     ]
     cmd2 = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "lsf",
         "--fast-list",
         "-R",
@@ -163,7 +164,7 @@ async def rcloneNode(client, message, link, dst_path, rcf, tag):
         destination,
     ]
     cmd3 = [
-        "rclone",
+        BinConfig.RCLONE_NAME,
         "size",
         "--fast-list",
         "--json",
