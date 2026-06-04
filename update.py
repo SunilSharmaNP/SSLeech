@@ -167,6 +167,15 @@ if UPSTREAM_REPO:
     if ospath.exists(".git"):
         srun(["rm", "-rf", ".git"])
 
+    # GIT_TERMINAL_PROMPT=0  → git never tries to open /dev/tty for credentials
+    # GIT_ASKPASS=echo       → if git asks for password, return empty string (silent fail)
+    # These fix "fatal: could not read Username ... No such device or address" on Heroku/Docker
+    _git_env = {
+        **environ,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_ASKPASS": "echo",
+    }
+
     update = srun(
         f'git init -q'
         f' && git config --global user.email bot@ssleech.com'
@@ -177,6 +186,7 @@ if UPSTREAM_REPO:
         f' && git fetch origin -q'
         f' && git reset --hard origin/{UPSTREAM_BRANCH} -q',
         shell=True,
+        env=_git_env,
     )
 
     # ── Restore config.env AFTER git reset (prevents credential wipe) ─────────
