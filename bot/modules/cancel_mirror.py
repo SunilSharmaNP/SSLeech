@@ -108,7 +108,7 @@ async def cancel_all_update(_, query):
 bot.add_handler(
     MessageHandler(
         cancel_mirror,
-        filters=regex(f"^/{BotCommands.CancelMirror}(_\w+)?(?!all)")
+        filters=regex(f"^/{BotCommands.CancelMirror}(_\\w+)?(?!all)")
         & CustomFilters.authorized
         & ~CustomFilters.blacklisted,
     )
