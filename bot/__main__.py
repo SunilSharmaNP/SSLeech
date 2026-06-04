@@ -21,6 +21,7 @@ from pyrogram.filters import command, private, regex
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from bot import (
+    BinConfig,
     bot,
     user,
     bot_name,
@@ -177,7 +178,7 @@ async def restart(client, message):
             interval[0].cancel()
     await sync_to_async(clean_all)
     proc1 = await create_subprocess_exec(
-        "pkill", "-9", "-f", "gunicorn|aria2c|qbittorrent-nox|ffmpeg|rclone"
+        "pkill", "-9", "-f", f"gunicorn|{BinConfig.ARIA2_NAME}|{BinConfig.QBIT_NAME}|{BinConfig.FFMPEG_NAME}|{BinConfig.RCLONE_NAME}"
     )
     proc2 = await create_subprocess_exec("python3", "update.py")
     await gather(proc1.wait(), proc2.wait())
