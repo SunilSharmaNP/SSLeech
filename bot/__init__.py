@@ -3,17 +3,16 @@ import asyncio
 import uvloop
 from socket import setdefaulttimeout
 
-# ✅ Ensure uvloop is installed and event loop initialized
+# wzv3 style: install uvloop FIRST, then create and set a single event loop
+# This event loop is reused everywhere (bot client, APScheduler) — safe on Python 3.14
 try:
     uvloop.install()
 except Exception as e:
-    print(f"[WARNING] uvloop installation failed: {e}")
+    print(f"[WARNING] uvloop not available, using default asyncio loop: {e}")
 
-# ✅ Make sure an event loop exists before Pyrogram loads
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+# Create the single global event loop before anything else imports asyncio internals
+bot_loop = asyncio.new_event_loop()
+asyncio.set_event_loop(bot_loop)
 
 setdefaulttimeout(600)
 
@@ -850,7 +849,7 @@ if BASE_URL:
     )
     Popen("python3 cron_boot.py", shell=True)
 
-srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"])
+srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"], check=False)
 if not ospath.exists(".netrc"):
     with open(".netrc", "w"):
         pass
@@ -949,6 +948,7 @@ bot = wztgClient(
     workers=1000,
     parse_mode=enums.ParseMode.HTML,
 ).start()
-bot_loop = bot.loop
+# bot_loop is already set at module top (wzv3 style) — do NOT use bot.loop
+# bot.loop is deprecated in Python 3.10+ and removed in 3.14
 bot_name = bot.me.username
 scheduler = AsyncIOScheduler(timezone=str(get_localzone()), event_loop=bot_loop)
