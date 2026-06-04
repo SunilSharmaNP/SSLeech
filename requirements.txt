@@ -11,10 +11,9 @@ cloudscraper
 cryptography
 dnspython
 feedparser
-fastapi
-uvicorn
+flask
+gevent
 gunicorn
-uvloop
 git+https://github.com/zevtyardt/lk21.git
 httpx
 langcodes[data]
@@ -37,6 +36,7 @@ speedtest-cli
 telegraph
 tenacity
 pytgcrypto
+uvloop
 uv
 xattr
 yt-dlp[default,curl-cffi]
