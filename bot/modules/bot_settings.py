@@ -1379,7 +1379,7 @@ async def edit_bot_settings(client, query):
         rfunc = partial(update_buttons, message, data[2], data[1], edit_mode)
         await event_handler(client, query, pfunc, rfunc)
     elif data[1] == "showvar":
-        value = config_dict[data[2]]
+        value = config_dict.get(data[2], "")
         if len(str(value)) > 200:
             await query.answer()
             with BytesIO(str.encode(value)) as out_file:
@@ -1441,12 +1441,13 @@ async def edit_bot_settings(client, query):
     elif data[1] == "push":
         await query.answer()
         filename = data[2].rsplit(".zip", 1)[0]
+        _upstream_branch = config_dict.get('UPSTREAM_BRANCH', 'master')
         if await aiopath.exists(filename):
             await (
                 await create_subprocess_shell(
                     f"git add -f {filename} \
                                                    && git commit -sm botsettings -q \
-                                                   && git push origin {config_dict['UPSTREAM_BRANCH']} -qf"
+                                                   && git push origin {_upstream_branch} -qf"
                 )
             ).wait()
         else:
@@ -1454,7 +1455,7 @@ async def edit_bot_settings(client, query):
                 await create_subprocess_shell(
                     f"git rm -r --cached {filename} \
                                                    && git commit -sm botsettings -q \
-                                                   && git push origin {config_dict['UPSTREAM_BRANCH']} -qf"
+                                                   && git push origin {_upstream_branch} -qf"
                 )
             ).wait()
         await deleteMessage(message)
