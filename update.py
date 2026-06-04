@@ -73,15 +73,18 @@ if DATABASE_URL is not None:
 
 UPGRADE_PACKAGES = environ.get("UPGRADE_PACKAGES", "False")
 if UPGRADE_PACKAGES.lower() == "true":
-    # Exclude packages that require source compilation (e.g. lxml needs libxml2-dev)
-    # These are already installed in .venv via Dockerfile pip install
-    _skip_build = {"lxml", "cryptography", "uwsgi"}
+    # --no-build : only pre-built wheels, no source compilation (lxml needs libxml2-dev)
+    # --no-deps  : skip transitive-dep resolution so lxml isn't pulled in indirectly
+    _SKIP_BUILD = {"lxml", "cryptography", "uwsgi", "grpcio"}
     packages = [
         dist.metadata["Name"]
         for dist in distributions()
-        if dist.metadata["Name"].lower() not in _skip_build
+        if dist.metadata["Name"].lower() not in _SKIP_BUILD
     ]
-    scall("uv pip install --system " + " ".join(packages), shell=True)
+    scall(
+        "uv pip install --system --no-build --no-deps " + " ".join(packages),
+        shell=True,
+    )
 
 UPSTREAM_REPO = environ.get("UPSTREAM_REPO", "")
 if len(UPSTREAM_REPO) == 0:
