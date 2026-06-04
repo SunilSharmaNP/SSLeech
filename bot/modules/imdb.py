@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 from contextlib import suppress
 from re import findall, IGNORECASE
-from imdb import Cinemagoer
+try:
+    from imdb import Cinemagoer
+    IMDB_AVAILABLE = True
+except (ImportError, Exception) as e:
+    Cinemagoer = None
+    IMDB_AVAILABLE = False
 from pycountry import countries as conn
 
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
@@ -316,12 +321,16 @@ async def imdb_callback(_, query):
         await query.message.reply_to_message.delete()
 
 
-bot.add_handler(
-    MessageHandler(
-        imdb_search,
-        filters=command(BotCommands.IMDBCommand)
-        & CustomFilters.authorized
-        & ~CustomFilters.blacklisted,
+if IMDB_AVAILABLE:
+    bot.add_handler(
+        MessageHandler(
+            imdb_search,
+            filters=command(BotCommands.IMDBCommand)
+            & CustomFilters.authorized
+            & ~CustomFilters.blacklisted,
+        )
     )
-)
-bot.add_handler(CallbackQueryHandler(imdb_callback, filters=regex(r"^imdb")))
+    bot.add_handler(CallbackQueryHandler(imdb_callback, filters=regex(r"^imdb")))
+else:
+    from bot import LOGGER as _LOGGER
+    _LOGGER.warning("IMDb (Cinemagoer) not available — IMDB commands disabled.")
