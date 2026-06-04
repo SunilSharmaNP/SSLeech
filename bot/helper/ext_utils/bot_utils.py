@@ -11,6 +11,7 @@ from time import time
 from html import escape
 from uuid import uuid4
 from subprocess import run as srun
+from bot import BinConfig
 from psutil import (
     disk_usage,
     disk_io_counters,
@@ -205,12 +206,12 @@ def get_all_versions():
     except FileNotFoundError:
         vp = ""
     try:
-        result = srun(["ffmpeg", "-version"], capture_output=True, text=True)
+        result = srun([BinConfig.FFMPEG_NAME, "-version"], capture_output=True, text=True)
         vf = result.stdout.split("\n")[0].split(" ")[2].split("ubuntu")[0]
     except FileNotFoundError:
         vf = ""
     try:
-        result = srun(["rclone", "version"], capture_output=True, text=True)
+        result = srun([BinConfig.RCLONE_NAME, "version"], capture_output=True, text=True)
         vr = result.stdout.split("\n")[0].split(" ")[1]
     except FileNotFoundError:
         vr = ""
