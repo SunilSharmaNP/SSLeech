@@ -16,7 +16,7 @@ gevent
 gunicorn
 httpx
 langcodes[data]
-lxml
+git+https://github.com/zevtyardt/lk21.git
 motor
 mutagen
 markdown
