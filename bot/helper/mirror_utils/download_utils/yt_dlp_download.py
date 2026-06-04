@@ -11,6 +11,7 @@ from ..status_utils.yt_dlp_download_status import YtDlpDownloadStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.ext_utils.bot_utils import sync_to_async, async_to_sync
 from bot.helper.ext_utils.task_manager import (
+from bot import BinConfig
     is_queued,
     stop_duplicate_check,
     limit_checker,
@@ -144,7 +145,7 @@ class YoutubeDLHelper:
 
     def extractMetaData(self, link, name):
         if link.startswith(("rtmp", "mms", "rstp", "rtmps")):
-            self.opts["external_downloader"] = "ffmpeg"
+            self.opts["external_downloader"] = BinConfig.FFMPEG_NAME
         with YoutubeDL(self.opts) as ydl:
             try:
                 result = ydl.extract_info(link, download=False)
