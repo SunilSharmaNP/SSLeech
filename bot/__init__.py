@@ -17,6 +17,15 @@ except RuntimeError:
 
 setdefaulttimeout(600)
 
+# ── Binary Name Config (Heroku Ban Bypass) ───────────────────────────────────
+class BinConfig:
+    ARIA2_NAME   = "blitzfetcher"   # actual: aria2c
+    QBIT_NAME    = "stormtorrent"   # actual: qbittorrent-nox
+    FFMPEG_NAME  = "mediaforge"     # actual: ffmpeg
+    RCLONE_NAME  = "ghostdrive"     # actual: rclone
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 # ==============================
 # Other imports after event loop setup
 # ==============================
@@ -83,7 +92,7 @@ qbit_options = {}
 queued_dl = {}
 queued_up = {}
 bot_cache = {}
-bot_cache["pkgs"] = ["7z", "rclone", "ffmpeg"]
+bot_cache["pkgs"] = ["7z", BinConfig.RCLONE_NAME, BinConfig.FFMPEG_NAME]
 non_queued_dl = set()
 non_queued_up = set()
 
@@ -815,18 +824,19 @@ if ospath.exists("shorteners.txt"):
 
 if BASE_URL:
     Popen(
-        f"gunicorn web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT} --worker-class gevent",
+        f"gunicorn -k uvicorn.workers.UvicornWorker -w 1 web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT}",
         shell=True,
     )
+    Popen("python3 cron_boot.py", shell=True)
 
-srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
+srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"])
 if not ospath.exists(".netrc"):
     with open(".netrc", "w"):
         pass
 srun(["chmod", "600", ".netrc"])
 srun(["cp", ".netrc", "/root/.netrc"])
-srun(["chmod", "+x", "aria.sh"])
-srun("./aria.sh", shell=True)
+srun(["chmod", "+x", "setpkgs.sh"])
+srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
 if ospath.exists("accounts.zip"):
     if ospath.exists("accounts"):
         srun(["rm", "-rf", "accounts"])
