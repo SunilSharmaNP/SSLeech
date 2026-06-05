@@ -72,7 +72,6 @@ from .modules import (
     torrent_search,
     torrent_select,
     ytdlp,
-    rss,
     shell,
     eval,
     users_settings,
@@ -242,7 +241,7 @@ async def search_images():
             query = query.strip().replace(" ", "+")
             for page in range(1, total_pages + 1):
                 url = f"{base_url}?wallpaper={query}&width=1280&height=720&page={page}"
-                r = rget(url)
+                r = await sync_to_async(rget, url, timeout=10)
                 soup = BeautifulSoup(r.text, "html.parser")
                 images = soup.select(
                     'img[data-src^="https://c4.wallpaperflare.com/wallpaper"]'
@@ -408,11 +407,11 @@ async def main():
         start_cleanup(),
         torrent_search.initiate_search_tools(),
         restart_notification(),
-        search_images(),
         set_commands(bot),
         log_check(),
     )
     await sync_to_async(start_aria2_listener, wait=False)
+    bot.loop.create_task(search_images())
 
     bot.add_handler(
         MessageHandler(start, filters=command(BotCommands.StartCommand) & private)
