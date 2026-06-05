@@ -168,8 +168,20 @@ async def login(_, message):
         await sendMessage(message, BotTheme("LOGIN_USED"))
 
 
+@new_task
 async def restart(client, message):
-    restart_message = await sendMessage(message, BotTheme("RESTARTING"))
+    buttons = ButtonMaker()
+    buttons.ibutton("✅ Yes, Restart!", "botrestart confirm")
+    buttons.ibutton("❌ No, Cancel", "botrestart cancel")
+    await sendMessage(
+        message,
+        "<i>⚠️ Are you sure you want to restart the bot?\n\nAll active tasks will be interrupted.</i>",
+        buttons.build_menu(2),
+    )
+
+
+async def _do_restart(message):
+    restart_message = await sendMessage(message, "<i>🔄 Restarting bot, please wait...</i>")
     if scheduler.running:
         scheduler.shutdown(wait=False)
     await delete_all_messages()
@@ -178,13 +190,28 @@ async def restart(client, message):
             interval[0].cancel()
     await sync_to_async(clean_all)
     proc1 = await create_subprocess_exec(
-        "pkill", "-9", "-f", f"gunicorn|{BinConfig.ARIA2_NAME}|{BinConfig.QBIT_NAME}|{BinConfig.FFMPEG_NAME}|{BinConfig.RCLONE_NAME}"
+        "pkill", "-9", "-f",
+        f"gunicorn|{BinConfig.ARIA2_NAME}|{BinConfig.QBIT_NAME}|{BinConfig.FFMPEG_NAME}|{BinConfig.RCLONE_NAME}",
     )
     proc2 = await create_subprocess_exec("python3", "update.py")
     await gather(proc1.wait(), proc2.wait())
     async with aiopen(".restartmsg", "w") as f:
         await f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
     osexecl(executable, executable, "-m", "bot")
+
+
+@new_task
+async def confirm_restart(_, query):
+    await query.answer()
+    data = query.data.split()
+    message = query.message
+    reply_to = message.reply_to_message
+    if data[1] == "confirm":
+        await deleteMessage(message)
+        await _do_restart(reply_to)
+    else:
+        await deleteMessage(message)
+        await sendMessage(reply_to, "✅ <i>Restart cancelled.</i>")
 
 
 async def ping(_, message):
@@ -391,6 +418,9 @@ async def main():
         MessageHandler(start, filters=command(BotCommands.StartCommand) & private)
     )
     bot.add_handler(CallbackQueryHandler(token_callback, filters=regex(r"^pass")))
+    bot.add_handler(
+        CallbackQueryHandler(confirm_restart, filters=regex(r"^botrestart") & CustomFilters.sudo)
+    )
     bot.add_handler(
         MessageHandler(login, filters=command(BotCommands.LoginCommand) & private)
     )
