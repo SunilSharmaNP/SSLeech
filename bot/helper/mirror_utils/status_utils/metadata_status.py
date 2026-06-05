@@ -4,6 +4,7 @@ from bot import LOGGER
 from bot.helper.ext_utils.bot_utils import (
     EngineStatus,
     get_readable_file_size,
+    get_readable_time,
     MirrorStatus,
 )
 
@@ -21,10 +22,31 @@ class MetadataStatus:
         return self.__gid
 
     def progress(self):
-        return "0"
+        try:
+            mp = getattr(self.__listener, "meta_progress", None)
+            if mp is not None and mp.progress_raw > 0:
+                return f"{round(mp.progress_raw, 2)}%"
+        except Exception:
+            pass
+        return "0%"
 
     def speed(self):
-        return "0"
+        try:
+            mp = getattr(self.__listener, "meta_progress", None)
+            if mp is not None and mp.speed_raw > 0:
+                return f"{get_readable_file_size(mp.speed_raw)}/s"
+        except Exception:
+            pass
+        return "0 B/s"
+
+    def processed_bytes(self):
+        try:
+            mp = getattr(self.__listener, "meta_progress", None)
+            if mp is not None and mp.processed_bytes > 0:
+                return get_readable_file_size(mp.processed_bytes)
+        except Exception:
+            pass
+        return "0 B"
 
     def name(self):
         return self.__name
@@ -33,13 +55,16 @@ class MetadataStatus:
         return get_readable_file_size(self.__size)
 
     def eta(self):
-        return "0s"
+        try:
+            mp = getattr(self.__listener, "meta_progress", None)
+            if mp is not None and mp.eta_raw > 0:
+                return get_readable_time(mp.eta_raw)
+        except Exception:
+            pass
+        return "-"
 
     def status(self):
         return MirrorStatus.STATUS_METADATA
-
-    def processed_bytes(self):
-        return 0
 
     def download(self):
         return self
@@ -49,10 +74,10 @@ class MetadataStatus:
         if self.__listener.suproc is not None:
             try:
                 self.__listener.suproc.kill()
-            except:
+            except Exception:
                 pass
         self.__listener.suproc = "cancelled"
-        await self.__listener.onUploadError("Metada edit stopped by user!")
+        await self.__listener.onUploadError("Metadata edit stopped by user!")
 
     def eng(self):
         return EngineStatus().STATUS_SPLIT_MERGE
