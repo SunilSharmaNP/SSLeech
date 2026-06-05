@@ -34,7 +34,6 @@ from bot import (
     queue_dict_lock,
     bot,
     GLOBAL_EXTENSION_FILTER,
-    cpu_eater_lock,
     same_directory_lock,
 )
 from bot.helper.ext_utils.bot_utils import (
@@ -55,6 +54,7 @@ from bot.helper.ext_utils.fs_utils import (
     is_archive_split,
     join_files,
     edit_metadata,
+    MetaProgress,
 )
 from bot.helper.ext_utils.leech_utils import (
     split_file,
@@ -316,7 +316,6 @@ class MirrorLeechListener:
                 LOGGER.info(f"Extracting: {name}")
                 async with download_dict_lock:
                     download_dict[self.uid] = ExtractStatus(name, size, gid, self)
-                await cpu_eater_lock.acquire()
                 if await aiopath.isdir(dl_path):
                     if self.seed:
                         self.newDir = f"{self.dir}10000"
@@ -409,41 +408,34 @@ class MirrorLeechListener:
                 LOGGER.info("Not any valid archive, uploading file as it is.")
                 self.newDir = ""
                 up_path = dl_path
-            finally:
-                if cpu_eater_lock.locked():
-                    cpu_eater_lock.release()
 
         if metadata := self.user_dict.get("lmeta") or config_dict["METADATA"]:
             meta_path = up_path or dl_path
             self.newDir = f"{self.dir}10000"
             await makedirs(self.newDir, exist_ok=True)
+            self.meta_progress = MetaProgress()
             async with download_dict_lock:
                 download_dict[self.uid] = MetadataStatus(name, size, gid, self)
-            await cpu_eater_lock.acquire()
-            try:
-                if (
-                    await aiopath.isfile(meta_path)
-                    and (await get_document_type(meta_path))[0]
-                ):
-                    base_dir, file_name = ospath.split(meta_path)
-                    outfile = ospath.join(self.newDir, file_name)
-                    await edit_metadata(self, base_dir, meta_path, outfile, metadata)
-                    if self.suproc == "cancelled":
-                        return
-                elif await aiopath.isdir(meta_path):
-                    for dirpath, _, files in await sync_to_async(walk, meta_path):
-                        for file in files:
-                            if self.suproc == "cancelled":
-                                return
-                            video_file = ospath.join(dirpath, file)
-                            if (await get_document_type(video_file))[0]:
-                                outfile = ospath.join(self.newDir, file)
-                                await edit_metadata(
-                                    self, dirpath, video_file, outfile, metadata
-                                )
-            finally:
-                if cpu_eater_lock.locked():
-                    cpu_eater_lock.release()
+            if (
+                await aiopath.isfile(meta_path)
+                and (await get_document_type(meta_path))[0]
+            ):
+                base_dir, file_name = ospath.split(meta_path)
+                outfile = ospath.join(self.newDir, file_name)
+                await edit_metadata(self, base_dir, meta_path, outfile, metadata)
+                if self.suproc == "cancelled":
+                    return
+            elif await aiopath.isdir(meta_path):
+                for dirpath, _, files in await sync_to_async(walk, meta_path):
+                    for file in files:
+                        if self.suproc == "cancelled":
+                            return
+                        video_file = ospath.join(dirpath, file)
+                        if (await get_document_type(video_file))[0]:
+                            outfile = ospath.join(self.newDir, file)
+                            await edit_metadata(
+                                self, dirpath, video_file, outfile, metadata
+                            )
 
         if self.compress:
             pswd = self.compress if isinstance(self.compress, str) else ""
@@ -483,13 +475,8 @@ class MirrorLeechListener:
                 LOGGER.info(f"Zip: orig_path: {dl_path}, zip_path: {up_path}")
             if self.suproc == "cancelled":
                 return
-            await cpu_eater_lock.acquire()
-            try:
-                self.suproc = await create_subprocess_exec(*cmd)
-                code = await self.suproc.wait()
-            finally:
-                if cpu_eater_lock.locked():
-                    cpu_eater_lock.release()
+            self.suproc = await create_subprocess_exec(*cmd)
+            code = await self.suproc.wait()
             if code == -9:
                 return
             elif not self.seed:
@@ -523,13 +510,10 @@ class MirrorLeechListener:
                                         up_name, size, gid, self
                                     )
                                 LOGGER.info(f"Splitting: {up_name}")
-                                await cpu_eater_lock.acquire()
                             res = await split_file(
                                 f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self
                             )
                             if not res:
-                                if cpu_eater_lock.locked():
-                                    cpu_eater_lock.release()
                                 return
                             if res == "errored":
                                 if f_size <= MAX_SPLIT_SIZE:
@@ -537,21 +521,15 @@ class MirrorLeechListener:
                                 try:
                                     await aioremove(f_path)
                                 except Exception:
-                                    if cpu_eater_lock.locked():
-                                        cpu_eater_lock.release()
                                     return
                             elif not self.seed or self.newDir:
                                 try:
                                     await aioremove(f_path)
                                 except Exception:
-                                    if cpu_eater_lock.locked():
-                                        cpu_eater_lock.release()
                                     return
                             else:
                                 m_size.append(f_size)
                                 o_files.append(file_)
-                if checked and cpu_eater_lock.locked():
-                    cpu_eater_lock.release()
 
         up_limit = config_dict["QUEUE_UPLOAD"]
         all_limit = config_dict["QUEUE_ALL"]
