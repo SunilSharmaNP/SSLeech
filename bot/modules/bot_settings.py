@@ -1291,3 +1291,230 @@ async def edit_bot_settings(client, query):
                         Interval.clear()
                         Interval.append(setInterval(value, update_all_messages))
         elif data[2] == "EXTENSION_FILTER":
+            GLOBAL_EXTENSION_FILTER.clear()
+            GLOBAL_EXTENSION_FILTER.extend(["aria2", "!qB"])
+        elif data[2] == "TORRENT_TIMEOUT":
+            downloads = await sync_to_async(aria2.get_downloads)
+            for download in downloads:
+                if not download.is_complete:
+                    try:
+                        await sync_to_async(
+                            aria2.client.change_option,
+                            download.gid,
+                            {"bt-stop-timeout": "0"},
+                        )
+                    except Exception as e:
+                        LOGGER.error(e)
+            aria2_options["bt-stop-timeout"] = "0"
+            if DATABASE_URL:
+                await DbManger().update_aria2("bt-stop-timeout", "0")
+        elif data[2] == "BASE_URL":
+            await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
+        elif data[2] == "BASE_URL_PORT":
+            value = 80
+            if config_dict.get("BASE_URL"):
+                await (
+                    await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")
+                ).wait()
+                await create_subprocess_shell(
+                    "gunicorn web.wserver:app --bind 0.0.0.0:80 --worker-class gevent"
+                )
+        elif data[2] == "GDRIVE_ID":
+            if "Main" in list_drives_dict:
+                del list_drives_dict["Main"]
+            if "Root" in categories_dict:
+                del categories_dict["Root"]
+        elif data[2] == "INDEX_URL":
+            if (GDRIVE_ID := config_dict.get("GDRIVE_ID")) and "Main" in list_drives_dict:
+                list_drives_dict["Main"] = {"drive_id": GDRIVE_ID, "index_link": ""}
+            if (GDRIVE_ID := config_dict.get("GDRIVE_ID")) and "Root" in categories_dict:
+                categories_dict["Root"] = {"drive_id": GDRIVE_ID, "index_link": ""}
+        elif data[2] == "INCOMPLETE_TASK_NOTIFIER" and DATABASE_URL:
+            await DbManger().trunc_table("tasks")
+        config_dict[data[2]] = value
+        await update_buttons(message, data[2], "editvar", False)
+        if DATABASE_URL:
+            await DbManger().update_config({data[2]: value})
+        if data[2] in ["SEARCH_PLUGINS", "SEARCH_API_LINK"]:
+            await initiate_search_tools()
+        elif data[2] in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
+            await start_from_queued()
+        elif data[2] in [
+            "RCLONE_SERVE_URL",
+            "RCLONE_SERVE_PORT",
+            "RCLONE_SERVE_USER",
+            "RCLONE_SERVE_PASS",
+        ]:
+            await rclone_serve_booter()
+    elif data[1] == "resetaria":
+        handler_dict[message.chat.id] = False
+        aria2_defaults = await sync_to_async(aria2.client.get_global_option)
+        if aria2_defaults[data[2]] == aria2_options[data[2]]:
+            await query.answer("Value already same as you added in aria.sh!")
+            return
+        await query.answer()
+        value = aria2_defaults[data[2]]
+        aria2_options[data[2]] = value
+        await update_buttons(message, "aria")
+        downloads = await sync_to_async(aria2.get_downloads)
+        for download in downloads:
+            if not download.is_complete:
+                try:
+                    await sync_to_async(
+                        aria2.client.change_option, download.gid, {data[2]: value}
+                    )
+                except Exception as e:
+                    LOGGER.error(e)
+        if DATABASE_URL:
+            await DbManger().update_aria2(data[2], value)
+    elif data[1] == "emptyaria":
+        handler_dict[message.chat.id] = False
+        await query.answer()
+        aria2_options[data[2]] = ""
+        await update_buttons(message, "aria")
+        downloads = await sync_to_async(aria2.get_downloads)
+        for download in downloads:
+            if not download.is_complete:
+                try:
+                    await sync_to_async(
+                        aria2.client.change_option, download.gid, {data[2]: ""}
+                    )
+                except Exception as e:
+                    LOGGER.error(e)
+        if DATABASE_URL:
+            await DbManger().update_aria2(data[2], "")
+    elif data[1] == "emptyqbit":
+        handler_dict[message.chat.id] = False
+        await query.answer()
+        await sync_to_async(get_client().app_set_preferences, {data[2]: value})
+        qbit_options[data[2]] = ""
+        await update_buttons(message, "qbit")
+        if DATABASE_URL:
+            await DbManger().update_qbittorrent(data[2], "")
+    elif data[1] == "private":
+        handler_dict[message.chat.id] = False
+        await query.answer()
+        await update_buttons(message, data[1])
+        pfunc = partial(update_private_file, pre_message=message)
+        rfunc = partial(update_buttons, message)
+        await event_handler(client, query, pfunc, rfunc, True)
+    elif data[1] == "boolvar":
+        handler_dict[message.chat.id] = False
+        value = data[3] == "on"
+        await query.answer(f"Successfully Var changed to {value}!", show_alert=True)
+        config_dict[data[2]] = value
+        if not value and data[2] == "INCOMPLETE_TASK_NOTIFIER" and DATABASE_URL:
+            await DbManger().trunc_table("tasks")
+        await update_buttons(message, data[2], "editvar", False)
+        if DATABASE_URL:
+            await DbManger().update_config({data[2]: value})
+    elif data[1] == "editvar":
+        handler_dict[message.chat.id] = False
+        await query.answer()
+        edit_mode = len(data) == 4
+        await update_buttons(message, data[2], data[1], edit_mode)
+        if data[2] in bool_vars or not edit_mode:
+            return
+        pfunc = partial(edit_variable, pre_message=message, key=data[2])
+        rfunc = partial(update_buttons, message, data[2], data[1], edit_mode)
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[1] == "showvar":
+        value = config_dict.get(data[2], "")
+        if len(str(value)) > 200:
+            await query.answer()
+            with BytesIO(str.encode(value)) as out_file:
+                out_file.name = f"{data[2]}.txt"
+                await sendFile(message, out_file)
+            return
+        elif value == "":
+            value = None
+        await query.answer(f"{value}", show_alert=True)
+    elif data[1] == "editaria" and (STATE == "edit" or data[2] == "newkey"):
+        handler_dict[message.chat.id] = False
+        await query.answer()
+        await update_buttons(message, data[2], data[1])
+        pfunc = partial(edit_aria, pre_message=message, key=data[2])
+        rfunc = partial(update_buttons, message, "aria")
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[1] == "editaria" and STATE == "view":
+        value = aria2_options[data[2]]
+        if len(str(value)) > 200:
+            await query.answer()
+            with BytesIO(str.encode(value)) as out_file:
+                out_file.name = f"{data[2]}.txt"
+                await sendFile(message, out_file)
+            return
+        elif value == "":
+            value = None
+        await query.answer(f"{value}", show_alert=True)
+    elif data[1] == "editqbit" and STATE == "edit":
+        handler_dict[message.chat.id] = False
+        await query.answer()
+        await update_buttons(message, data[2], data[1])
+        pfunc = partial(edit_qbit, pre_message=message, key=data[2])
+        rfunc = partial(update_buttons, message, "var")
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[1] == "editqbit" and STATE == "view":
+        value = qbit_options[data[2]]
+        if len(str(value)) > 200:
+            await query.answer()
+            with BytesIO(str.encode(value)) as out_file:
+                out_file.name = f"{data[2]}.txt"
+                await sendFile(message, out_file)
+            return
+        elif value == "":
+            value = None
+        await query.answer(f"{value}", show_alert=True)
+    elif data[1] == "edit":
+        await query.answer()
+        globals()["STATE"] = "edit"
+        await update_buttons(message, data[2])
+    elif data[1] == "view":
+        await query.answer()
+        globals()["STATE"] = "view"
+        await update_buttons(message, data[2])
+    elif data[1] == "start":
+        await query.answer()
+        if START != int(data[3]):
+            globals()["START"] = int(data[3])
+            await update_buttons(message, data[2])
+    elif data[1] == "push":
+        await query.answer()
+        filename = data[2].rsplit(".zip", 1)[0]
+        _upstream_branch = config_dict.get('UPSTREAM_BRANCH', 'master')
+        if await aiopath.exists(filename):
+            await (
+                await create_subprocess_shell(
+                    f"git add -f {filename} \
+                                                   && git commit -sm botsettings -q \
+                                                   && git push origin {_upstream_branch} -qf"
+                )
+            ).wait()
+        else:
+            await (
+                await create_subprocess_shell(
+                    f"git rm -r --cached {filename} \
+                                                   && git commit -sm botsettings -q \
+                                                   && git push origin {_upstream_branch} -qf"
+                )
+            ).wait()
+        await deleteMessage(message)
+        await deleteMessage(message.reply_to_message)
+
+
+async def bot_settings(_, message):
+    msg, button = await get_buttons()
+    globals()["START"] = 0
+    await sendMessage(message, msg, button, "IMAGES")
+
+
+bot.add_handler(
+    MessageHandler(
+        bot_settings, filters=command(BotCommands.BotSetCommand) & CustomFilters.sudo
+    )
+)
+bot.add_handler(
+    CallbackQueryHandler(
+        edit_bot_settings, filters=regex("^botset") & CustomFilters.sudo
+    )
+)
