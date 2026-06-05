@@ -123,7 +123,6 @@ cpu_eater_lock = Lock()
 same_directory_lock = Lock()
 status_reply_dict = {}
 download_dict = {}
-rss_dict = {}
 
 BOT_TOKEN = environ.get("BOT_TOKEN", "")
 if len(BOT_TOKEN) == 0:
@@ -423,14 +422,6 @@ STATUS_LIMIT = environ.get("STATUS_LIMIT", "")
 STATUS_LIMIT = 6 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
 
 CMD_SUFFIX = environ.get("CMD_SUFFIX", "")
-
-RSS_CHAT = environ.get("RSS_CHAT", "")
-RSS_CHAT = "" if len(RSS_CHAT) == 0 else RSS_CHAT
-if RSS_CHAT.isdigit() or RSS_CHAT.startswith("-"):
-    RSS_CHAT = int(RSS_CHAT)
-
-RSS_DELAY = environ.get("RSS_DELAY", "")
-RSS_DELAY = 600 if len(RSS_DELAY) == 0 else int(RSS_DELAY)
 
 TORRENT_TIMEOUT = environ.get("TORRENT_TIMEOUT", "")
 TORRENT_TIMEOUT = "" if len(TORRENT_TIMEOUT) == 0 else int(TORRENT_TIMEOUT)
@@ -811,8 +802,6 @@ config_dict = {
     "RCLONE_SERVE_USER": RCLONE_SERVE_USER,
     "RCLONE_SERVE_PASS": RCLONE_SERVE_PASS,
     "RCLONE_SERVE_PORT": RCLONE_SERVE_PORT,
-    "RSS_CHAT": RSS_CHAT,
-    "RSS_DELAY": RSS_DELAY,
     "SAVE_MSG": SAVE_MSG,
     "SAFE_MODE": SAFE_MODE,
     "SEARCH_API_LINK": SEARCH_API_LINK,
