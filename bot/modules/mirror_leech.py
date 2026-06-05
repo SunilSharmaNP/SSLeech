@@ -192,6 +192,32 @@ async def _mirror_leech(
             sameDir = {"total": multi, "tasks": set(), "name": folder_name}
         sameDir["tasks"].add(message.id)
 
+    if isBulk and config_dict.get("DISABLE_BULK"):
+        await sendMessage(message, "❌ Bulk downloads are currently disabled.")
+        return
+
+    if multi > 1 and config_dict.get("DISABLE_MULTI"):
+        await sendMessage(message, "❌ Multi-downloads are currently disabled. Try without the -i flag.")
+        return
+
+    if seed and config_dict.get("DISABLE_SEED"):
+        await sendMessage(message, "❌ Seeding is currently disabled. Try without the -d flag.")
+        seed = False
+        ratio = None
+        seed_time = None
+
+    if isLeech and config_dict.get("DISABLE_LEECH"):
+        await sendMessage(message, "❌ Leech (Telegram upload) is currently disabled. Use mirror instead.")
+        return
+
+    if not isLeech and config_dict.get("DISABLE_MIRROR"):
+        await sendMessage(message, "❌ Mirror (cloud upload) is currently disabled. Use leech instead.")
+        return
+
+    if isQbit and config_dict.get("DISABLE_TORRENTS"):
+        await sendMessage(message, "❌ Torrent (qBittorrent) downloads are currently disabled.")
+        return
+
     if isBulk:
         try:
             bulk = await extract_bulk_links(message, bulk_start, bulk_end)
