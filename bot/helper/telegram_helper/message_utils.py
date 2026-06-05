@@ -72,6 +72,8 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 await sendMessage(message, text, buttons, des_dir)
                 await aioremove(des_dir)
                 return
+            except ReplyMarkupInvalid:
+                raise  # let outer except ReplyMarkupInvalid retry without buttons
             except Exception as e:
                 LOGGER.error(format_exc())
         return await message.reply(
@@ -163,6 +165,9 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
         channel_id, *topic_id = channel_id.split(":")
         topic_id = int(topic_id[0]) if len(topic_id) else None
         chat = await chat_info(channel_id)
+        if chat is None:
+            LOGGER.warning(f"sendMultiMessage: skipping invalid/inaccessible channel {channel_id}")
+            continue
         try:
             if photo:
                 try:
