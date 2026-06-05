@@ -54,7 +54,6 @@ class _BotCommands:
         self.CancelMirror = f"cancel{CMD_SUFFIX}"
         self.CancelAllCommand = [f"cancelall{CMD_SUFFIX}", "cancellallbot"]
         self.ListCommand = f"list{CMD_SUFFIX}"
-        self.SearchCommand = f"search{CMD_SUFFIX}"
         self.StatusCommand = [f"status{CMD_SUFFIX}", f"s{CMD_SUFFIX}", "statusall"]
         self.UsersCommand = f"users{CMD_SUFFIX}"
         self.AuthorizeCommand = [f"authorize{CMD_SUFFIX}", f"a{CMD_SUFFIX}"]
@@ -81,8 +80,6 @@ class _BotCommands:
         self.LoginCommand = "login"
         self.AddImageCommand = f"addimg{CMD_SUFFIX}"
         self.ImagesCommand = f"images{CMD_SUFFIX}"
-        self.IMDBCommand = f"imdb{CMD_SUFFIX}"
-        self.AniListCommand = f"anime{CMD_SUFFIX}"
         self.AnimeHelpCommand = f"animehelp{CMD_SUFFIX}"
         self.MediaInfoCommand = [f"mediainfo{CMD_SUFFIX}", f"mi{CMD_SUFFIX}"]
         self.MyDramaListCommand = f"mdl{CMD_SUFFIX}"
