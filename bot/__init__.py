@@ -864,31 +864,47 @@ if ospath.exists("shorteners.txt"):
             if len(temp) == 2:
                 shorteners_list.append({"domain": temp[0], "api_key": temp[1]})
 
-if BASE_URL:
+# On Heroku, PORT is always set by the platform — start web server even if BASE_URL is
+# not configured. Without this, Heroku web dynos get SIGKILL (exit 137) because nothing
+# binds to $PORT within the 60-second boot window.
+# Also: wserver.py is a Flask (WSGI) app — do NOT use uvicorn.workers.UvicornWorker
+# (that is for ASGI/FastAPI). Standard gunicorn sync workers are correct here.
+_heroku_port = environ.get("PORT", "")
+if BASE_URL or _heroku_port:
+    _bind_port = _heroku_port if _heroku_port else str(BASE_URL_PORT)
     Popen(
-        f"gunicorn -k uvicorn.workers.UvicornWorker -w 1 web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT}",
+        f"gunicorn web.wserver:app --bind 0.0.0.0:{_bind_port} --workers 1 --timeout 120",
         shell=True,
     )
     Popen("python3 cron_boot.py", shell=True)
 
-srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"], check=False)
 if not ospath.exists(".netrc"):
     with open(".netrc", "w"):
         pass
 srun(["chmod", "600", ".netrc"])
 srun(["cp", ".netrc", "/root/.netrc"])
-srun(["chmod", "+x", "setpkgs.sh"])
-srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
-if ospath.exists("accounts.zip"):
-    if ospath.exists("accounts"):
-        srun(["rm", "-rf", "accounts"])
-    srun(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
-    srun(["chmod", "-R", "777", "accounts"])
-    osremove("accounts.zip")
-if not ospath.exists("accounts"):
+
+if not DISABLE_TORRENTS:
+    srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"], check=False)
+    srun(["chmod", "+x", "setpkgs.sh"])
+    srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
+    if ospath.exists("accounts.zip"):
+        if ospath.exists("accounts"):
+            srun(["rm", "-rf", "accounts"])
+        srun(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
+        srun(["chmod", "-R", "777", "accounts"])
+        osremove("accounts.zip")
+    if not ospath.exists("accounts"):
+        config_dict["USE_SERVICE_ACCOUNTS"] = False
+else:
+    log_info("DISABLE_TORRENTS=True — skipping aria2c & qBittorrent startup (saves CPU/RAM)")
     config_dict["USE_SERVICE_ACCOUNTS"] = False
+
 sleep(0.5)
 
+# aria2 and get_client are still defined so existing imports don't break.
+# When DISABLE_TORRENTS=True the processes aren't running, so API calls will
+# fail gracefully (already wrapped in try/except everywhere they're used).
 aria2 = ariaAPI(ariaClient(host="http://localhost", port=6800, secret=""))
 
 
@@ -901,65 +917,64 @@ def get_client():
     )
 
 
-def aria2c_init():
+if not DISABLE_TORRENTS:
+    def aria2c_init():
+        try:
+            log_info("Initializing download engine")
+            link = "https://linuxmint.com/torrents/lmde-5-cinnamon-64bit.iso.torrent"
+            dire = DOWNLOAD_DIR.rstrip("/")
+            aria2.add_uris([link], {"dir": dire})
+            sleep(3)
+            downloads = aria2.get_downloads()
+            sleep(10)
+            aria2.remove(downloads, force=True, files=True, clean=True)
+        except Exception as e:
+            log_error(f"Download engine initializing error: {e}")
+
+    Thread(target=aria2c_init).start()
+    sleep(1.5)
+
+    aria2c_global = [
+        "bt-max-open-files",
+        "download-result",
+        "keep-unfinished-download-result",
+        "log",
+        "log-level",
+        "max-concurrent-downloads",
+        "max-download-result",
+        "max-overall-download-limit",
+        "save-session",
+        "max-overall-upload-limit",
+        "optimize-concurrent-downloads",
+        "save-cookies",
+        "server-stat-of",
+    ]
+
     try:
-        log_info("Initializing download engine")
-        link = "https://linuxmint.com/torrents/lmde-5-cinnamon-64bit.iso.torrent"
-        dire = DOWNLOAD_DIR.rstrip("/")
-        aria2.add_uris([link], {"dir": dire})
-        sleep(3)
-        downloads = aria2.get_downloads()
-        sleep(10)
-        aria2.remove(downloads, force=True, files=True, clean=True)
-    except Exception as e:
-        log_error(f"Download engine initializing error: {e}")
+        if not aria2_options:
+            aria2_options = aria2.client.get_global_option()
+        else:
+            a2c_glo = {op: aria2_options[op] for op in aria2c_global if op in aria2_options}
+            aria2.set_global_options(a2c_glo)
+    except Exception as _a2_err:
+        log_error(f"Aria2c not ready at startup (will retry on first use): {_a2_err}")
 
-
-Thread(target=aria2c_init).start()
-sleep(1.5)
-
-aria2c_global = [
-    "bt-max-open-files",
-    "download-result",
-    "keep-unfinished-download-result",
-    "log",
-    "log-level",
-    "max-concurrent-downloads",
-    "max-download-result",
-    "max-overall-download-limit",
-    "save-session",
-    "max-overall-upload-limit",
-    "optimize-concurrent-downloads",
-    "save-cookies",
-    "server-stat-of",
-]
-
-# ── wzv3-style resilient init: wrap API calls so import never crashes ─────────
-try:
-    if not aria2_options:
-        aria2_options = aria2.client.get_global_option()
-    else:
-        a2c_glo = {op: aria2_options[op] for op in aria2c_global if op in aria2_options}
-        aria2.set_global_options(a2c_glo)
-except Exception as _a2_err:
-    log_error(f"Aria2c not ready at startup (will retry on first use): {_a2_err}")
-
-qb_client = get_client()
-try:
-    if not qbit_options:
-        qbit_options = dict(qb_client.app_preferences())
-        del qbit_options["listen_port"]
-        for k in list(qbit_options.keys()):
-            if k.startswith("rss"):
-                del qbit_options[k]
-    else:
-        qb_opt = {**qbit_options}
-        for k, v in list(qb_opt.items()):
-            if v in ["", "*"]:
-                del qb_opt[k]
-        qb_client.app_set_preferences(qb_opt)
-except Exception as _qb_err:
-    log_error(f"qBittorrent not ready at startup (will retry on first use): {_qb_err}")
+    qb_client = get_client()
+    try:
+        if not qbit_options:
+            qbit_options = dict(qb_client.app_preferences())
+            del qbit_options["listen_port"]
+            for k in list(qbit_options.keys()):
+                if k.startswith("rss"):
+                    del qbit_options[k]
+        else:
+            qb_opt = {**qbit_options}
+            for k, v in list(qb_opt.items()):
+                if v in ["", "*"]:
+                    del qb_opt[k]
+            qb_client.app_set_preferences(qb_opt)
+    except Exception as _qb_err:
+        log_error(f"qBittorrent not ready at startup (will retry on first use): {_qb_err}")
 
 log_info("Creating client from BOT_TOKEN")
 bot = wztgClient(
