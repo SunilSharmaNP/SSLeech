@@ -119,7 +119,6 @@ download_dict_lock = Lock()
 status_reply_dict_lock = Lock()
 queue_dict_lock = Lock()
 qb_listener_lock = Lock()
-cpu_eater_lock = Lock()
 same_directory_lock = Lock()
 status_reply_dict = {}
 download_dict = {}
