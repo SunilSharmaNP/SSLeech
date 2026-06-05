@@ -11,7 +11,7 @@ from time import time
 from html import escape
 from uuid import uuid4
 from subprocess import run as srun
-from bot import BinConfig
+from bot import BinConfig, cpu_no
 from psutil import (
     disk_usage,
     disk_io_counters,
@@ -71,7 +71,7 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.telegraph_helper import telegraph
 from bot.helper.ext_utils.shortners import short_url
 
-THREADPOOL = ThreadPoolExecutor(max_workers=1000)
+THREADPOOL = ThreadPoolExecutor(max_workers=min(32, cpu_no + 4))
 MAGNET_REGEX = r"magnet:\?xt=urn:(btih|btmh):[a-zA-Z0-9]*\s*"
 URL_REGEX = r"^(?!\/)(rtmps?:\/\/|mms:\/\/|rtsp:\/\/|https?:\/\/|ftp:\/\/)?([^\/:]+:[^\/@]+@)?(www\.)?(?=[^\/:\s]+\.[^\/:\s]+)([^\/:\s]+\.[^\/:\s]+)(:\d+)?(\/[^#\s]*[\s\S]*)?(\?[^#\s]*)?(#.*)?$"
 SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB", "EB"]
