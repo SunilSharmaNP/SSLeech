@@ -11,16 +11,12 @@ lxml
 cloudscraper
 cryptography
 dnspython
-feedparser
 flask
 gevent
 gunicorn
 httpx
-langcodes[data]
-git+https://github.com/zevtyardt/lk21.git
 motor
 mutagen
-markdown
 natsort
 pillow
 psutil
