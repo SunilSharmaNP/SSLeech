@@ -310,6 +310,14 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     args = arg_parser(input_list[1:], arg_base)
     cmd = input_list[0].split("@")[0]
 
+    if config_dict.get("DISABLE_YTDLP"):
+        await sendMessage(
+            message,
+            "<b>❌ YT-DLP Disabled!</b>\n\nyt-dlp (YouTube/media URL) downloads are currently disabled by the admin.",
+        )
+        await delete_links(message)
+        return
+
     try:
         multi = int(args["-i"])
     except Exception:
