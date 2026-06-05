@@ -344,10 +344,6 @@ INDEX_URL = environ.get("INDEX_URL", "").rstrip("/")
 if len(INDEX_URL) == 0:
     INDEX_URL = ""
 
-SEARCH_API_LINK = environ.get("SEARCH_API_LINK", "").rstrip("/")
-if len(SEARCH_API_LINK) == 0:
-    SEARCH_API_LINK = ""
-
 CAP_FONT = environ.get("CAP_FONT", "").lower()
 if CAP_FONT.strip() not in ["", "b", "i", "u", "s", "spoiler", "code"]:
     CAP_FONT = "code"
@@ -380,10 +376,6 @@ MIRROR_FILENAME_REMNAME = environ.get("MIRROR_FILENAME_REMNAME", "")
 if len(MIRROR_FILENAME_REMNAME) == 0:
     MIRROR_FILENAME_REMNAME = ""
 
-SEARCH_PLUGINS = environ.get("SEARCH_PLUGINS", "")
-if len(SEARCH_PLUGINS) == 0:
-    SEARCH_PLUGINS = ""
-
 MAX_SPLIT_SIZE = 4194304000 if IS_PREMIUM_USER else 2097152000
 
 LEECH_SPLIT_SIZE = environ.get("LEECH_SPLIT_SIZE", "")
@@ -414,9 +406,6 @@ else:
 YT_DLP_OPTIONS = environ.get("YT_DLP_OPTIONS", "")
 if len(YT_DLP_OPTIONS) == 0:
     YT_DLP_OPTIONS = ""
-
-SEARCH_LIMIT = environ.get("SEARCH_LIMIT", "")
-SEARCH_LIMIT = 0 if len(SEARCH_LIMIT) == 0 else int(SEARCH_LIMIT)
 
 STATUS_LIMIT = environ.get("STATUS_LIMIT", "")
 STATUS_LIMIT = 6 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
@@ -804,9 +793,6 @@ config_dict = {
     "RCLONE_SERVE_PORT": RCLONE_SERVE_PORT,
     "SAVE_MSG": SAVE_MSG,
     "SAFE_MODE": SAFE_MODE,
-    "SEARCH_API_LINK": SEARCH_API_LINK,
-    "SEARCH_LIMIT": SEARCH_LIMIT,
-    "SEARCH_PLUGINS": SEARCH_PLUGINS,
     "SET_COMMANDS": SET_COMMANDS,
     "SHOW_MEDIAINFO": SHOW_MEDIAINFO,
     "SCREENSHOTS_MODE": SCREENSHOTS_MODE,
