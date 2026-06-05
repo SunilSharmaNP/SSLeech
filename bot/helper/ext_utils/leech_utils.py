@@ -12,7 +12,7 @@ from asyncio.subprocess import PIPE
 from telegraph import upload_file
 from langcodes import Language
 
-from bot import LOGGER, MAX_SPLIT_SIZE, config_dict, user_data
+from bot import LOGGER, MAX_SPLIT_SIZE, config_dict, user_data, threads, cpu_eater_lock
 from bot.modules.mediainfo import parseinfo
 from bot.helper.ext_utils.bot_utils import (
     cmd_exec,
@@ -166,6 +166,8 @@ async def get_audio_thumb(audio_file):
         "-hide_banner",
         "-loglevel",
         "error",
+        "-threads",
+        str(threads),
         "-i",
         audio_file,
         "-an",
@@ -173,8 +175,14 @@ async def get_audio_thumb(audio_file):
         "copy",
         des_dir,
     ]
-    status = await create_subprocess_exec(*cmd, stderr=PIPE)
-    if await status.wait() != 0 or not await aiopath.exists(des_dir):
+    await cpu_eater_lock.acquire()
+    try:
+        status = await create_subprocess_exec(*cmd, stderr=PIPE)
+        await status.wait()
+    finally:
+        if cpu_eater_lock.locked():
+            cpu_eater_lock.release()
+    if status.returncode != 0 or not await aiopath.exists(des_dir):
         err = (await status.stderr.read()).decode().strip()
         LOGGER.error(
             f"Error while extracting thumbnail from audio. Name: {audio_file} stderr: {err}"
@@ -196,6 +204,8 @@ async def take_ss(video_file, duration=None, total=1, gen_ss=False):
         "-hide_banner",
         "-loglevel",
         "error",
+        "-threads",
+        str(threads),
         "-ss",
         "",
         "-i",
@@ -281,6 +291,8 @@ async def split_file(
                 "-hide_banner",
                 "-loglevel",
                 "error",
+                "-threads",
+                str(threads),
                 "-ss",
                 str(start_time),
                 "-i",
