@@ -9,7 +9,7 @@ from magic import Magic
 from re import split as re_split, I, search as re_search
 from subprocess import run as srun
 from sys import exit as sexit
-from bot import bot_cache
+from bot import bot_cache, threads, cpu_eater_lock
 
 from .exceptions import NotSupportedExtractionArchive
 from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER, BinConfig
@@ -232,6 +232,8 @@ async def edit_metadata(
         "-hide_banner",
         "-loglevel",
         "error",
+        "-threads",
+        str(threads),
         "-ignore_unknown",
         "-i",
         media_file,
@@ -282,8 +284,13 @@ async def edit_metadata(
         outfile,
         "-y",
     ]
-    listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
-    code = await listener.suproc.wait()
+    await cpu_eater_lock.acquire()
+    try:
+        listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
+        code = await listener.suproc.wait()
+    finally:
+        if cpu_eater_lock.locked():
+            cpu_eater_lock.release()
     if code == 0:
         listener.seed = False
         await clean_target(media_file)
