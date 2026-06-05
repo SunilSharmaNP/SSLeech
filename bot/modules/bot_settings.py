@@ -51,7 +51,6 @@ from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.task_manager import start_from_queued
 from bot.helper.ext_utils.help_messages import default_desp
 from bot.helper.mirror_utils.rclone_utils.serve import rclone_serve_booter
-from bot.modules.torrent_search import initiate_search_tools
 from bot.helper.themes import AVL_THEMES
 
 START = 0
@@ -63,7 +62,6 @@ default_values = {
     "DOWNLOAD_DIR": "/usr/src/app/downloads/",
     "LEECH_SPLIT_SIZE": MAX_SPLIT_SIZE,
     "STATUS_UPDATE_INTERVAL": 10,
-    "SEARCH_LIMIT": 0,
     "UPSTREAM_BRANCH": "master",
     "BOT_THEME": "minimal",
     "BOT_LANG": "en",
@@ -213,9 +211,6 @@ async def load_config():
     if len(INDEX_URL) == 0:
         INDEX_URL = ""
 
-    SEARCH_API_LINK = environ.get("SEARCH_API_LINK", "").rstrip("/")
-    if len(SEARCH_API_LINK) == 0:
-        SEARCH_API_LINK = ""
 
     CAP_FONT = environ.get("CAP_FONT", "").lower()
     if CAP_FONT.strip() not in ["", "b", "i", "u", "s", "spoiler", "code"]:
@@ -249,9 +244,6 @@ async def load_config():
     if len(MIRROR_FILENAME_REMNAME) == 0:
         MIRROR_FILENAME_REMNAME = ""
 
-    SEARCH_PLUGINS = environ.get("SEARCH_PLUGINS", "")
-    if len(SEARCH_PLUGINS) == 0:
-        SEARCH_PLUGINS = ""
 
     MAX_SPLIT_SIZE = 4194304000 if IS_PREMIUM_USER else 2097152000
 
@@ -285,8 +277,6 @@ async def load_config():
     if len(YT_DLP_OPTIONS) == 0:
         YT_DLP_OPTIONS = ""
 
-    SEARCH_LIMIT = environ.get("SEARCH_LIMIT", "")
-    SEARCH_LIMIT = 0 if len(SEARCH_LIMIT) == 0 else int(SEARCH_LIMIT)
 
     STATUS_LIMIT = environ.get("STATUS_LIMIT", "")
     STATUS_LIMIT = 10 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
@@ -782,9 +772,6 @@ async def load_config():
             "RCLONE_SERVE_PORT": RCLONE_SERVE_PORT,
             "SAVE_MSG": SAVE_MSG,
             "SAFE_MODE": SAFE_MODE,
-            "SEARCH_API_LINK": SEARCH_API_LINK,
-            "SEARCH_LIMIT": SEARCH_LIMIT,
-            "SEARCH_PLUGINS": SEARCH_PLUGINS,
             "SET_COMMANDS": SET_COMMANDS,
             "SHOW_MEDIAINFO": SHOW_MEDIAINFO,
             "SCREENSHOTS_MODE": SCREENSHOTS_MODE,
@@ -814,7 +801,7 @@ async def load_config():
 
     if DATABASE_URL:
         await DbManger().update_config(config_dict)
-    await gather(initiate_search_tools(), start_from_queued(), rclone_serve_booter())
+    await gather(start_from_queued(), rclone_serve_booter())
 
 
 async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
@@ -1023,9 +1010,7 @@ async def edit_variable(_, message, pre_message, key):
     await deleteMessage(message)
     if DATABASE_URL:
         await DbManger().update_config({key: value})
-    if key in ["SEARCH_PLUGINS", "SEARCH_API_LINK"]:
-        await initiate_search_tools()
-    elif key in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
+    if key in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
         await start_from_queued()
     elif key in [
         "RCLONE_SERVE_URL",
@@ -1322,9 +1307,7 @@ async def edit_bot_settings(client, query):
         await update_buttons(message, data[2], "editvar", False)
         if DATABASE_URL:
             await DbManger().update_config({data[2]: value})
-        if data[2] in ["SEARCH_PLUGINS", "SEARCH_API_LINK"]:
-            await initiate_search_tools()
-        elif data[2] in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
+        if data[2] in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
             await start_from_queued()
         elif data[2] in [
             "RCLONE_SERVE_URL",
