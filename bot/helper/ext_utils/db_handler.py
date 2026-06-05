@@ -8,7 +8,6 @@ from dotenv import dotenv_values
 from bot import (
     DATABASE_URL,
     user_data,
-    rss_dict,
     LOGGER,
     bot_id,
     config_dict,
@@ -75,15 +74,6 @@ class DbManger:
                     row["rclone"] = rclone_path
                 user_data[uid] = row
             LOGGER.info("Users data has been imported from Database")
-        # Rss Data
-        if await self.__db.rss[bot_id].find_one():
-            # return a dict ==> {_id, title: {link, last_feed, last_name, inf, exf, command, paused}
-            rows = self.__db.rss[bot_id].find({})
-            async for row in rows:
-                user_id = row["_id"]
-                del row["_id"]
-                rss_dict[user_id] = row
-            LOGGER.info("Rss data has been imported from Database.")
         self.__conn.close
 
     async def update_deploy_config(self):
@@ -181,29 +171,6 @@ class DbManger:
         if self.__err:
             return
         await self.__db.pm_users[bot_id].delete_one({"_id": user_id})
-        self.__conn.close
-
-    async def rss_update_all(self):
-        if self.__err:
-            return
-        for user_id in list(rss_dict.keys()):
-            await self.__db.rss[bot_id].replace_one(
-                {"_id": user_id}, rss_dict[user_id], upsert=True
-            )
-        self.__conn.close
-
-    async def rss_update(self, user_id):
-        if self.__err:
-            return
-        await self.__db.rss[bot_id].replace_one(
-            {"_id": user_id}, rss_dict[user_id], upsert=True
-        )
-        self.__conn.close
-
-    async def rss_delete(self, user_id):
-        if self.__err:
-            return
-        await self.__db.rss[bot_id].delete_one({"_id": user_id})
         self.__conn.close
 
     async def add_incomplete_task(self, cid, link, tag, msg_link, msg):
