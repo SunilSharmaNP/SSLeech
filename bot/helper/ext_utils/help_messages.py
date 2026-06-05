@@ -255,30 +255,7 @@ Some links need user access so sure you must add USER_SESSION_STRING for it.
 """,
 ]
 
-RSS_HELP_MESSAGE = """
-➲ <b>Format to adding feed url(s):</b>
-Title1 link (required)
-Title2 link -c cmd -inf xx -exf xx
-Title3 link -c cmd -d ratio:time -z password
-
-➲ <b><i>Argument Details:</i></b>
--c command + any arg
--inf For included words filter.
--exf For excluded words filter.
-
-<b>Example:</b> Title https://www.rss-url.com inf: 1080 or 720 or 144p|mkv or mp4|hevc exf: flv or web|xxx opt: up: mrcc:remote:path/subdir rcf: --buffer-size:8M|key|key:value
-This filter will parse links that it's titles contains `(1080 or 720 or 144p) and (mkv or mp4) and hevc` and doesn't conyain (flv or web) and xxx` words. You can add whatever you want.
-
-Another example: inf:  1080  or 720p|.web. or .webrip.|hvec or x264. This will parse titles that contains ( 1080  or 720p) and (.web. or .webrip.) and (hvec or x264). I have added space before and after 1080 to avoid wrong matching. If this `10805695` number in title it will match 1080 if added 1080 without spaces after it.
-
-➲ <b><i>Filter Notes:</i></b>
-1. | means and.
-2. Add `or` between similar keys, you can add it between qualities or between extensions, so don't add filter like this f: 1080|mp4 or 720|web because this will parse 1080 and (mp4 or 720) and web ... not (1080 and mp4) or (720 and web)."
-3. You can add `or` and `|` as much as you want."
-4. Take look on title if it has static special character after or before the qualities or extensions or whatever and use them in filter to avoid wrong match.
-
-<b>Timeout:</b> 60 sec.
-"""
+RSS_HELP_MESSAGE = ""
 
 CLONE_HELP_MESSAGE = [
     """<i>Send Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link or RClone path along with or by replying to the link/rc_path by command with args.</i>
@@ -365,8 +342,7 @@ help_string = [
 ┠ /{BotCommands.StatsCommand[0]} or /{BotCommands.StatsCommand[1]}: Show Server detailed stats.
 ┖ /{BotCommands.PingCommand[0]} or /{BotCommands.PingCommand[1]}: Check how long it takes to Ping the Bot.
 
-<b>RSS Feed:</b>
-┖ /{BotCommands.RssCommand}: Open RSS Menu (Sub/Unsub/Start/Pause)""",
+""",
     f"""⌬ <b><i>Owner or Sudos Commands!</i></b>
 
 <b>Bot Settings:</b>
@@ -401,9 +377,6 @@ help_string = [
 ┠ /{BotCommands.ExecCommand}: Run Commands In Exec (Only Owner).
 ┠ /{BotCommands.ClearLocalsCommand}: Clear {BotCommands.EvalCommand} or {BotCommands.ExecCommand} locals (Only Owner).
 ┖ /exportsession: Generate User StringSession of Same Pyro Version (Only Owner).
-
-<b>RSS Feed:</b>
-┖ /{BotCommands.RssCommand}: Open RSS Menu (Sub/Unsub/Start/Pause)
 
 <b>Extras:</b>
 ┠ /{BotCommands.AddImageCommand} [url/photo]: Add Images in Bot
@@ -516,8 +489,6 @@ default_desp = {
     "RCLONE_SERVE_USER": "Username for rclone serve authentication.",
     "RCLONE_SERVE_PASS": "Password for rclone serve authentication.",
     "RCLONE_SERVE_PORT": "Which is the RCLONE_SERVE_URL Port. Default is 8080.",
-    "RSS_CHAT_ID": "Chat ID where rss links will be sent. If you want message to be sent to the channel then add channel id. Add -100 before channel id. Int",
-    "RSS_DELAY": "Time in seconds for rss refresh interval. Recommended 900 second at least. Default is 900 in sec. Int",
     "SEARCH_API_LINK": "Search api app link. Get your api from deploying this repository. Supported Sites: 1337x, Piratebay, Nyaasi, Torlock, Torrent Galaxy, Zooqle, Kickass, Bitsearch, MagnetDL, Libgen, YTS, Limetorrent, TorrentFunk, Glodls, TorrentProject and YourBittorrent",
     "SEARCH_LIMIT": "Search limit for search api, limit for each site and not overall result limit. Default is zero (Default api limit for each site).",
     "SEARCH_PLUGINS": "List of qBittorrent search plugins (github raw links). I have added some plugins, you can remove/add plugins as you want.",
