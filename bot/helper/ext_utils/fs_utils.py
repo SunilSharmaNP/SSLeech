@@ -2,18 +2,32 @@
 from os import walk, path as ospath
 from aiofiles.os import remove as aioremove, path as aiopath, listdir, rmdir, makedirs
 from aioshutil import rmtree as aiormtree, move
-from asyncio import create_subprocess_exec
+from asyncio import create_subprocess_exec, gather as asyncio_gather
 from asyncio.subprocess import PIPE
+from time import time as _time
 from shutil import rmtree, disk_usage
 from magic import Magic
 from re import split as re_split, I, search as re_search
 from subprocess import run as srun
 from sys import exit as sexit
-from bot import bot_cache, threads, cpu_eater_lock
+from bot import bot_cache, threads
 
 from .exceptions import NotSupportedExtractionArchive
+
+
 from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER, BinConfig
 from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec
+
+
+class MetaProgress:
+    """Live progress tracker attached to listener.meta_progress during metadata edit."""
+    __slots__ = ("progress_raw", "speed_raw", "processed_bytes", "eta_raw")
+
+    def __init__(self):
+        self.progress_raw: float = 0.0
+        self.speed_raw: int = 0
+        self.processed_bytes: int = 0
+        self.eta_raw: float = 0.0
 
 ARCH_EXT = [
     ".tar.bz2",
@@ -227,78 +241,98 @@ async def join_files(path):
 async def edit_metadata(
     listener, base_dir: str, media_file: str, outfile: str, metadata: str = ""
 ):
+    """Edit file metadata using ffmpeg.
+
+    Progress is tracked via listener.meta_progress (MetaProgress instance).
+    """
+    from bot.helper.ext_utils.leech_utils import get_media_info
+
+    total_dur, *_ = await get_media_info(media_file)
+    total_dur = float(total_dur or 0)
+
     cmd = [
         bot_cache["pkgs"][2],
         "-hide_banner",
-        "-loglevel",
-        "error",
-        "-threads",
-        str(threads),
+        "-loglevel", "error",
+        "-threads", str(threads),
         "-ignore_unknown",
-        "-i",
-        media_file,
-        "-metadata",
-        f"title={metadata}",
-        "-metadata:s:v",
-        f"title={metadata}",
-        "-metadata",
-        "Comment=",
-        "-metadata",
-        "Copyright=",
-        "-metadata",
-        f"AUTHOR=Zyradaex",
-        "-metadata",
-        "Encoded by=",
-        "-metadata",
-        "SYNOPSIS=",
-        "-metadata",
-        "ARTIST=",
-        "-metadata",
-        "PURL=",
-        "-metadata",
-        "Encoded_by=",
-        "-metadata",
-        "Description=",
-        "-metadata",
-        "description=",
-        "-metadata",
-        "SUMMARY=",
-        "-metadata",
-        "WEBSITE=",
-        "-metadata:s:a",
-        f"title={metadata}",
-        "-metadata:s:s",
-        f"title={metadata}",
-        "-map",
-        "0:v:0?",
-        "-map",
-        "0:a:?",
-        "-map",
-        "0:s:?",
-        "-c:v",
-        "copy",
-        "-c:a",
-        "copy",
-        "-c:s",
-        "copy",
+        "-i", media_file,
+        "-metadata", f"title={metadata}",
+        "-metadata:s:v", f"title={metadata}",
+        "-metadata", "Comment=",
+        "-metadata", "Copyright=",
+        "-metadata", f"AUTHOR=Zyradaex",
+        "-metadata", "Encoded by=",
+        "-metadata", "SYNOPSIS=",
+        "-metadata", "ARTIST=",
+        "-metadata", "PURL=",
+        "-metadata", "Encoded_by=",
+        "-metadata", "Description=",
+        "-metadata", "description=",
+        "-metadata", "SUMMARY=",
+        "-metadata", "WEBSITE=",
+        "-metadata:s:a", f"title={metadata}",
+        "-metadata:s:s", f"title={metadata}",
+        "-map", "0:v:0?",
+        "-map", "0:a:?",
+        "-map", "0:s:?",
+        "-c:v", "copy",
+        "-c:a", "copy",
+        "-c:s", "copy",
+        "-progress", "pipe:1",
         outfile,
         "-y",
     ]
-    await cpu_eater_lock.acquire()
-    try:
-        listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
-        code = await listener.suproc.wait()
-    finally:
-        if cpu_eater_lock.locked():
-            cpu_eater_lock.release()
+
+    mp: MetaProgress | None = getattr(listener, "meta_progress", None)
+    t0 = _time()
+
+    proc = await create_subprocess_exec(*cmd, stdout=PIPE, stderr=PIPE)
+    listener.suproc = proc
+
+    async def _track_progress():
+        async for raw in proc.stdout:
+            if mp is None:
+                continue
+            line = raw.decode().strip()
+            k, _, v = line.partition("=")
+            k, v = k.strip(), v.strip()
+            if not k or not v:
+                continue
+            if k == "out_time_ms" and total_dur > 0:
+                try:
+                    elapsed_media = int(v) / 1_000_000
+                    mp.progress_raw = min(elapsed_media / total_dur * 100, 100)
+                    wall = _time() - t0
+                    if wall > 0 and elapsed_media > 0:
+                        mp.eta_raw = max(0.0, (total_dur - elapsed_media) / (elapsed_media / wall))
+                except Exception:
+                    pass
+            elif k == "total_size":
+                try:
+                    mp.processed_bytes = max(int(v), 0)
+                    wall = _time() - t0
+                    if wall > 0:
+                        mp.speed_raw = int(mp.processed_bytes / wall)
+                except Exception:
+                    pass
+
+    await asyncio_gather(proc.wait(), _track_progress())
+    code = proc.returncode
+
     if code == 0:
         listener.seed = False
         await clean_target(media_file)
         await move(outfile, base_dir)
     else:
         await clean_target(outfile)
+        stderr_out = b""
+        try:
+            stderr_out = await proc.stderr.read()
+        except Exception:
+            pass
         LOGGER.error(
             "%s. Changing metadata failed, Path %s",
-            (await listener.suproc.stderr.read()).decode(),
+            stderr_out.decode().strip(),
             media_file,
         )
