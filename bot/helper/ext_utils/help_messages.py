@@ -387,15 +387,8 @@ help_string = [
 ┠ /{BotCommands.SpeedCommand[0]} or /{BotCommands.SpeedCommand[1]}: Check Speed in VPS/Server.
 ┖ /{BotCommands.MediaInfoCommand[0]} or /{BotCommands.MediaInfoCommand[1]} [url/media]: Generate MediaInfo of Media or DL Urls
 
-<b>Torrent/Drive Search:</b>
-┠ /{BotCommands.ListCommand} [query]: Search in Google Drive(s).
-┖ /{BotCommands.SearchCommand} [query]: Search for torrents with API.
-
-<b>Movie/TV Shows/Drama Search:</b>
-┠ /{BotCommands.IMDBCommand}: Search in IMDB.
-┠ /{BotCommands.AniListCommand}: Search for anime in AniList.
-┠ /{BotCommands.AnimeHelpCommand}: Anime help guide.
-┖ /{BotCommands.MyDramaListCommand}: Search in MyDramaList.
+<b>Drive Search:</b>
+┖ /{BotCommands.ListCommand} [query]: Search in Google Drive(s).
 """,
 ]
 
@@ -489,9 +482,6 @@ default_desp = {
     "RCLONE_SERVE_USER": "Username for rclone serve authentication.",
     "RCLONE_SERVE_PASS": "Password for rclone serve authentication.",
     "RCLONE_SERVE_PORT": "Which is the RCLONE_SERVE_URL Port. Default is 8080.",
-    "SEARCH_API_LINK": "Search api app link. Get your api from deploying this repository. Supported Sites: 1337x, Piratebay, Nyaasi, Torlock, Torrent Galaxy, Zooqle, Kickass, Bitsearch, MagnetDL, Libgen, YTS, Limetorrent, TorrentFunk, Glodls, TorrentProject and YourBittorrent",
-    "SEARCH_LIMIT": "Search limit for search api, limit for each site and not overall result limit. Default is zero (Default api limit for each site).",
-    "SEARCH_PLUGINS": "List of qBittorrent search plugins (github raw links). I have added some plugins, you can remove/add plugins as you want.",
     "STATUS_LIMIT": "Limit the no. of tasks shown in status message with buttons. Default is 10. NOTE: Recommended limit is 4 tasks.",
     "STATUS_UPDATE_INTERVAL": "Time in seconds after which the progress/status message will be updated. Recommended 10 seconds at least.",
     "STOP_DUPLICATE": "Bot will check file/folder name in Drive incase uploading to GDRIVE_ID. If it's present in Drive then downloading or cloning will be stopped. (NOTE: Item will be checked using name and not hash, so this feature is not perfect yet). Default is False",
