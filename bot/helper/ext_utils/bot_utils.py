@@ -926,9 +926,13 @@ async def set_commands(client):
                 "Cancel all Tasks in whole Bots.",
             ),
             BotCommand(BotCommands.ListCommand, "Search in Drive(s)"),
-            BotCommand(
-                BotCommands.SearchCommand,
-                "Search in Torrent via qBit clients!",
+            *(
+                [BotCommand(
+                    BotCommands.SearchCommand,
+                    "Search in Torrent via qBit clients!",
+                )]
+                if not config_dict.get("DISABLE_TORRENTS")
+                else []
             ),
             BotCommand(
                 BotCommands.HelpCommand,
