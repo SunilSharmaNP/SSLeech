@@ -40,7 +40,7 @@ from dotenv import load_dotenv, dotenv_values
 from threading import Thread
 from time import sleep, time
 from subprocess import Popen, run as srun
-from os import remove as osremove, path as ospath, environ, getcwd
+from os import remove as osremove, path as ospath, environ, getcwd, cpu_count
 from aria2p import API as ariaAPI, Client as ariaClient
 from qbittorrentapi import Client as qbClient
 from logging import (
@@ -72,12 +72,22 @@ basicConfig(
 getLogger("pyrogram").setLevel(ERROR)
 getLogger("aiohttp").setLevel(ERROR)
 getLogger("httpx").setLevel(ERROR)
+getLogger("requests").setLevel(ERROR)
+getLogger("urllib3").setLevel(ERROR)
+getLogger("pymongo").setLevel(ERROR)
+getLogger("apscheduler").setLevel(ERROR)
 
 LOGGER = getLogger(__name__)
 
 # override=False: Heroku config vars (already in environ) are NEVER wiped by config.env
 # This mirrors wzv3's approach — env vars always win over file-based config
 load_dotenv("config.env", override=False)
+
+# ── wzv3: CPU-aware resource limits ──────────────────────────────────────────
+cpu_no = cpu_count() or 1
+threads = max(1, cpu_no // 2)
+cores = ",".join(str(i) for i in range(threads))
+# ─────────────────────────────────────────────────────────────────────────────
 
 Interval = []
 QbInterval = []
@@ -109,6 +119,8 @@ download_dict_lock = Lock()
 status_reply_dict_lock = Lock()
 queue_dict_lock = Lock()
 qb_listener_lock = Lock()
+cpu_eater_lock = Lock()
+same_directory_lock = Lock()
 status_reply_dict = {}
 download_dict = {}
 rss_dict = {}
@@ -490,6 +502,10 @@ UPSTREAM_BRANCH = environ.get("UPSTREAM_BRANCH", "")
 if len(UPSTREAM_BRANCH) == 0:
     UPSTREAM_BRANCH = "master"
 
+GITHUB_TOKEN = environ.get("GITHUB_TOKEN", "")
+if len(GITHUB_TOKEN) == 0:
+    GITHUB_TOKEN = ""
+
 UPGRADE_PACKAGES = environ.get("UPGRADE_PACKAGES", "")
 UPGRADE_PACKAGES = UPGRADE_PACKAGES.lower() == "true"
 
@@ -559,6 +575,29 @@ DAILY_LEECH_LIMIT = "" if len(DAILY_LEECH_LIMIT) == 0 else float(DAILY_LEECH_LIM
 
 DISABLE_DRIVE_LINK = environ.get("DISABLE_DRIVE_LINK", "")
 DISABLE_DRIVE_LINK = DISABLE_DRIVE_LINK.lower() == "true"
+
+# ── wzv3: Feature disable flags (Heroku load reduction) ──────────────────────
+DISABLE_TORRENTS = environ.get("DISABLE_TORRENTS", "")
+DISABLE_TORRENTS = DISABLE_TORRENTS.lower() == "true"
+
+DISABLE_LEECH = environ.get("DISABLE_LEECH", "")
+DISABLE_LEECH = DISABLE_LEECH.lower() == "true"
+
+DISABLE_BULK = environ.get("DISABLE_BULK", "")
+DISABLE_BULK = DISABLE_BULK.lower() == "true"
+
+DISABLE_MULTI = environ.get("DISABLE_MULTI", "")
+DISABLE_MULTI = DISABLE_MULTI.lower() == "true"
+
+DISABLE_SEED = environ.get("DISABLE_SEED", "")
+DISABLE_SEED = DISABLE_SEED.lower() == "true"
+
+DISABLE_YTDLP = environ.get("DISABLE_YTDLP", "")
+DISABLE_YTDLP = DISABLE_YTDLP.lower() == "true"
+
+DISABLE_MIRROR = environ.get("DISABLE_MIRROR", "")
+DISABLE_MIRROR = DISABLE_MIRROR.lower() == "true"
+# ─────────────────────────────────────────────────────────────────────────────
 
 BOT_THEME = environ.get("BOT_THEME", "")
 if len(BOT_THEME) == 0:
@@ -721,6 +760,13 @@ config_dict = {
     "EXCEP_CHATS": EXCEP_CHATS,
     "BOT_PM": BOT_PM,
     "DISABLE_DRIVE_LINK": DISABLE_DRIVE_LINK,
+    "DISABLE_TORRENTS": DISABLE_TORRENTS,
+    "DISABLE_LEECH": DISABLE_LEECH,
+    "DISABLE_BULK": DISABLE_BULK,
+    "DISABLE_MULTI": DISABLE_MULTI,
+    "DISABLE_SEED": DISABLE_SEED,
+    "DISABLE_YTDLP": DISABLE_YTDLP,
+    "DISABLE_MIRROR": DISABLE_MIRROR,
     "BOT_THEME": BOT_THEME,
     "IMAGES": IMAGES,
     "IMG_SEARCH": IMG_SEARCH,
@@ -787,6 +833,7 @@ config_dict = {
     "TORRENT_TIMEOUT": TORRENT_TIMEOUT,
     "UPSTREAM_REPO": UPSTREAM_REPO,
     "UPSTREAM_BRANCH": UPSTREAM_BRANCH,
+    "GITHUB_TOKEN": GITHUB_TOKEN,
     "UPGRADE_PACKAGES": UPGRADE_PACKAGES,
     "USER_SESSION_STRING": USER_SESSION_STRING,
     "USER_TD_MODE": USER_TD_MODE,
@@ -945,7 +992,7 @@ bot = wztgClient(
     TELEGRAM_API,
     TELEGRAM_HASH,
     bot_token=BOT_TOKEN,
-    workers=1000,
+    workers=min(32, cpu_no + 4),
     parse_mode=enums.ParseMode.HTML,
 ).start()
 # bot_loop is already set at module top (wzv3 style) — do NOT use bot.loop
