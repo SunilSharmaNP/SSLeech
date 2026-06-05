@@ -12,7 +12,7 @@ from asyncio.subprocess import PIPE
 from telegraph import upload_file
 from langcodes import Language
 
-from bot import LOGGER, MAX_SPLIT_SIZE, config_dict, user_data, threads, cpu_eater_lock
+from bot import LOGGER, MAX_SPLIT_SIZE, config_dict, user_data, threads
 from bot.modules.mediainfo import parseinfo
 from bot.helper.ext_utils.bot_utils import (
     cmd_exec,
@@ -175,13 +175,8 @@ async def get_audio_thumb(audio_file):
         "copy",
         des_dir,
     ]
-    await cpu_eater_lock.acquire()
-    try:
-        status = await create_subprocess_exec(*cmd, stderr=PIPE)
-        await status.wait()
-    finally:
-        if cpu_eater_lock.locked():
-            cpu_eater_lock.release()
+    status = await create_subprocess_exec(*cmd, stderr=PIPE)
+    await status.wait()
     if status.returncode != 0 or not await aiopath.exists(des_dir):
         err = (await status.stderr.read()).decode().strip()
         LOGGER.error(
