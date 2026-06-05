@@ -69,8 +69,6 @@ from .modules import (
     cancel_mirror,
     mirror_leech,
     status,
-    torrent_search,
-    torrent_select,
     ytdlp,
     shell,
     eval,
@@ -79,10 +77,7 @@ from .modules import (
     speedtest,
     save_msg,
     images,
-    imdb,
-    anilist,
     mediainfo,
-    mydramalist,
     gen_pyro_sess,
     gd_clean,
     broadcast,
@@ -405,7 +400,6 @@ async def log_check():
 async def main():
     await gather(
         start_cleanup(),
-        torrent_search.initiate_search_tools(),
         restart_notification(),
         set_commands(bot),
         log_check(),
