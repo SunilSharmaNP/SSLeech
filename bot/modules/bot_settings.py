@@ -52,7 +52,6 @@ from bot.helper.ext_utils.task_manager import start_from_queued
 from bot.helper.ext_utils.help_messages import default_desp
 from bot.helper.mirror_utils.rclone_utils.serve import rclone_serve_booter
 from bot.modules.torrent_search import initiate_search_tools
-from bot.modules.rss import addJob
 from bot.helper.themes import AVL_THEMES
 
 START = 0
@@ -63,7 +62,6 @@ default_values = {
     "DEFAULT_UPLOAD": "gd",
     "DOWNLOAD_DIR": "/usr/src/app/downloads/",
     "LEECH_SPLIT_SIZE": MAX_SPLIT_SIZE,
-    "RSS_DELAY": 600,
     "STATUS_UPDATE_INTERVAL": 10,
     "SEARCH_LIMIT": 0,
     "UPSTREAM_BRANCH": "master",
@@ -292,12 +290,6 @@ async def load_config():
 
     STATUS_LIMIT = environ.get("STATUS_LIMIT", "")
     STATUS_LIMIT = 10 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
-
-    RSS_CHAT = environ.get("RSS_CHAT", "")
-    RSS_CHAT = "" if len(RSS_CHAT) == 0 else int(RSS_CHAT)
-
-    RSS_DELAY = environ.get("RSS_DELAY", "")
-    RSS_DELAY = 900 if len(RSS_DELAY) == 0 else int(RSS_DELAY)
 
     CMD_SUFFIX = environ.get("CMD_SUFFIX", "")
 
@@ -788,8 +780,6 @@ async def load_config():
             "RCLONE_SERVE_USER": RCLONE_SERVE_USER,
             "RCLONE_SERVE_PASS": RCLONE_SERVE_PASS,
             "RCLONE_SERVE_PORT": RCLONE_SERVE_PORT,
-            "RSS_CHAT": RSS_CHAT,
-            "RSS_DELAY": RSS_DELAY,
             "SAVE_MSG": SAVE_MSG,
             "SAFE_MODE": SAFE_MODE,
             "SEARCH_API_LINK": SEARCH_API_LINK,
@@ -957,13 +947,10 @@ async def update_buttons(message, key=None, edit_type=None, edit_mode=None):
 async def edit_variable(_, message, pre_message, key):
     handler_dict[message.chat.id] = False
     value = message.text
-    if key == "RSS_DELAY":
-        value = int(value)
-        addJob(value)
-    elif key == "DOWNLOAD_DIR":
+    if key == "DOWNLOAD_DIR":
         if not value.endswith("/"):
             value += "/"
-    elif key in ["LINKS_LOG_ID", "RSS_CHAT"]:
+    elif key == "LINKS_LOG_ID":
         value = int(value)
     elif key == "STATUS_UPDATE_INTERVAL":
         value = int(value)
