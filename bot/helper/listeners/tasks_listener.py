@@ -510,6 +510,11 @@ class MirrorLeechListener:
                                         up_name, size, gid, self
                                     )
                                 LOGGER.info(f"Splitting: {up_name}")
+                            from time import time as _split_time
+                            self.split_current_total = f_size
+                            self.split_current_done = 0
+                            self.split_elapsed = 0
+                            self._split_start = _split_time()
                             res = await split_file(
                                 f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self
                             )
