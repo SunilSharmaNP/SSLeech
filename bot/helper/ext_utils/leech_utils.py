@@ -11,6 +11,7 @@ from asyncio import create_subprocess_exec, create_task, gather, Semaphore
 from asyncio.subprocess import PIPE
 from telegraph import upload_file
 from langcodes import Language
+from time import time as _time
 
 from bot import LOGGER, MAX_SPLIT_SIZE, config_dict, user_data, threads
 from bot.modules.mediainfo import parseinfo
@@ -363,6 +364,14 @@ async def split_file(
                     i,
                     True,
                 )
+            # Update progress tracking on listener
+            try:
+                listener.split_current_done = getattr(listener, "split_current_done", 0) + out_size
+                t0 = getattr(listener, "_split_start", None)
+                if t0 is not None:
+                    listener.split_elapsed = max(_time() - t0, 0.001)
+            except Exception:
+                pass
             lpd = (await get_media_info(out_path))[0]
             if lpd == 0:
                 LOGGER.error(
