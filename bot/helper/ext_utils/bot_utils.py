@@ -287,7 +287,6 @@ def get_readable_message():
             ),
         )
         if download.status() not in [
-            MirrorStatus.STATUS_SPLITTING,
             MirrorStatus.STATUS_SEEDING,
         ]:
             msg += BotTheme("mm")
