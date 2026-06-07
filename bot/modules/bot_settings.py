@@ -46,7 +46,7 @@ from bot.helper.telegram_helper.message_utils import (
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
-from bot.helper.ext_utils.bot_utils import setInterval, sync_to_async, new_thread
+from bot.helper.ext_utils.bot_utils import setInterval, sync_to_async, new_thread, set_commands
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.task_manager import start_from_queued
 from bot.helper.ext_utils.help_messages import default_desp
@@ -890,7 +890,6 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
         buttons.ibutton("Close", "botset close", position="footer")
         if edit_mode and key in [
             "SUDO_USERS",
-            "CMD_SUFFIX",
             "OWNER_ID",
             "USER_SESSION_STRING",
             "TELEGRAM_HASH",
@@ -901,6 +900,8 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
             "DOWNLOAD_DIR",
         ]:
             msg += "<b>Note:</b> Restart required for this edit to take effect!\n\n"
+        elif edit_mode and key == "CMD_SUFFIX":
+            msg += "<b>Note:</b> Bot Commands menu will be updated automatically!\n\n"
         if edit_mode and key not in bool_vars:
             msg += "<i>Send a valid value for the above Var.</i> <b>Timeout:</b> 60 sec"
         if key in bool_vars:
@@ -1010,7 +1011,10 @@ async def edit_variable(_, message, pre_message, key):
     await deleteMessage(message)
     if DATABASE_URL:
         await DbManger().update_config({key: value})
-    if key in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
+    if key == "CMD_SUFFIX":
+        BotCommands.reinit()
+        await set_commands(bot)
+    elif key in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
         await start_from_queued()
     elif key in [
         "RCLONE_SERVE_URL",
