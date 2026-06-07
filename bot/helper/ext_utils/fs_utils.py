@@ -15,7 +15,7 @@ from bot import bot_cache, threads
 from .exceptions import NotSupportedExtractionArchive
 
 
-from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER, BinConfig
+from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER, BinConfig, DISABLE_TORRENTS
 from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec
 
 
@@ -111,7 +111,15 @@ async def clean_download(path):
 
 
 async def start_cleanup():
-    get_client().torrents_delete(torrent_hashes="all")
+    if not DISABLE_TORRENTS:
+        try:
+            get_client().torrents_delete(torrent_hashes="all")
+        except Exception:
+            pass
+        try:
+            aria2.remove_all(True)
+        except Exception:
+            pass
     try:
         await aiormtree(DOWNLOAD_DIR)
     except Exception:
@@ -120,8 +128,15 @@ async def start_cleanup():
 
 
 def clean_all():
-    aria2.remove_all(True)
-    get_client().torrents_delete(torrent_hashes="all")
+    if not DISABLE_TORRENTS:
+        try:
+            aria2.remove_all(True)
+        except Exception:
+            pass
+        try:
+            get_client().torrents_delete(torrent_hashes="all")
+        except Exception:
+            pass
     try:
         rmtree(DOWNLOAD_DIR)
     except Exception:
