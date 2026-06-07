@@ -225,15 +225,23 @@ def get_all_versions():
             vpy = pkg_version("pyrofork")
         except PackageNotFoundError:
             vpy = "2.xx.xx"
+    try:
+        aria_ver = aria2.client.get_version()["version"]
+    except Exception:
+        aria_ver = "N/A"
+    try:
+        qbit_ver = get_client().app.version
+    except Exception:
+        qbit_ver = "N/A"
     bot_cache["eng_versions"] = {
         "p7zip": vp,
         "ffmpeg": vf,
         "rclone": vr,
-        "aria": aria2.client.get_version()["version"],
+        "aria": aria_ver,
         "aiohttp": pkg_version("aiohttp"),
         "gapi": pkg_version("google-api-python-client"),
         "mega": MegaApi("test").getVersion() if MegaApi else "N/A",
-        "qbit": get_client().app.version,
+        "qbit": qbit_ver,
         "pyro": vpy,
         "ytdlp": pkg_version("yt-dlp"),
     }
