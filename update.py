@@ -139,41 +139,21 @@ if UPSTREAM_REPO:
         except Exception as e:
             log_warning(f"Could not backup config.env: {e}")
 
-    # ── Safe display URL (strip token from logs if embedded) ──────────────────
-    # Private repo: embed token directly in UPSTREAM_REPO
-    #   e.g. https://TOKEN@github.com/user/repo
-    # Public repo: plain https://github.com/user/repo
-    _fetch_url = UPSTREAM_REPO
-    if "@github.com" in _fetch_url:
-        # Token is embedded — build a clean URL for display (don't log the token)
-        _parts = _fetch_url.split("@github.com/", 1)
-        _display = f"https://github.com/{_parts[1]}" if len(_parts) == 2 else _fetch_url
-    else:
-        _display = _fetch_url
-
     if ospath.exists(".git"):
         srun(["rm", "-rf", ".git"])
 
-    # GIT_TERMINAL_PROMPT=0  → git never tries to open /dev/tty for credentials
-    # GIT_ASKPASS=echo       → if git asks for password, return empty string (silent fail)
-    # These fix "fatal: could not read Username ... No such device or address" on Heroku/Docker
-    _git_env = {
-        **environ,
-        "GIT_TERMINAL_PROMPT": "0",
-        "GIT_ASKPASS": "echo",
-    }
-
     update = srun(
-        f'git init -q'
-        f' && git config --global user.email bot@ssleech.com'
-        f' && git config --global user.name ssleech-bot'
-        f' && git add .'
-        f' && git commit -sm update -q'
-        f' && git remote add origin {_fetch_url}'
-        f' && git fetch origin -q'
-        f' && git reset --hard origin/{UPSTREAM_BRANCH} -q',
+        [
+            f"git init -q"
+            f" && git config --global user.email bot@ssleech.com"
+            f" && git config --global user.name ssleech-bot"
+            f" && git add ."
+            f" && git commit -sm update -q"
+            f" && git remote add origin {UPSTREAM_REPO}"
+            f" && git fetch origin -q"
+            f" && git reset --hard origin/{UPSTREAM_BRANCH} -q"
+        ],
         shell=True,
-        env=_git_env,
     )
 
     # ── Restore config.env AFTER git reset (prevents credential wipe) ─────────
@@ -185,23 +165,12 @@ if UPSTREAM_REPO:
         except Exception as e:
             log_error(f"Could not restore config.env: {e}")
 
+    # Strip any embedded token from URL before logging (WZML-X style display)
+    repo = UPSTREAM_REPO.split("/")
+    _display = f"https://github.com/{repo[-2]}/{repo[-1]}"
+
     if update.returncode == 0:
-        log_info(f"Upstream updated successfully! Repo: {_display} | Branch: {UPSTREAM_BRANCH}")
-        # Re-apply Heroku bypass patches after git reset
-        if _bypass_loaded:
-            try:
-                _reapply_bypass()
-                log_info("Heroku bypass patches re-applied.")
-            except Exception as e:
-                log_error(f"Bypass re-apply failed: {e}")
-        else:
-            log_warning("bypass_reapply module not loaded — bypass patches may be missing after reset.")
+        log_info("Successfully updated with latest commits !!")
     else:
-        log_error(
-            f"Upstream update FAILED (repo: {_display}, branch: {UPSTREAM_BRANCH}).\n"
-            "  Possible causes:\n"
-            "  1. Private repo — embed token in UPSTREAM_REPO: https://TOKEN@github.com/user/repo\n"
-            "  2. UPSTREAM_BRANCH does not exist on the remote\n"
-            "  3. Invalid UPSTREAM_REPO URL\n"
-            "Bot will continue with current (pre-reset) code."
-        )
+        log_error("Something went Wrong ! Recheck your details or Ask Support !")
+    log_info(f"UPSTREAM_REPO: {_display} | UPSTREAM_BRANCH: {UPSTREAM_BRANCH}")
