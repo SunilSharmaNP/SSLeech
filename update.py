@@ -53,7 +53,6 @@ _VAR_LIST = [
     "UPSTREAM_REPO",
     "UPSTREAM_BRANCH",
     "UPGRADE_PACKAGES",
-    "GITHUB_TOKEN",
 ]
 
 # Step 1: read config.env (strip whitespace, skip dunder keys)
@@ -128,7 +127,6 @@ if (isinstance(UPGRADE_PACKAGES, str) and UPGRADE_PACKAGES.lower() == "true") or
 # ── Upstream repo update ────────────────────────────────────────────────────────
 UPSTREAM_REPO = config_file.get("UPSTREAM_REPO", "").strip()
 UPSTREAM_BRANCH = config_file.get("UPSTREAM_BRANCH", "").strip() or "master"
-GITHUB_TOKEN = config_file.get("GITHUB_TOKEN", "").strip()
 
 if UPSTREAM_REPO:
     # ── Backup config.env BEFORE git reset overwrites it ──────────────────────
@@ -141,28 +139,17 @@ if UPSTREAM_REPO:
         except Exception as e:
             log_warning(f"Could not backup config.env: {e}")
 
-    # ── Build authenticated fetch URL (private repo support) ──────────────────
-    # wzv3 style: embed token in URL. Support three forms:
-    #   a) User sets GITHUB_TOKEN separately  → we embed it automatically
-    #   b) User already embedded token in UPSTREAM_REPO → used as-is
-    #   c) Public repo → no token needed
+    # ── Safe display URL (strip token from logs if embedded) ──────────────────
+    # Private repo: embed token directly in UPSTREAM_REPO
+    #   e.g. https://TOKEN@github.com/user/repo
+    # Public repo: plain https://github.com/user/repo
     _fetch_url = UPSTREAM_REPO
-    if GITHUB_TOKEN and "@github.com" not in _fetch_url:
-        # Token not already embedded — inject it
-        if _fetch_url.startswith("git@github.com:"):
-            # SSH → convert to authenticated HTTPS
-            _fetch_url = _fetch_url.replace(
-                "git@github.com:", f"https://{GITHUB_TOKEN}@github.com/"
-            )
-        elif "github.com" in _fetch_url:
-            from urllib.parse import urlparse, urlunparse
-            _p = urlparse(_fetch_url)
-            _fetch_url = urlunparse(_p._replace(netloc=f"{GITHUB_TOKEN}@{_p.netloc}"))
-        log_info("GITHUB_TOKEN embedded in fetch URL for private repo access.")
-
-    # Safe display URL (never log the token)
-    _parts = UPSTREAM_REPO.rstrip("/").split("/")
-    _display = f"https://github.com/{_parts[-2]}/{_parts[-1]}" if len(_parts) >= 2 else UPSTREAM_REPO
+    if "@github.com" in _fetch_url:
+        # Token is embedded — build a clean URL for display (don't log the token)
+        _parts = _fetch_url.split("@github.com/", 1)
+        _display = f"https://github.com/{_parts[1]}" if len(_parts) == 2 else _fetch_url
+    else:
+        _display = _fetch_url
 
     if ospath.exists(".git"):
         srun(["rm", "-rf", ".git"])
@@ -213,7 +200,7 @@ if UPSTREAM_REPO:
         log_error(
             f"Upstream update FAILED (repo: {_display}, branch: {UPSTREAM_BRANCH}).\n"
             "  Possible causes:\n"
-            "  1. UPSTREAM_REPO is a private repo — set GITHUB_TOKEN in Heroku config vars\n"
+            "  1. Private repo — embed token in UPSTREAM_REPO: https://TOKEN@github.com/user/repo\n"
             "  2. UPSTREAM_BRANCH does not exist on the remote\n"
             "  3. Invalid UPSTREAM_REPO URL\n"
             "Bot will continue with current (pre-reset) code."
