@@ -286,37 +286,41 @@ async def load_config():
     USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
 
     TORRENT_TIMEOUT = environ.get("TORRENT_TIMEOUT", "")
-    downloads = aria2.get_downloads()
-    if len(TORRENT_TIMEOUT) == 0:
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(
-                        aria2.client.change_option,
-                        download.gid,
-                        {"bt-stop-timeout": "0"},
-                    )
-                except Exception as e:
-                    LOGGER.error(e)
-        aria2_options["bt-stop-timeout"] = "0"
-        if DATABASE_URL:
-            await DbManger().update_aria2("bt-stop-timeout", "0")
-        TORRENT_TIMEOUT = ""
-    else:
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(
-                        aria2.client.change_option,
-                        download.gid,
-                        {"bt-stop-timeout": TORRENT_TIMEOUT},
-                    )
-                except Exception as e:
-                    LOGGER.error(e)
-        aria2_options["bt-stop-timeout"] = TORRENT_TIMEOUT
-        if DATABASE_URL:
-            await DbManger().update_aria2("bt-stop-timeout", TORRENT_TIMEOUT)
-        TORRENT_TIMEOUT = int(TORRENT_TIMEOUT)
+    if not config_dict.get("DISABLE_TORRENTS"):
+        try:
+            downloads = aria2.get_downloads()
+        except Exception:
+            downloads = []
+        if len(TORRENT_TIMEOUT) == 0:
+            for download in downloads:
+                if not download.is_complete:
+                    try:
+                        await sync_to_async(
+                            aria2.client.change_option,
+                            download.gid,
+                            {"bt-stop-timeout": "0"},
+                        )
+                    except Exception as e:
+                        LOGGER.error(e)
+            aria2_options["bt-stop-timeout"] = "0"
+            if DATABASE_URL:
+                await DbManger().update_aria2("bt-stop-timeout", "0")
+            TORRENT_TIMEOUT = ""
+        else:
+            for download in downloads:
+                if not download.is_complete:
+                    try:
+                        await sync_to_async(
+                            aria2.client.change_option,
+                            download.gid,
+                            {"bt-stop-timeout": TORRENT_TIMEOUT},
+                        )
+                    except Exception as e:
+                        LOGGER.error(e)
+            aria2_options["bt-stop-timeout"] = TORRENT_TIMEOUT
+            if DATABASE_URL:
+                await DbManger().update_aria2("bt-stop-timeout", TORRENT_TIMEOUT)
+            TORRENT_TIMEOUT = int(TORRENT_TIMEOUT)
 
     QUEUE_ALL = environ.get("QUEUE_ALL", "")
     QUEUE_ALL = "" if len(QUEUE_ALL) == 0 else int(QUEUE_ALL)
@@ -953,18 +957,22 @@ async def edit_variable(_, message, pre_message, key):
                     Interval.append(setInterval(value, update_all_messages))
     elif key == "TORRENT_TIMEOUT":
         value = int(value)
-        downloads = await sync_to_async(aria2.get_downloads)
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(
-                        aria2.client.change_option,
-                        download.gid,
-                        {"bt-stop-timeout": f"{value}"},
-                    )
-                except Exception as e:
-                    LOGGER.error(e)
-        aria2_options["bt-stop-timeout"] = f"{value}"
+        if not config_dict.get("DISABLE_TORRENTS"):
+            try:
+                downloads = await sync_to_async(aria2.get_downloads)
+            except Exception:
+                downloads = []
+            for download in downloads:
+                if not download.is_complete:
+                    try:
+                        await sync_to_async(
+                            aria2.client.change_option,
+                            download.gid,
+                            {"bt-stop-timeout": f"{value}"},
+                        )
+                    except Exception as e:
+                        LOGGER.error(e)
+            aria2_options["bt-stop-timeout"] = f"{value}"
     elif key == "LEECH_SPLIT_SIZE":
         value = min(int(value), MAX_SPLIT_SIZE)
     elif key == "BOT_THEME":
@@ -1037,18 +1045,22 @@ async def edit_aria(_, message, pre_message, key):
         value = "true"
     elif value.lower() == "false":
         value = "false"
-    if key in aria2c_global:
-        await sync_to_async(aria2.set_global_options, {key: value})
-    else:
-        downloads = await sync_to_async(aria2.get_downloads)
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(
-                        aria2.client.change_option, download.gid, {key: value}
-                    )
-                except Exception as e:
-                    LOGGER.error(e)
+    if not config_dict.get("DISABLE_TORRENTS"):
+        try:
+            if key in aria2c_global:
+                await sync_to_async(aria2.set_global_options, {key: value})
+            else:
+                downloads = await sync_to_async(aria2.get_downloads)
+                for download in downloads:
+                    if not download.is_complete:
+                        try:
+                            await sync_to_async(
+                                aria2.client.change_option, download.gid, {key: value}
+                            )
+                        except Exception as e:
+                            LOGGER.error(e)
+        except Exception as e:
+            LOGGER.error(f"aria2 not available (DISABLE_TORRENTS=True?): {e}")
     aria2_options[key] = value
     await update_buttons(pre_message, "aria")
     await deleteMessage(message)
@@ -1067,7 +1079,11 @@ async def edit_qbit(_, message, pre_message, key):
         value = float(value)
     elif value.isdigit():
         value = int(value)
-    await sync_to_async(get_client().app_set_preferences, {key: value})
+    if not config_dict.get("DISABLE_TORRENTS"):
+        try:
+            await sync_to_async(get_client().app_set_preferences, {key: value})
+        except Exception as e:
+            LOGGER.error(f"qBittorrent not available (DISABLE_TORRENTS=True?): {e}")
     qbit_options[key] = value
     await update_buttons(pre_message, "qbit")
     await deleteMessage(message)
@@ -1325,7 +1341,14 @@ async def edit_bot_settings(client, query):
             await rclone_serve_booter()
     elif data[1] == "resetaria":
         handler_dict[message.chat.id] = False
-        aria2_defaults = await sync_to_async(aria2.client.get_global_option)
+        if config_dict.get("DISABLE_TORRENTS"):
+            await query.answer("Torrents are disabled — aria2 settings unavailable!", show_alert=True)
+            return
+        try:
+            aria2_defaults = await sync_to_async(aria2.client.get_global_option)
+        except Exception as e:
+            await query.answer(f"aria2 not reachable: {e}", show_alert=True)
+            return
         if aria2_defaults[data[2]] == aria2_options[data[2]]:
             await query.answer("Value already same as you added in aria.sh!")
             return
@@ -1333,15 +1356,18 @@ async def edit_bot_settings(client, query):
         value = aria2_defaults[data[2]]
         aria2_options[data[2]] = value
         await update_buttons(message, "aria")
-        downloads = await sync_to_async(aria2.get_downloads)
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(
-                        aria2.client.change_option, download.gid, {data[2]: value}
-                    )
-                except Exception as e:
-                    LOGGER.error(e)
+        try:
+            downloads = await sync_to_async(aria2.get_downloads)
+            for download in downloads:
+                if not download.is_complete:
+                    try:
+                        await sync_to_async(
+                            aria2.client.change_option, download.gid, {data[2]: value}
+                        )
+                    except Exception as e:
+                        LOGGER.error(e)
+        except Exception as e:
+            LOGGER.error(f"aria2 get_downloads failed: {e}")
         if DATABASE_URL:
             await DbManger().update_aria2(data[2], value)
     elif data[1] == "emptyaria":
@@ -1349,21 +1375,29 @@ async def edit_bot_settings(client, query):
         await query.answer()
         aria2_options[data[2]] = ""
         await update_buttons(message, "aria")
-        downloads = await sync_to_async(aria2.get_downloads)
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(
-                        aria2.client.change_option, download.gid, {data[2]: ""}
-                    )
-                except Exception as e:
-                    LOGGER.error(e)
+        if not config_dict.get("DISABLE_TORRENTS"):
+            try:
+                downloads = await sync_to_async(aria2.get_downloads)
+                for download in downloads:
+                    if not download.is_complete:
+                        try:
+                            await sync_to_async(
+                                aria2.client.change_option, download.gid, {data[2]: ""}
+                            )
+                        except Exception as e:
+                            LOGGER.error(e)
+            except Exception as e:
+                LOGGER.error(f"aria2 not available (DISABLE_TORRENTS=True?): {e}")
         if DATABASE_URL:
             await DbManger().update_aria2(data[2], "")
     elif data[1] == "emptyqbit":
         handler_dict[message.chat.id] = False
         await query.answer()
-        await sync_to_async(get_client().app_set_preferences, {data[2]: value})
+        if not config_dict.get("DISABLE_TORRENTS"):
+            try:
+                await sync_to_async(get_client().app_set_preferences, {data[2]: value})
+            except Exception as e:
+                LOGGER.error(f"qBittorrent not available (DISABLE_TORRENTS=True?): {e}")
         qbit_options[data[2]] = ""
         await update_buttons(message, "qbit")
         if DATABASE_URL:
