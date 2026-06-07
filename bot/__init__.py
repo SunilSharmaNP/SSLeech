@@ -631,7 +631,7 @@ SAVE_MSG = SAVE_MSG.lower() == "true"
 SAFE_MODE = environ.get("SAFE_MODE", "")
 SAFE_MODE = SAFE_MODE.lower() == "true"
 
-SET_COMMANDS = environ.get("SET_COMMANDS", "")
+SET_COMMANDS = environ.get("SET_COMMANDS", "true")
 SET_COMMANDS = SET_COMMANDS.lower() == "true"
 
 CLEAN_LOG_MSG = environ.get("CLEAN_LOG_MSG", "")
