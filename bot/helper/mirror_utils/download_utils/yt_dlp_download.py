@@ -62,6 +62,7 @@ class YoutubeDLHelper:
         self.name = ""
         self.is_playlist = False
         self.playlist_count = 0
+        self.keep_thumb = False
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self, self.__listener),
@@ -74,6 +75,7 @@ class YoutubeDLHelper:
             "overwrites": True,
             "writethumbnail": True,
             "trim_file_name": 220,
+            "ffmpeg_location": f"/bin/{BinConfig.FFMPEG_NAME}",
             "fragment_retries": 10,
             "retries": 10,
             "retry_sleep_functions": {
@@ -289,7 +291,12 @@ class YoutubeDLHelper:
         if qual.startswith("ba/b"):
             self.name = f"{base_name}{self.__ext}"
 
-        if self.__listener.isLeech:
+        if not self.__listener.isLeech or self.keep_thumb:
+            pass
+        else:
+            self.opts["writethumbnail"] = False
+
+        if self.opts["writethumbnail"]:
             self.opts["postprocessors"].append(
                 {
                     "format": "jpg",
@@ -307,16 +314,14 @@ class YoutubeDLHelper:
             ".m4a",
             ".mp4",
             ".mov",
-            "m4v",
+            ".m4v",
         ]:
             self.opts["postprocessors"].append(
                 {
-                    "already_have_thumbnail": self.__listener.isLeech,
+                    "already_have_thumbnail": self.opts["writethumbnail"],
                     "key": "EmbedThumbnail",
                 }
             )
-        elif not self.__listener.isLeech:
-            self.opts["writethumbnail"] = False
 
         msg, button = await stop_duplicate_check(self.name, self.__listener)
         if msg:
@@ -355,6 +360,21 @@ class YoutubeDLHelper:
             await self.__listener.onDownloadError("Download Cancelled by User!")
 
     def __set_options(self, options):
+        if isinstance(options, dict):
+            for key, value in options.items():
+                if key == "postprocessors":
+                    if isinstance(value, list):
+                        self.opts[key].extend(tuple(value))
+                    elif isinstance(value, dict):
+                        self.opts[key].append(value)
+                elif key == "download_ranges":
+                    if isinstance(value, list):
+                        self.opts[key] = lambda info, ytdl: value
+                else:
+                    if key == "writethumbnail" and value is True:
+                        self.keep_thumb = True
+                    self.opts[key] = value
+            return
         options = options.split("|")
         for opt in options:
             key, value = map(str.strip, opt.split(":", 1))
@@ -378,4 +398,6 @@ class YoutubeDLHelper:
                 elif isinstance(value, dict):
                     self.opts[key].append(value)
             else:
+                if key == "writethumbnail" and value is True:
+                    self.keep_thumb = True
                 self.opts[key] = value
