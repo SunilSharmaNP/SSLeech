@@ -490,7 +490,7 @@ default_desp = {
     "TELEGRAM_HASH": "This is to authenticate your Telegram account for downloading Telegram files. You can get this from https://my.telegram.org.",
     "TIMEZONE": 'Set your Preferred Time Zone for Restart Message. Get yours at <a href="http://www.timezoneconverter.com/cgi-bin/findzone.tzc">Here</a> Str',
     "TORRENT_TIMEOUT": "Timeout of dead torrents downloading with qBittorrent and Aria2c in seconds. Int",
-    "UPSTREAM_REPO": "Your github repository link, if your repo is private add https://username:{githubtoken}@github.com/{username}/{reponame} format. Get token from Github settings. So you can update your bot from filled repository on each restart.",
+    "UPSTREAM_REPO": "Your GitHub repository URL for bot updates on each restart. Public repo: https://github.com/user/repo | Private repo: embed token directly → https://TOKEN@github.com/user/repo (generate token at GitHub → Settings → Developer settings → Personal access tokens → repo scope)",
     "UPSTREAM_BRANCH": "Upstream branch for update. Default is master.",
     "UPGRADE_PACKAGES": "Install New Requirements File without thinking of Crash. Bool",
     "SAVE_MSG": "Add button of save message. Bool",
