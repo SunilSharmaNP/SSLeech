@@ -898,6 +898,9 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
             "DATABASE_URL",
             "BOT_TOKEN",
             "DOWNLOAD_DIR",
+            "UPSTREAM_REPO",
+            "UPSTREAM_BRANCH",
+            "GITHUB_TOKEN",
         ]:
             msg += "<b>Note:</b> Restart required for this edit to take effect!\n\n"
         elif edit_mode and key == "CMD_SUFFIX":
