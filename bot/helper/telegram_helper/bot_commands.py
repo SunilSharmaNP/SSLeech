@@ -1,91 +1,95 @@
 #!/usr/bin/env python3
-from bot import CMD_SUFFIX, config_dict
+from bot import config_dict
 
 
 class _BotCommands:
     def __init__(self):
+        self.reinit()
+
+    def reinit(self):
+        suffix = config_dict.get("CMD_SUFFIX", "")
         self.StartCommand = "start"
-        self.MirrorCommand = [f"mirror{CMD_SUFFIX}", f"m{CMD_SUFFIX}"]
-        self.QbMirrorCommand = [f"qbmirror{CMD_SUFFIX}", f"qm{CMD_SUFFIX}"]
-        self.YtdlCommand = [f"ytdl{CMD_SUFFIX}", f"y{CMD_SUFFIX}"]
-        self.LeechCommand = [f"leech{CMD_SUFFIX}", f"l{CMD_SUFFIX}"]
-        self.QbLeechCommand = [f"qbleech{CMD_SUFFIX}", f"ql{CMD_SUFFIX}"]
-        self.YtdlLeechCommand = [f"ytdlleech{CMD_SUFFIX}", f"yl{CMD_SUFFIX}"]
-        if config_dict["SHOW_EXTRA_CMDS"]:
+        self.MirrorCommand = [f"mirror{suffix}", f"m{suffix}"]
+        self.QbMirrorCommand = [f"qbmirror{suffix}", f"qm{suffix}"]
+        self.YtdlCommand = [f"ytdl{suffix}", f"y{suffix}"]
+        self.LeechCommand = [f"leech{suffix}", f"l{suffix}"]
+        self.QbLeechCommand = [f"qbleech{suffix}", f"ql{suffix}"]
+        self.YtdlLeechCommand = [f"ytdlleech{suffix}", f"yl{suffix}"]
+        if config_dict.get("SHOW_EXTRA_CMDS"):
             self.MirrorCommand.extend(
                 [
-                    f"unzipmirror{CMD_SUFFIX}",
-                    f"uzm{CMD_SUFFIX}",
-                    f"zipmirror{CMD_SUFFIX}",
-                    f"zm{CMD_SUFFIX}",
+                    f"unzipmirror{suffix}",
+                    f"uzm{suffix}",
+                    f"zipmirror{suffix}",
+                    f"zm{suffix}",
                 ]
             )
             self.QbMirrorCommand.extend(
                 [
-                    f"qbunzipmirror{CMD_SUFFIX}",
-                    f"quzm{CMD_SUFFIX}",
-                    f"qbzipmirror{CMD_SUFFIX}",
-                    f"qzm{CMD_SUFFIX}",
+                    f"qbunzipmirror{suffix}",
+                    f"quzm{suffix}",
+                    f"qbzipmirror{suffix}",
+                    f"qzm{suffix}",
                 ]
             )
-            self.YtdlCommand.extend([f"ytdlzip{CMD_SUFFIX}", f"yz{CMD_SUFFIX}"])
+            self.YtdlCommand.extend([f"ytdlzip{suffix}", f"yz{suffix}"])
             self.LeechCommand.extend(
                 [
-                    f"unzipleech{CMD_SUFFIX}",
-                    f"uzl{CMD_SUFFIX}",
-                    f"zipleech{CMD_SUFFIX}",
-                    f"zl{CMD_SUFFIX}",
+                    f"unzipleech{suffix}",
+                    f"uzl{suffix}",
+                    f"zipleech{suffix}",
+                    f"zl{suffix}",
                 ]
             )
             self.QbLeechCommand.extend(
                 [
-                    f"qbunzipleech{CMD_SUFFIX}",
-                    f"quzl{CMD_SUFFIX}",
-                    f"qbzipleech{CMD_SUFFIX}",
-                    f"qzl{CMD_SUFFIX}",
+                    f"qbunzipleech{suffix}",
+                    f"quzl{suffix}",
+                    f"qbzipleech{suffix}",
+                    f"qzl{suffix}",
                 ]
             )
             self.YtdlLeechCommand.extend(
-                [f"ytdlzipleech{CMD_SUFFIX}", f"yzl{CMD_SUFFIX}"]
+                [f"ytdlzipleech{suffix}", f"yzl{suffix}"]
             )
-        self.CloneCommand = [f"clone{CMD_SUFFIX}", f"c{CMD_SUFFIX}"]
-        self.CountCommand = f"count{CMD_SUFFIX}"
-        self.DeleteCommand = f"del{CMD_SUFFIX}"
-        self.CancelMirror = f"cancel{CMD_SUFFIX}"
-        self.CancelAllCommand = [f"cancelall{CMD_SUFFIX}", "cancellallbot"]
-        self.ListCommand = f"list{CMD_SUFFIX}"
-        self.StatusCommand = [f"status{CMD_SUFFIX}", f"s{CMD_SUFFIX}", "statusall"]
-        self.UsersCommand = f"users{CMD_SUFFIX}"
-        self.AuthorizeCommand = [f"authorize{CMD_SUFFIX}", f"a{CMD_SUFFIX}"]
-        self.UnAuthorizeCommand = [f"unauthorize{CMD_SUFFIX}", f"ua{CMD_SUFFIX}"]
-        self.AddBlackListCommand = [f"blacklist{CMD_SUFFIX}", f"bl{CMD_SUFFIX}"]
-        self.RmBlackListCommand = [f"rmblacklist{CMD_SUFFIX}", f"rbl{CMD_SUFFIX}"]
-        self.AddSudoCommand = f"addsudo{CMD_SUFFIX}"
-        self.RmSudoCommand = f"rmsudo{CMD_SUFFIX}"
-        self.PingCommand = [f"ping{CMD_SUFFIX}", f"p{CMD_SUFFIX}"]
-        self.RestartCommand = [f"restart{CMD_SUFFIX}", f"r{CMD_SUFFIX}", "restartall"]
-        self.StatsCommand = [f"stats{CMD_SUFFIX}", f"st{CMD_SUFFIX}"]
-        self.HelpCommand = f"help{CMD_SUFFIX}"
-        self.LogCommand = f"log{CMD_SUFFIX}"
-        self.ShellCommand = f"shell{CMD_SUFFIX}"
-        self.EvalCommand = f"eval{CMD_SUFFIX}"
-        self.ExecCommand = f"exec{CMD_SUFFIX}"
-        self.ClearLocalsCommand = f"clearlocals{CMD_SUFFIX}"
-        self.BotSetCommand = [f"bsetting{CMD_SUFFIX}", f"bs{CMD_SUFFIX}"]
-        self.UserSetCommand = [f"usetting{CMD_SUFFIX}", f"us{CMD_SUFFIX}"]
-        self.BtSelectCommand = f"btsel{CMD_SUFFIX}"
-        self.CategorySelect = f"ctsel{CMD_SUFFIX}"
-        self.SpeedCommand = [f"speedtest{CMD_SUFFIX}", f"sp{CMD_SUFFIX}"]
+        self.CloneCommand = [f"clone{suffix}", f"c{suffix}"]
+        self.CountCommand = f"count{suffix}"
+        self.DeleteCommand = f"del{suffix}"
+        self.CancelMirror = f"cancel{suffix}"
+        self.CancelAllCommand = [f"cancelall{suffix}", "cancellallbot"]
+        self.ListCommand = f"list{suffix}"
+        self.StatusCommand = [f"status{suffix}", f"s{suffix}", "statusall"]
+        self.UsersCommand = f"users{suffix}"
+        self.AuthorizeCommand = [f"authorize{suffix}", f"a{suffix}"]
+        self.UnAuthorizeCommand = [f"unauthorize{suffix}", f"ua{suffix}"]
+        self.AddBlackListCommand = [f"blacklist{suffix}", f"bl{suffix}"]
+        self.RmBlackListCommand = [f"rmblacklist{suffix}", f"rbl{suffix}"]
+        self.AddSudoCommand = f"addsudo{suffix}"
+        self.RmSudoCommand = f"rmsudo{suffix}"
+        self.PingCommand = [f"ping{suffix}", f"p{suffix}"]
+        self.RestartCommand = [f"restart{suffix}", f"r{suffix}", "restartall"]
+        self.StatsCommand = [f"stats{suffix}", f"st{suffix}"]
+        self.HelpCommand = f"help{suffix}"
+        self.LogCommand = f"log{suffix}"
+        self.ShellCommand = f"shell{suffix}"
+        self.EvalCommand = f"eval{suffix}"
+        self.ExecCommand = f"exec{suffix}"
+        self.ClearLocalsCommand = f"clearlocals{suffix}"
+        self.BotSetCommand = [f"bsetting{suffix}", f"bs{suffix}"]
+        self.UserSetCommand = [f"usetting{suffix}", f"us{suffix}"]
+        self.BtSelectCommand = f"btsel{suffix}"
+        self.CategorySelect = f"ctsel{suffix}"
+        self.SpeedCommand = [f"speedtest{suffix}", f"sp{suffix}"]
 
         self.LoginCommand = "login"
-        self.AddImageCommand = f"addimg{CMD_SUFFIX}"
-        self.ImagesCommand = f"images{CMD_SUFFIX}"
-        self.AnimeHelpCommand = f"animehelp{CMD_SUFFIX}"
-        self.MediaInfoCommand = [f"mediainfo{CMD_SUFFIX}", f"mi{CMD_SUFFIX}"]
-        self.MyDramaListCommand = f"mdl{CMD_SUFFIX}"
-        self.GDCleanCommand = [f"gdclean{CMD_SUFFIX}", f"gc{CMD_SUFFIX}"]
-        self.BroadcastCommand = [f"broadcast{CMD_SUFFIX}", f"bc{CMD_SUFFIX}"]
-        self.SearchCommand = f"search{CMD_SUFFIX}"
+        self.AddImageCommand = f"addimg{suffix}"
+        self.ImagesCommand = f"images{suffix}"
+        self.AnimeHelpCommand = f"animehelp{suffix}"
+        self.MediaInfoCommand = [f"mediainfo{suffix}", f"mi{suffix}"]
+        self.MyDramaListCommand = f"mdl{suffix}"
+        self.GDCleanCommand = [f"gdclean{suffix}", f"gc{suffix}"]
+        self.BroadcastCommand = [f"broadcast{suffix}", f"bc{suffix}"]
+        self.SearchCommand = f"search{suffix}"
 
 
 BotCommands = _BotCommands()
