@@ -563,28 +563,51 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         name, link = await _mdisk(link, name)
 
     options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+    ydl_opts = {}
     if opt:
-        yt_opt = opt.split("|")
-        for ytopt in yt_opt:
-            key, value = map(str.strip, ytopt.split(":", 1))
-            if key == "format":
-                if select:
-                    qual = ""
-                elif value.startswith("ba/b-"):
-                    qual = value
+        if opt.strip().startswith("{"):
+            try:
+                ydl_opts = eval(opt)
+                if not isinstance(ydl_opts, dict):
+                    raise ValueError
+            except Exception:
+                ydl_opts = {}
+        if ydl_opts:
+            for key, value in ydl_opts.items():
+                if key in ["postprocessors", "download_ranges"]:
                     continue
-            if value.startswith("^"):
-                if "." in value or value == "^inf":
-                    value = float(value.split("^")[1])
-                else:
-                    value = int(value.split("^")[1])
-            elif value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-            elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
-                value = eval(value)
-            options[key] = value
+                if key == "format":
+                    if select:
+                        qual = ""
+                    elif value.startswith("ba/b-"):
+                        qual = value
+                        continue
+                    else:
+                        qual = value
+                options[key] = value
+        else:
+            yt_opt = opt.split("|")
+            for ytopt in yt_opt:
+                key, value = map(str.strip, ytopt.split(":", 1))
+                if key == "format":
+                    if select:
+                        qual = ""
+                    elif value.startswith("ba/b-"):
+                        qual = value
+                        continue
+                if value.startswith("^"):
+                    if "." in value or value == "^inf":
+                        value = float(value.split("^")[1])
+                    else:
+                        value = int(value.split("^")[1])
+                elif value.lower() == "true":
+                    value = True
+                elif value.lower() == "false":
+                    value = False
+                elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
+                    value = eval(value)
+                options[key] = value
+                ydl_opts[key] = value
 
         options["playlist_items"] = "0"
 
@@ -610,7 +633,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     LOGGER.info(f"Downloading with YT-DLP: {link}")
     playlist = "entries" in result
     ydl = YoutubeDLHelper(listener)
-    await ydl.add_download(link, path, name, qual, playlist, opt)
+    await ydl.add_download(link, path, name, qual, playlist, ydl_opts or opt)
 
 
 async def ytdl(client, message):
