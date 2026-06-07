@@ -915,7 +915,7 @@ def get_client():
         REQUESTS_ARGS={"timeout": (30, 60)},
     )
 
-
+aria2c_global = []
 if not DISABLE_TORRENTS:
     def aria2c_init():
         try:
