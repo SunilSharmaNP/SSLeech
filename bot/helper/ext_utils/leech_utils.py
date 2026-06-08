@@ -421,8 +421,9 @@ async def auto_rename_by_metadata(file_path, original_name):
     ext = ospath.splitext(original_name)[1]
     base = ospath.splitext(original_name)[0]
 
+    # ── Step 1: extract quality / audio / subs from ffprobe ─────────────────
     quality = ""
-    codec_str = ""
+    ffprobe_codec = ""
     audio_langs = []
     audio_count = 0
     has_subs = False
@@ -449,17 +450,17 @@ async def auto_rename_by_metadata(file_path, original_name):
                 )
                 cn = stream.get("codec_name", "").lower()
                 if cn in ("h264", "avc", "avc1"):
-                    codec_str = "x264"
+                    ffprobe_codec = "x264"
                 elif cn in ("hevc", "h265", "hvc1"):
-                    codec_str = "x265"
+                    ffprobe_codec = "x265"
                 elif cn == "av1":
-                    codec_str = "AV1"
+                    ffprobe_codec = "AV1"
                 elif cn == "vp9":
-                    codec_str = "VP9"
+                    ffprobe_codec = "VP9"
                 elif cn == "mpeg4":
-                    codec_str = "XviD"
+                    ffprobe_codec = "XviD"
                 elif cn:
-                    codec_str = cn.upper()
+                    ffprobe_codec = cn.upper()
             elif ctype == "audio":
                 audio_count += 1
                 lang_tag = stream.get("tags", {}).get("language", "")
@@ -475,6 +476,7 @@ async def auto_rename_by_metadata(file_path, original_name):
 
     name = base
 
+    # ── Step 2: parse filename for title / year / rip / season / codec ──────
     season_match = re_search(r'(?i)[Ss](\d{1,2})(?:[Ee]\d{1,2})?', name)
     is_series = bool(season_match)
     season_str = ""
@@ -500,6 +502,29 @@ async def auto_rename_by_metadata(file_path, original_name):
             rip_type = label
             break
 
+    # Codec from filename takes priority over ffprobe
+    # (filenames set by encoders are reliable; ffprobe can misread containers)
+    _codec_patterns = [
+        (r'(?i)\bx\.?265\b|\bh\.?265\b', 'x265'),
+        (r'(?i)\bHEVC\b',                 'x265'),
+        (r'(?i)\bx\.?264\b|\bh\.?264\b', 'x264'),
+        (r'(?i)\bAVC\b',                  'x264'),
+        (r'(?i)\bAV1\b',                  'AV1'),
+        (r'(?i)\bVP9\b',                  'VP9'),
+        (r'(?i)\bXviD\b|\bDivX\b',        'XviD'),
+    ]
+    filename_codec = ""
+    for pattern, label in _codec_patterns:
+        if re_search(pattern, name):
+            filename_codec = label
+            break
+
+    # Use filename codec if found, else fall back to ffprobe
+    codec_str = filename_codec if filename_codec else ffprobe_codec
+    LOGGER.info(
+        f"auto_rename codec: filename='{filename_codec}' ffprobe='{ffprobe_codec}' → using='{codec_str}'"
+    )
+
     _strip_patterns = [
         r'[\(\[]?(?:19|20)\d{2}[\)\]]?.*$',
         r'(?i)\b(?:480|540|720|1080|2160|4320)p\b.*$',
@@ -511,9 +536,12 @@ async def auto_rename_by_metadata(file_path, original_name):
         r'(?i)\bhdrip\b.*$',
         r'(?i)\bdvdrip\b.*$',
         r'(?i)\bhdtv\b.*$',
-        r'(?i)\bx264\b.*$',
-        r'(?i)\bx265\b.*$',
+        r'(?i)\bx\.?264\b|\bh\.?264\b',
+        r'(?i)\bx\.?265\b|\bh\.?265\b',
         r'(?i)\bhevc\b.*$',
+        r'(?i)\bav1\b.*$',
+        r'(?i)\bvp9\b.*$',
+        r'(?i)\bxvid\b.*$',
         r'(?i)\b[Ss]\d{1,2}[Ee]\d{1,2}\b.*$',
         r'(?i)\b[Ss]eason\s*\d{1,2}\b.*$',
     ]
@@ -531,6 +559,7 @@ async def auto_rename_by_metadata(file_path, original_name):
         LOGGER.warning(f"auto_rename: could not extract title from '{original_name}', skipping rename")
         return original_name
 
+    # ── Step 3: build audio string ───────────────────────────────────────────
     if audio_count == 0:
         audio_str = ""
     elif audio_count == 1:
@@ -548,6 +577,7 @@ async def auto_rename_by_metadata(file_path, original_name):
 
     sub_str = "ESubs" if has_subs else ""
 
+    # ── Step 4: assemble final filename ─────────────────────────────────────
     parts = [title]
     if year_str:
         parts.append(year_str)
@@ -582,13 +612,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
         if ospath.isfile(file_path):
             renamed = await auto_rename_by_metadata(file_path, file_)
             if renamed != file_:
-                new_path = ospath.join(dirpath, renamed)
-                try:
-                    import os as _os
-                    _os.rename(file_path, new_path)
-                    file_ = renamed
-                except Exception as _e:
-                    LOGGER.warning(f"auto_rename os.rename failed: {_e}")
+                file_ = renamed
 
     prefix = (
         config_dict[f"{ctag}_FILENAME_PREFIX"]
