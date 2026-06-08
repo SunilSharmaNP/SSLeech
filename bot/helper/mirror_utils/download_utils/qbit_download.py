@@ -63,7 +63,11 @@ async def add_qb_torrent(link, path, listener, ratio, seed_time):
             seeding_time_limit=seed_time,
             headers={"user-agent": "Wget/1.12"},
         )
-        if op.lower() == "ok.":
+        # qbittorrentapi < 2024: returns "Ok." string on success
+        # qbittorrentapi >= 2024: returns TorrentsAddedMetadata object on success
+        # In both cases failure either raises an exception or returns a non-"ok" string
+        op_ok = (not isinstance(op, str)) or op.lower() == "ok."
+        if op_ok:
             tor_info = await sync_to_async(client.torrents_info, tag=f"{listener.uid}")
             if len(tor_info) == 0:
                 while True:
