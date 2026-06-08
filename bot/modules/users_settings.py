@@ -125,7 +125,32 @@ desp_dict = {
         "𝐘ᴏᴜʀ 𝐂ʜᴀɴɴᴇʟ 𝐍ᴀᴍᴇ 𝐓ʜᴀᴛ 𝐖ɪʟʟ 𝐁ᴇ 𝐔sᴇᴅ 𝐖ʜɪʟᴇ 𝐄ᴅɪᴛɪɴɢ 𝐌ᴇᴛᴀᴅᴀᴛᴀ 𝐎ғ 𝐓ʜᴇ 𝐕ɪᴅᴇᴏ 𝐅ɪʟᴇ",
         "𝐒ᴇɴᴅ 𝐌ᴇᴛᴀᴅᴀᴛᴀ 𝐓ᴇxᴛ 𝐅ᴏʀ 𝐋ᴇᴇᴄʜɪɴɢ 𝐅ɪʟᴇs.\n<b>𝐓ɪᴍᴇᴏᴜᴛ:</b> 60 𝐒ᴇᴄ.",
     ],
+    "auto_rename_fmt": [
+        "𝐂ᴜsᴛᴏᴍ 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ 𝐅ᴏʀᴍᴀᴛ — ᴜsᴇ ᴘʟᴀᴄᴇʜᴏʟᴅᴇʀs ᴛᴏ ʙᴜɪʟᴅ ʏᴏᴜʀ ᴏᴡɴ ғɪʟᴇɴᴀᴍᴇ ᴛᴇᴍᴘʟᴀᴛᴇ.",
+        (
+            "𝐒ᴇɴᴅ ʏᴏᴜʀ ғᴏʀᴍᴀᴛ sᴛʀɪɴɢ. <b>𝐓ɪᴍᴇᴏᴜᴛ:</b> 60 𝐒ᴇᴄ\n\n"
+            "<b>𝐀ᴠᴀɪʟᴀʙʟᴇ ᴘʟᴀᴄᴇʜᴏʟᴅᴇʀs:</b>\n"
+            "<code>{name}</code>  —  𝐓ɪᴛʟᴇ\n"
+            "<code>{year}</code>  —  𝐘ᴇᴀʀ (ᴠɪᴀ ɪᴍᴅʙ ɪғ ɴᴏᴛ ɪɴ ғɪʟᴇ)\n"
+            "<code>{quality}</code>  —  480ᴘ / 720ᴘ / 1080ᴘ\n"
+            "<code>{resolution}</code>  —  1280x720\n"
+            "<code>{rip}</code>  —  𝐇𝐃𝐑ɪᴘ / 𝐁ʟᴜ𝐑ᴀʏ\n"
+            "<code>{season}</code>  —  𝐒01 (ᴇᴍᴘᴛʏ ғᴏʀ ᴍᴏᴠɪᴇs)\n"
+            "<code>{episode}</code>  —  𝐄01\n"
+            "<code>{audio}</code>  —  𝐅ᴜʟʟ ᴀᴜᴅɪᴏ ʟᴀʙᴇʟ\n"
+            "<code>{shortlang}</code>  —  𝐃ᴜᴀʟ / 𝐇ɪɴᴅɪ / 𝐌ᴜʟᴛɪ\n"
+            "<code>{lib}</code>  —  x264 / x265\n"
+            "<code>{audiocodec}</code>  —  𝐀𝐀𝐂 / 𝐀𝐂3 / 𝐃𝐓𝐒\n"
+            "<code>{shortsub}</code>  —  𝐄𝐒ᴜʙs / 𝐌𝐒ᴜʙs\n"
+            "<code>{hevc}</code>  —  𝐇𝐄𝐕𝐂 (ᴇᴍᴘᴛʏ ɪғ ɴᴏᴛ x265)\n"
+            "<code>{extension}</code>  —  .ᴍᴋᴠ / .ᴍᴘ4\n\n"
+            "<b>𝐄xᴀᴍᴘʟᴇ:</b>\n"
+            "<code>{name} ({year}) {quality} {hevc} {rip} {audio} {season} Complete Series {lib} {audiocodec} {shortsub}</code>"
+        ),
+    ],
 }
+desp_dict["ar_fmt"] = desp_dict["auto_rename_fmt"]
+
 fname_dict = {
     "rcc": "𝐑ᴄʟᴏɴᴇ",
     "lprefix": "𝐏ʀᴇғɪx",
@@ -145,6 +170,8 @@ fname_dict = {
     "user_tds": "𝐔sᴇʀ 𝐂ᴜsᴛᴏᴍ 𝐓ᴅs",
     "gofile": "𝐆ᴏ𝐅ɪʟᴇ",
     "streamtape": "𝐒ᴛʀᴇᴀᴍ𝐓ᴀᴘᴇ",
+    "auto_rename_fmt": "𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ 𝐅ᴏʀᴍᴀᴛ",
+    "ar_fmt": "𝐅ᴏʀᴍᴀᴛ",
 }
 
 
@@ -444,12 +471,21 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             f"userset {user_id} lmeta",
         )
 
-        auto_rename_on = user_dict.get("auto_rename", False)
-        buttons.ibutton(
-            f"{'✅️ 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ : 𝐎ɴ' if auto_rename_on else '𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ : 𝐎ғғ'}",
-            f"userset {user_id} auto_rename_toggle",
+        _ar_mode = user_dict.get("auto_rename", False)
+        if _ar_mode is True:
+            _ar_mode = "auto"
+        _ar_label = (
+            "🤖 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ ✅" if _ar_mode == "auto" else
+            "✏️ 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ ✅" if _ar_mode == "custom" else
+            "🔄 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ"
         )
+        buttons.ibutton(_ar_label, f"userset {user_id} auto_rename")
 
+        _ar_display = (
+            "🤖 𝐀ᴜᴛᴏ"    if _ar_mode == "auto"   else
+            "✏️ 𝐂ᴜsᴛᴏᴍ" if _ar_mode == "custom" else
+            "𝐃ɪsᴀʙʟᴇᴅ"
+        )
         text = BotTheme(
             "LEECH",
             NAME=name,
@@ -465,10 +501,46 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             LDUMP=ldump,
             LREMNAME=escape(lremname),
             LMETA=escape(lmeta),
-            AUTO_RENAME="𝐄ɴᴀʙʟᴇᴅ" if auto_rename_on else "𝐃ɪsᴀʙʟᴇᴅ",
+            AUTO_RENAME=_ar_display,
         )
 
         buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
+        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        button = buttons.build_menu(2)
+    elif key == "auto_rename":
+        _ar_mode = user_dict.get("auto_rename", False)
+        if _ar_mode is True:
+            _ar_mode = "auto"
+        _ar_fmt  = user_dict.get("auto_rename_fmt", "")
+        _ar_fmt_preview = (
+            f"<code>{escape(_ar_fmt[:80])}{'…' if len(_ar_fmt) > 80 else ''}</code>"
+            if _ar_fmt else "<i>𝐍ᴏᴛ 𝐒ᴇᴛ</i>"
+        )
+        _mode_label = (
+            "🤖 𝐀ᴜᴛᴏ (𝐒ᴍᴀʀᴛ)" if _ar_mode == "auto"   else
+            "✏️ 𝐂ᴜsᴛᴏᴍ 𝐅ᴏʀᴍᴀᴛ" if _ar_mode == "custom" else
+            "❌ 𝐎ғғ"
+        )
+        text = (
+            f"⚙️ <b><u>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ 𝐒ᴇᴛᴛɪɴɢs</u></b>\n\n"
+            f"➲ <b>𝐌ᴏᴅᴇ :</b> {_mode_label}\n"
+            f"➲ <b>𝐂ᴜsᴛᴏᴍ 𝐅ᴏʀᴍᴀᴛ :</b> {_ar_fmt_preview}\n\n"
+            f"<b>🤖 𝐀ᴜᴛᴏ 𝐌ᴏᴅᴇ</b> — 𝐁ᴏᴛ ᴀᴜᴛᴏ-ᴅᴇᴛᴇᴄᴛs ᴛɪᴛʟᴇ, ʏᴇᴀʀ, ϙᴜᴀʟɪᴛʏ, ᴀᴜᴅɪᴏ & sᴜʙs ᴠɪᴀ ᴍᴇᴛᴀᴅᴀᴛᴀ.\n"
+            f"<b>✏️ 𝐂ᴜsᴛᴏᴍ 𝐌ᴏᴅᴇ</b> — ʏᴏᴜ sᴇᴛ ʏᴏᴜʀ ᴏᴡɴ ᴛᴇᴍᴘʟᴀᴛᴇ ᴜsɪɴɢ ᴘʟᴀᴄᴇʜᴏʟᴅᴇʀs."
+        )
+        buttons.ibutton(
+            f"{'✅ ' if _ar_mode == 'auto' else ''}🤖 𝐀ᴜᴛᴏ 𝐌ᴏᴅᴇ",
+            f"userset {user_id} ar_auto",
+        )
+        buttons.ibutton(
+            f"{'✅ ' if _ar_mode == 'custom' else ''}✏️ 𝐒ᴇᴛ 𝐂ᴜsᴛᴏᴍ 𝐅ᴏʀᴍᴀᴛ",
+            f"userset {user_id} ar_fmt",
+        )
+        if _ar_mode:
+            buttons.ibutton("❌ 𝐃ɪsᴀʙʟᴇ", f"userset {user_id} ar_off")
+        if _ar_fmt:
+            buttons.ibutton("🗑️ 𝐂ʟᴇᴀʀ 𝐅ᴏʀᴍᴀᴛ", f"userset {user_id} dar_fmt")
+        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back leech", "footer")
         buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "ddl_servers":
@@ -541,6 +613,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 buttons.ibutton(
                     "𝐄ɴᴀʙʟᴇ 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ", f"userset {user_id} mgroup", "header"
                 )
+        elif key == "ar_fmt":
+            _ar_fmt_val = user_dict.get("auto_rename_fmt", "")
+            set_exist   = escape(_ar_fmt_val) if _ar_fmt_val else "𝐍ᴏᴛ 𝐄xɪsᴛs"
+            _fmt_display = f"<code>{set_exist}</code>" if _ar_fmt_val else f"<i>{set_exist}</i>"
+            text = (
+                f"⚙️ <b><u>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ 𝐅ᴏʀᴍᴀᴛ 𝐒ᴇᴛᴛɪɴɢs</u></b>\n\n"
+                f"➲ <b>𝐂ᴜʀʀᴇɴᴛ 𝐅ᴏʀᴍᴀᴛ :</b>\n{_fmt_display}\n\n"
+            )
         elif key in ["lprefix", "lremname", "lsuffix", "lcaption", "ldump", "lmeta"]:
             set_exist = (
                 "𝐍ᴏᴛ 𝐄xɪsᴛs"
@@ -719,7 +799,16 @@ async def set_custom(client, message, pre_event, key, direct=False):
     return_key = "leech"
     n_key = key
     user_dict = user_data.get(user_id, {})
-    if key in ["gofile", "streamtape"]:
+    if key == "ar_fmt":
+        n_key = "auto_rename_fmt"
+        update_user_ldata(user_id, "auto_rename_fmt", value)
+        update_user_ldata(user_id, "auto_rename", "custom")
+        await deleteMessage(message)
+        await update_user_settings(pre_event, "ar_fmt", "auto_rename", msg=message, sdirect=direct)
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+        return
+    elif key in ["gofile", "streamtape"]:
         ddl_dict = user_dict.get("ddl_servers", {})
         mode, api = ddl_dict.get(key, [False, ""])
         if key == "gofile" and not await Gofile.is_goapi(value):
@@ -1027,12 +1116,46 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, "leech")
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
-    elif data[2] == "auto_rename_toggle":
+    elif data[2] == "auto_rename":
+        handler_dict[user_id] = False
+        await query.answer()
+        await update_user_settings(query, "auto_rename")
+    elif data[2] == "ar_auto":
         handler_dict[user_id] = False
         await query.answer()
         current = user_dict.get("auto_rename", False)
-        update_user_ldata(user_id, "auto_rename", not current)
-        await update_user_settings(query, "leech")
+        if current is True:
+            current = "auto"
+        new_mode = "" if current == "auto" else "auto"
+        update_user_ldata(user_id, "auto_rename", new_mode)
+        await update_user_settings(query, "auto_rename")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "ar_off":
+        handler_dict[user_id] = False
+        await query.answer()
+        update_user_ldata(user_id, "auto_rename", "")
+        await update_user_settings(query, "auto_rename")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "ar_fmt":
+        handler_dict[user_id] = False
+        await query.answer()
+        edit_mode = len(data) == 4
+        await update_user_settings(query, "ar_fmt", "auto_rename", edit_mode)
+        if not edit_mode:
+            return
+        pfunc = partial(set_custom, pre_event=query, key="ar_fmt")
+        rfunc  = partial(update_user_settings, query, "ar_fmt", "auto_rename")
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == "dar_fmt":
+        handler_dict[user_id] = False
+        await query.answer()
+        update_user_ldata(user_id, "auto_rename_fmt", "")
+        _ar = user_dict.get("auto_rename", "")
+        if _ar == "custom":
+            update_user_ldata(user_id, "auto_rename", "")
+        await update_user_settings(query, "auto_rename")
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
     elif data[2] in ["sgofile", "sstreamtape", "dgofile", "dstreamtape"]:
