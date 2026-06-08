@@ -1,6 +1,6 @@
 from hashlib import md5
 from time import strftime, gmtime, time
-from re import sub as re_sub, search as re_search
+from re import sub as re_sub, search as re_search, compile as re_compile, IGNORECASE
 from shlex import split as ssplit
 from natsort import natsorted
 from os import path as ospath
@@ -408,9 +408,188 @@ async def split_file(
     return True
 
 
+async def auto_rename_by_metadata(file_path, original_name):
+    """
+    Read ffprobe metadata from file_path and auto-generate a clean filename.
+    Extracts from metadata: quality, codec, audio languages, subtitle presence.
+    Extracts from original_name: title, year, rip type, season info.
+    Returns new filename with extension, or original_name on failure.
+
+    Movie format  : Title (Year) Quality RipType AudioInfo Codec ESubs
+    Series format : Title (Year) Quality HEVC RipType AudioInfo S01 Complete Series Codec ESubs
+    """
+    ext = ospath.splitext(original_name)[1]
+    base = ospath.splitext(original_name)[0]
+
+    quality = ""
+    codec_str = ""
+    audio_langs = []
+    audio_count = 0
+    has_subs = False
+
+    try:
+        result = await cmd_exec([
+            "ffprobe", "-hide_banner", "-loglevel", "error",
+            "-print_format", "json", "-show_streams", file_path,
+        ])
+        if result[1]:
+            LOGGER.warning(f"auto_rename ffprobe stderr: {result[1]}")
+        streams = eval(result[0]).get("streams", [])
+        for stream in streams:
+            ctype = stream.get("codec_type", "")
+            if ctype == "video" and not quality:
+                h = int(stream.get("height", 0))
+                quality = (
+                    "480p" if h <= 480 else
+                    "540p" if h <= 540 else
+                    "720p" if h <= 720 else
+                    "1080p" if h <= 1080 else
+                    "2160p" if h <= 2160 else
+                    "4320p"
+                )
+                cn = stream.get("codec_name", "").lower()
+                if cn in ("h264", "avc", "avc1"):
+                    codec_str = "x264"
+                elif cn in ("hevc", "h265", "hvc1"):
+                    codec_str = "x265"
+                elif cn == "av1":
+                    codec_str = "AV1"
+                elif cn == "vp9":
+                    codec_str = "VP9"
+                elif cn == "mpeg4":
+                    codec_str = "XviD"
+                elif cn:
+                    codec_str = cn.upper()
+            elif ctype == "audio":
+                audio_count += 1
+                lang_tag = stream.get("tags", {}).get("language", "")
+                if lang_tag and lang_tag.lower() not in ("und", ""):
+                    with suppress(Exception):
+                        lang_tag = Language.get(lang_tag).display_name()
+                    if lang_tag not in audio_langs:
+                        audio_langs.append(lang_tag)
+            elif ctype == "subtitle":
+                has_subs = True
+    except Exception as e:
+        LOGGER.warning(f"auto_rename metadata extraction failed: {e}")
+
+    name = base
+
+    season_match = re_search(r'(?i)[Ss](\d{1,2})(?:[Ee]\d{1,2})?', name)
+    is_series = bool(season_match)
+    season_str = ""
+    if season_match:
+        s_num = int(season_match.group(1))
+        season_str = f"S{s_num:02d}"
+
+    year_match = re_search(r'[\(\[]?((?:19|20)\d{2})[\)\]]?', name)
+    year_str = f"({year_match.group(1)})" if year_match else ""
+
+    _rip_patterns = [
+        (r'blu[.\-\s]?ray|bluray|bdrip', 'BluRay'),
+        (r'web[.\-\s]?dl', 'WEB-DL'),
+        (r'web[.\-\s]?rip|webrip', 'WEBRip'),
+        (r'hdrip|hd[.\-\s]?rip', 'HDRip'),
+        (r'dvdrip|dvd[.\-\s]?scr', 'DVDRip'),
+        (r'hdtv', 'HDTV'),
+        (r'camrip|cam', 'CAMRip'),
+    ]
+    rip_type = ""
+    for pattern, label in _rip_patterns:
+        if re_search(pattern, name, IGNORECASE):
+            rip_type = label
+            break
+
+    _strip_patterns = [
+        r'[\(\[]?(?:19|20)\d{2}[\)\]]?.*$',
+        r'(?i)\b(?:480|540|720|1080|2160|4320)p\b.*$',
+        r'(?i)\bblu[.\-\s]?ray\b.*$',
+        r'(?i)\bbdrip\b.*$',
+        r'(?i)\bweb[.\-\s]?dl\b.*$',
+        r'(?i)\bweb[.\-\s]?rip\b.*$',
+        r'(?i)\bwebrip\b.*$',
+        r'(?i)\bhdrip\b.*$',
+        r'(?i)\bdvdrip\b.*$',
+        r'(?i)\bhdtv\b.*$',
+        r'(?i)\bx264\b.*$',
+        r'(?i)\bx265\b.*$',
+        r'(?i)\bhevc\b.*$',
+        r'(?i)\b[Ss]\d{1,2}[Ee]\d{1,2}\b.*$',
+        r'(?i)\b[Ss]eason\s*\d{1,2}\b.*$',
+    ]
+    title = name
+    for pat in _strip_patterns:
+        m = re_search(pat, title)
+        if m:
+            title = title[:m.start()]
+            break
+
+    title = re_sub(r'[._\-]+', ' ', title).strip()
+    title = re_sub(r'\s+', ' ', title).strip()
+
+    if not title:
+        LOGGER.warning(f"auto_rename: could not extract title from '{original_name}', skipping rename")
+        return original_name
+
+    if audio_count == 0:
+        audio_str = ""
+    elif audio_count == 1:
+        audio_str = audio_langs[0] if audio_langs else ""
+    elif audio_count == 2:
+        if len(audio_langs) >= 2:
+            audio_str = f"ORG. [Dual Audio] [{' - '.join(audio_langs[:2])}]"
+        else:
+            audio_str = "Dual Audio"
+    else:
+        if audio_langs:
+            audio_str = f"Multi Audio [{' - '.join(audio_langs[:3])}]"
+        else:
+            audio_str = "Multi Audio"
+
+    sub_str = "ESubs" if has_subs else ""
+
+    parts = [title]
+    if year_str:
+        parts.append(year_str)
+    if quality:
+        parts.append(quality)
+    if codec_str == "x265":
+        parts.append("HEVC")
+    if rip_type:
+        parts.append(rip_type)
+    if audio_str:
+        parts.append(audio_str)
+    if is_series and season_str:
+        parts.append(season_str)
+        parts.append("Complete Series")
+    if codec_str:
+        parts.append(codec_str)
+    if sub_str:
+        parts.append(sub_str)
+
+    new_name = " ".join(parts) + ext
+    LOGGER.info(f"auto_rename: '{original_name}' → '{new_name}'")
+    return new_name
+
+
 async def format_filename(file_, user_id, dirpath=None, isMirror=False):
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ("m", "MIRROR") if isMirror else ("l", "LEECH")
+
+    _auto_rename = user_dict.get("auto_rename", False)
+    if not isMirror and _auto_rename and dirpath:
+        file_path = ospath.join(dirpath, file_)
+        if ospath.isfile(file_path):
+            renamed = await auto_rename_by_metadata(file_path, file_)
+            if renamed != file_:
+                new_path = ospath.join(dirpath, renamed)
+                try:
+                    import os as _os
+                    _os.rename(file_path, new_path)
+                    file_ = renamed
+                except Exception as _e:
+                    LOGGER.warning(f"auto_rename os.rename failed: {_e}")
+
     prefix = (
         config_dict[f"{ctag}_FILENAME_PREFIX"]
         if (val := user_dict.get(f"{ftag}prefix", "")) == ""
