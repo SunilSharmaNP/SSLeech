@@ -883,10 +883,13 @@ if not ospath.exists(".netrc"):
 srun(["chmod", "600", ".netrc"])
 srun(["cp", ".netrc", "/root/.netrc"])
 
+# aria2c is always started — it handles direct HTTP downloads too, not just torrents.
+# qBittorrent is only started when DISABLE_TORRENTS=False.
+srun(["chmod", "+x", "setpkgs.sh"])
+srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
+
 if not DISABLE_TORRENTS:
     srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"], check=False)
-    srun(["chmod", "+x", "setpkgs.sh"])
-    srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
     if ospath.exists("accounts.zip"):
         if ospath.exists("accounts"):
             srun(["rm", "-rf", "accounts"])
@@ -896,7 +899,7 @@ if not DISABLE_TORRENTS:
     if not ospath.exists("accounts"):
         config_dict["USE_SERVICE_ACCOUNTS"] = False
 else:
-    log_info("DISABLE_TORRENTS=True — skipping aria2c & qBittorrent startup (saves CPU/RAM)")
+    log_info("DISABLE_TORRENTS=True — skipping qBittorrent startup (aria2c still runs for direct downloads)")
     config_dict["USE_SERVICE_ACCOUNTS"] = False
 
 sleep(0.5)
@@ -915,7 +918,24 @@ def get_client():
         REQUESTS_ARGS={"timeout": (30, 60)},
     )
 
-aria2c_global = []
+
+# aria2c_global is always defined — aria2c always runs (needed for direct downloads)
+aria2c_global = [
+    "bt-max-open-files",
+    "download-result",
+    "keep-unfinished-download-result",
+    "log",
+    "log-level",
+    "max-concurrent-downloads",
+    "max-download-result",
+    "max-overall-download-limit",
+    "save-session",
+    "max-overall-upload-limit",
+    "optimize-concurrent-downloads",
+    "save-cookies",
+    "server-stat-of",
+]
+
 if not DISABLE_TORRENTS:
     def aria2c_init():
         try:
@@ -931,33 +951,21 @@ if not DISABLE_TORRENTS:
             log_error(f"Download engine initializing error: {e}")
 
     Thread(target=aria2c_init).start()
-    sleep(1.5)
 
-    aria2c_global = [
-        "bt-max-open-files",
-        "download-result",
-        "keep-unfinished-download-result",
-        "log",
-        "log-level",
-        "max-concurrent-downloads",
-        "max-download-result",
-        "max-overall-download-limit",
-        "save-session",
-        "max-overall-upload-limit",
-        "optimize-concurrent-downloads",
-        "save-cookies",
-        "server-stat-of",
-    ]
+sleep(1.5)
 
-    try:
-        if not aria2_options:
-            aria2_options = aria2.client.get_global_option()
-        else:
-            a2c_glo = {op: aria2_options[op] for op in aria2c_global if op in aria2_options}
-            aria2.set_global_options(a2c_glo)
-    except Exception as _a2_err:
-        log_error(f"Aria2c not ready at startup (will retry on first use): {_a2_err}")
+# Load aria2 options — always, since aria2c always runs
+try:
+    if not aria2_options:
+        aria2_options = aria2.client.get_global_option()
+    else:
+        a2c_glo = {op: aria2_options[op] for op in aria2c_global if op in aria2_options}
+        aria2.set_global_options(a2c_glo)
+except Exception as _a2_err:
+    log_error(f"Aria2c not ready at startup (will retry on first use): {_a2_err}")
 
+# qBittorrent options — only when torrents enabled
+if not DISABLE_TORRENTS:
     qb_client = get_client()
     try:
         if not qbit_options:
