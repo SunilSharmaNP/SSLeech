@@ -408,25 +408,75 @@ async def split_file(
     return True
 
 
+_SITE_TAGS_RE = re_compile(
+    r'(?i)\b('
+    r'SkymoviesHD|Skymovies|YTS(?:\.MX|\.AM|\.LT)?|YIFY|'
+    r'TamilRockers|TamilBlasters|TamilMV|TamilGun|'
+    r'Moviesda|MoviesBay|MoviesCounter|MoviesWood|'
+    r'Bolly4u|Bolly4ufree|Filmywap|Filmyzilla|Filmy4wap|'
+    r'WorldFree4u|World4ufree|Khatrimaza|Katmovie|KatMovieHD|'
+    r'MKVCinemas|MKVCage|MkvHub|'
+    r'1337x|RARBG|TGx|EZTV|Nyaa|'
+    r'HDHub4u|HubHD|JalshaMoviez|DownloadHub|'
+    r'7StarHD|9xMovies|9xmovie|300MB|'
+    r'SSMovies|SSLeech|'
+    r'PikaHD|CineVood|UHDMovies|RipMovies'
+    r')\b',
+    0,
+)
+
+_AUDIO_CODEC_MAP = {
+    "aac":    "AAC",
+    "ac3":    "AC3",
+    "eac3":   "EAC3",
+    "dts":    "DTS",
+    "mp3":    "MP3",
+    "flac":   "FLAC",
+    "opus":   "OPUS",
+    "vorbis": "OGG",
+    "pcm_s16le": "PCM",
+}
+
+
+async def _imdb_year_lookup(title: str) -> str:
+    """Query IMDB suggestion endpoint to get release year for a title."""
+    try:
+        from urllib.request import urlopen
+        from urllib.parse import quote
+        import json as _json
+        clean = re_sub(r'[^a-zA-Z0-9 ]', '', title).strip()
+        url = f"https://v3.sg.media-imdb.com/suggestion/x/{quote(clean)}.json"
+        with urlopen(url, timeout=5) as resp:
+            data = _json.loads(resp.read())
+        for entry in data.get("d", []):
+            if entry.get("qid") in ("movie", "tvSeries", "tvMiniSeries", "tvMovie"):
+                yr = entry.get("y") or entry.get("yr", "")
+                if yr:
+                    yr_str = str(yr).split("-")[0]
+                    if re_search(r'^(?:19|20)\d{2}$', yr_str):
+                        return f"({yr_str})"
+    except Exception as e:
+        LOGGER.warning(f"auto_rename IMDB lookup failed: {e}")
+    return ""
+
+
 async def auto_rename_by_metadata(file_path, original_name):
     """
     Read ffprobe metadata from file_path and auto-generate a clean filename.
-    Extracts from metadata: quality, codec, audio languages, subtitle presence.
-    Extracts from original_name: title, year, rip type, season info.
-    Returns new filename with extension, or original_name on failure.
 
-    Movie format  : Title (Year) Quality RipType AudioInfo Codec ESubs
-    Series format : Title (Year) Quality HEVC RipType AudioInfo S01 Complete Series Codec ESubs
+    Movie  : Title (Year) Quality RipType AudioInfo VideoCodec AudioCodec ESubs/MSubs
+    Series : Title (Year) Quality HEVC RipType AudioInfo S01 Complete Series VideoCodec AudioCodec ESubs/MSubs
     """
     ext = ospath.splitext(original_name)[1]
     base = ospath.splitext(original_name)[0]
 
-    # ── Step 1: extract quality / audio / subs from ffprobe ─────────────────
-    quality = ""
+    # ── Step 1: ffprobe — quality / video codec / audio / subtitles ──────────
+    quality      = ""
     ffprobe_codec = ""
-    audio_langs = []
-    audio_count = 0
-    has_subs = False
+    audio_codec  = ""
+    audio_langs  = []
+    audio_count  = 0
+    sub_count    = 0
 
     try:
         result = await cmd_exec([
@@ -441,12 +491,11 @@ async def auto_rename_by_metadata(file_path, original_name):
             if ctype == "video" and not quality:
                 h = int(stream.get("height", 0))
                 quality = (
-                    "480p" if h <= 480 else
-                    "540p" if h <= 540 else
-                    "720p" if h <= 720 else
+                    "480p"  if h <= 480  else
+                    "540p"  if h <= 540  else
+                    "720p"  if h <= 720  else
                     "1080p" if h <= 1080 else
-                    "2160p" if h <= 2160 else
-                    "4320p"
+                    "2160p" if h <= 2160 else "4320p"
                 )
                 cn = stream.get("codec_name", "").lower()
                 if cn in ("h264", "avc", "avc1"):
@@ -463,6 +512,9 @@ async def auto_rename_by_metadata(file_path, original_name):
                     ffprobe_codec = cn.upper()
             elif ctype == "audio":
                 audio_count += 1
+                if not audio_codec:
+                    ac = stream.get("codec_name", "").lower()
+                    audio_codec = _AUDIO_CODEC_MAP.get(ac, ac.upper() if ac else "")
                 lang_tag = stream.get("tags", {}).get("language", "")
                 if lang_tag and lang_tag.lower() not in ("und", ""):
                     with suppress(Exception):
@@ -470,31 +522,33 @@ async def auto_rename_by_metadata(file_path, original_name):
                     if lang_tag not in audio_langs:
                         audio_langs.append(lang_tag)
             elif ctype == "subtitle":
-                has_subs = True
+                sub_count += 1
     except Exception as e:
         LOGGER.warning(f"auto_rename metadata extraction failed: {e}")
 
     name = base
 
-    # ── Step 2: parse filename for title / year / rip / season / codec ──────
+    # ── Step 2: parse filename ────────────────────────────────────────────────
+    # Season / episode (detect before title strip so we know it's a series)
     season_match = re_search(r'(?i)[Ss](\d{1,2})(?:[Ee]\d{1,2})?', name)
-    is_series = bool(season_match)
-    season_str = ""
+    is_series    = bool(season_match)
+    season_str   = ""
     if season_match:
-        s_num = int(season_match.group(1))
-        season_str = f"S{s_num:02d}"
+        season_str = f"S{int(season_match.group(1)):02d}"
 
+    # Year from filename
     year_match = re_search(r'[\(\[]?((?:19|20)\d{2})[\)\]]?', name)
-    year_str = f"({year_match.group(1)})" if year_match else ""
+    year_str   = f"({year_match.group(1)})" if year_match else ""
 
+    # Rip type — WEB-DL remapped to HDRip per user preference
     _rip_patterns = [
-        (r'blu[.\-\s]?ray|bluray|bdrip', 'BluRay'),
-        (r'web[.\-\s]?dl', 'WEB-DL'),
-        (r'web[.\-\s]?rip|webrip', 'WEBRip'),
-        (r'hdrip|hd[.\-\s]?rip', 'HDRip'),
-        (r'dvdrip|dvd[.\-\s]?scr', 'DVDRip'),
-        (r'hdtv', 'HDTV'),
-        (r'camrip|cam', 'CAMRip'),
+        (r'blu[.\-\s]?ray|bluray|bdrip',   'BluRay'),
+        (r'web[.\-\s]?dl',                  'HDRip'),   # WEB-DL → HDRip
+        (r'web[.\-\s]?rip|webrip',          'HDRip'),
+        (r'hdrip|hd[.\-\s]?rip',            'HDRip'),
+        (r'dvdrip|dvd[.\-\s]?scr',          'DVDRip'),
+        (r'hdtv',                            'HDTV'),
+        (r'camrip|cam',                      'CAMRip'),
     ]
     rip_type = ""
     for pattern, label in _rip_patterns:
@@ -502,8 +556,7 @@ async def auto_rename_by_metadata(file_path, original_name):
             rip_type = label
             break
 
-    # Codec from filename takes priority over ffprobe
-    # (filenames set by encoders are reliable; ffprobe can misread containers)
+    # Video codec — filename takes priority over ffprobe
     _codec_patterns = [
         (r'(?i)\bx\.?265\b|\bh\.?265\b', 'x265'),
         (r'(?i)\bHEVC\b',                 'x265'),
@@ -518,48 +571,57 @@ async def auto_rename_by_metadata(file_path, original_name):
         if re_search(pattern, name):
             filename_codec = label
             break
-
-    # Use filename codec if found, else fall back to ffprobe
     codec_str = filename_codec if filename_codec else ffprobe_codec
-    LOGGER.info(
-        f"auto_rename codec: filename='{filename_codec}' ffprobe='{ffprobe_codec}' → using='{codec_str}'"
-    )
+    LOGGER.info(f"auto_rename codec: filename='{filename_codec}' ffprobe='{ffprobe_codec}' → '{codec_str}'")
 
-    _strip_patterns = [
-        r'[\(\[]?(?:19|20)\d{2}[\)\]]?.*$',
-        r'(?i)\b(?:480|540|720|1080|2160|4320)p\b.*$',
-        r'(?i)\bblu[.\-\s]?ray\b.*$',
-        r'(?i)\bbdrip\b.*$',
-        r'(?i)\bweb[.\-\s]?dl\b.*$',
-        r'(?i)\bweb[.\-\s]?rip\b.*$',
-        r'(?i)\bwebrip\b.*$',
-        r'(?i)\bhdrip\b.*$',
-        r'(?i)\bdvdrip\b.*$',
-        r'(?i)\bhdtv\b.*$',
-        r'(?i)\bx\.?264\b|\bh\.?264\b',
-        r'(?i)\bx\.?265\b|\bh\.?265\b',
-        r'(?i)\bhevc\b.*$',
-        r'(?i)\bav1\b.*$',
-        r'(?i)\bvp9\b.*$',
-        r'(?i)\bxvid\b.*$',
-        r'(?i)\b[Ss]\d{1,2}[Ee]\d{1,2}\b.*$',
-        r'(?i)\b[Ss]eason\s*\d{1,2}\b.*$',
+    # Title strip — stop at first meaningful token after the title
+    # S\d pattern MUST come before quality so "Brown S01 480p" stops at "Brown"
+    _strip_at = [
+        r'[\(\[]?(?:19|20)\d{2}[\)\]]?',          # year
+        r'(?i)\b[Ss]\d{1,2}(?:[Ee]\d{1,2})?\b',   # S01 / S01E01
+        r'(?i)\b[Ss]eason\s*\d{1,2}\b',            # Season 1
+        r'(?i)\b(?:480|540|720|1080|2160|4320)p\b', # quality
+        r'(?i)\bblu[.\-\s]?ray\b',
+        r'(?i)\bbdrip\b',
+        r'(?i)\bweb[.\-\s]?dl\b',
+        r'(?i)\bweb[.\-\s]?rip\b',
+        r'(?i)\bwebrip\b',
+        r'(?i)\bhdrip\b',
+        r'(?i)\bdvdrip\b',
+        r'(?i)\bhdtv\b',
+        r'(?i)\bx\.?264\b',
+        r'(?i)\bx\.?265\b',
+        r'(?i)\bh\.?264\b',
+        r'(?i)\bh\.?265\b',
+        r'(?i)\bhevc\b',
+        r'(?i)\bav1\b',
+        r'(?i)\bvp9\b',
+        r'(?i)\bxvid\b',
     ]
     title = name
-    for pat in _strip_patterns:
+    earliest = len(title)
+    for pat in _strip_at:
         m = re_search(pat, title)
-        if m:
-            title = title[:m.start()]
-            break
+        if m and m.start() < earliest:
+            earliest = m.start()
+    title = title[:earliest]
 
+    # Clean site watermarks, dots/underscores, extra spaces
+    title = _SITE_TAGS_RE.sub('', title)
     title = re_sub(r'[._\-]+', ' ', title).strip()
     title = re_sub(r'\s+', ' ', title).strip()
 
     if not title:
-        LOGGER.warning(f"auto_rename: could not extract title from '{original_name}', skipping rename")
+        LOGGER.warning(f"auto_rename: could not extract title from '{original_name}', skipping")
         return original_name
 
-    # ── Step 3: build audio string ───────────────────────────────────────────
+    # ── Step 3: IMDB year lookup if year missing ──────────────────────────────
+    if not year_str:
+        year_str = await _imdb_year_lookup(title)
+        if year_str:
+            LOGGER.info(f"auto_rename IMDB year: {title} → {year_str}")
+
+    # ── Step 4: audio label ───────────────────────────────────────────────────
     if audio_count == 0:
         audio_str = ""
     elif audio_count == 1:
@@ -575,9 +637,10 @@ async def auto_rename_by_metadata(file_path, original_name):
         else:
             audio_str = "Multi Audio"
 
-    sub_str = "ESubs" if has_subs else ""
+    # ESubs = 1 subtitle track, MSubs = more than 1
+    sub_str = "MSubs" if sub_count > 1 else ("ESubs" if sub_count == 1 else "")
 
-    # ── Step 4: assemble final filename ─────────────────────────────────────
+    # ── Step 5: assemble filename ─────────────────────────────────────────────
     parts = [title]
     if year_str:
         parts.append(year_str)
@@ -594,6 +657,8 @@ async def auto_rename_by_metadata(file_path, original_name):
         parts.append("Complete Series")
     if codec_str:
         parts.append(codec_str)
+    if audio_codec:
+        parts.append(audio_codec)
     if sub_str:
         parts.append(sub_str)
 
