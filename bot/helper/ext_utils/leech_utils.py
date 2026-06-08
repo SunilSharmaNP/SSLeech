@@ -538,7 +538,7 @@ async def _collect_rename_meta(file_path: str, original_name: str) -> dict:
                     resolution = f"{w}x{h}"
                 quality = (
                     "480p"  if h <= 480  else
-                    "540p"  if h <= 540  else
+                    "720p"  if h <= 540  else
                     "720p"  if h <= 720  else
                     "1080p" if h <= 1080 else
                     "2160p" if h <= 2160 else "4320p"
