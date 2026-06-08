@@ -404,8 +404,7 @@ async def main():
         set_commands(bot),
         log_check(),
     )
-    if not config_dict.get("DISABLE_TORRENTS"):
-        await sync_to_async(start_aria2_listener, wait=False)
+    await sync_to_async(start_aria2_listener, wait=False)
     bot.loop.create_task(search_images())
 
     bot.add_handler(
