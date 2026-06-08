@@ -444,6 +444,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             f"userset {user_id} lmeta",
         )
 
+        auto_rename_on = user_dict.get("auto_rename", False)
+        buttons.ibutton(
+            f"{'✅️ 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ : 𝐎ɴ' if auto_rename_on else '𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ : 𝐎ғғ'}",
+            f"userset {user_id} auto_rename_toggle",
+        )
+
         text = BotTheme(
             "LEECH",
             NAME=name,
@@ -459,6 +465,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             LDUMP=ldump,
             LREMNAME=escape(lremname),
             LMETA=escape(lmeta),
+            AUTO_RENAME="𝐄ɴᴀʙʟᴇᴅ" if auto_rename_on else "𝐃ɪsᴀʙʟᴇᴅ",
         )
 
         buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
@@ -1017,6 +1024,14 @@ async def edit_user_settings(client, query):
         update_user_ldata(
             user_id, "media_group", not user_dict.get("media_group", False)
         )
+        await update_user_settings(query, "leech")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "auto_rename_toggle":
+        handler_dict[user_id] = False
+        await query.answer()
+        current = user_dict.get("auto_rename", False)
+        update_user_ldata(user_id, "auto_rename", not current)
         await update_user_settings(query, "leech")
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
