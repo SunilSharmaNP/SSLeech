@@ -742,6 +742,8 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ("m", "MIRROR") if isMirror else ("l", "LEECH")
 
+    disk_file_ = file_
+
     _auto_rename = user_dict.get("auto_rename", False)
     if _auto_rename is True:
         _auto_rename = "auto"
@@ -844,7 +846,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
         )
         slit = lcaption.split("|")
         slit[0] = re_sub(r"\{([^}]+)\}", lowerVars, slit[0])
-        up_path = ospath.join(dirpath, prefile_)
+        up_path = ospath.join(dirpath, disk_file_)
         dur, qual, lang, subs = await get_media_info(up_path, True)
         cap_mono = slit[0].format(
             filename=nfile_,
