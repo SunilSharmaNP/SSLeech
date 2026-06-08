@@ -460,23 +460,66 @@ async def _imdb_year_lookup(title: str) -> str:
     return ""
 
 
-async def auto_rename_by_metadata(file_path, original_name):
-    """
-    Read ffprobe metadata from file_path and auto-generate a clean filename.
+_RIP_PATTERNS = [
+    (r'blu[.\-\s]?ray|bluray|bdrip',  'BluRay'),
+    (r'web[.\-\s]?dl',                'HDRip'),
+    (r'web[.\-\s]?rip|webrip',        'HDRip'),
+    (r'hdrip|hd[.\-\s]?rip',          'HDRip'),
+    (r'dvdrip|dvd[.\-\s]?scr',        'DVDRip'),
+    (r'hdtv',                          'HDTV'),
+    (r'camrip|cam',                    'CAMRip'),
+]
 
-    Movie  : Title (Year) Quality RipType AudioInfo VideoCodec AudioCodec ESubs/MSubs
-    Series : Title (Year) Quality HEVC RipType AudioInfo S01 Complete Series VideoCodec AudioCodec ESubs/MSubs
+_CODEC_PATTERNS = [
+    (r'(?i)\bx\.?265\b|\bh\.?265\b', 'x265'),
+    (r'(?i)\bHEVC\b',                 'x265'),
+    (r'(?i)\bx\.?264\b|\bh\.?264\b', 'x264'),
+    (r'(?i)\bAVC\b',                  'x264'),
+    (r'(?i)\bAV1\b',                  'AV1'),
+    (r'(?i)\bVP9\b',                  'VP9'),
+    (r'(?i)\bXviD\b|\bDivX\b',        'XviD'),
+]
+
+_TITLE_STRIP_AT = [
+    r'[\(\[]?(?:19|20)\d{2}[\)\]]?',
+    r'(?i)\b[Ss]\d{1,2}(?:[Ee]\d{1,2})?\b',
+    r'(?i)\b[Ss]eason\s*\d{1,2}\b',
+    r'(?i)\b(?:480|540|720|1080|2160|4320)p\b',
+    r'(?i)\bblu[.\-\s]?ray\b',
+    r'(?i)\bbdrip\b',
+    r'(?i)\bweb[.\-\s]?dl\b',
+    r'(?i)\bweb[.\-\s]?rip\b',
+    r'(?i)\bwebrip\b',
+    r'(?i)\bhdrip\b',
+    r'(?i)\bdvdrip\b',
+    r'(?i)\bhdtv\b',
+    r'(?i)\bx\.?264\b',
+    r'(?i)\bx\.?265\b',
+    r'(?i)\bh\.?264\b',
+    r'(?i)\bh\.?265\b',
+    r'(?i)\bhevc\b',
+    r'(?i)\bav1\b',
+    r'(?i)\bvp9\b',
+    r'(?i)\bxvid\b',
+]
+
+
+async def _collect_rename_meta(file_path: str, original_name: str) -> dict:
     """
-    ext = ospath.splitext(original_name)[1]
+    Shared metadata collector for both Auto and Custom rename modes.
+    Runs ffprobe on file_path and parses original_name.
+    Returns a dict with all values needed to fill any rename template.
+    """
+    ext  = ospath.splitext(original_name)[1]
     base = ospath.splitext(original_name)[0]
 
-    # ── Step 1: ffprobe — quality / video codec / audio / subtitles ──────────
-    quality      = ""
+    quality       = ""
+    resolution    = ""
     ffprobe_codec = ""
-    audio_codec  = ""
-    audio_langs  = []
-    audio_count  = 0
-    sub_count    = 0
+    audio_codec   = ""
+    audio_langs   = []
+    audio_count   = 0
+    sub_count     = 0
 
     try:
         result = await cmd_exec([
@@ -484,12 +527,15 @@ async def auto_rename_by_metadata(file_path, original_name):
             "-print_format", "json", "-show_streams", file_path,
         ])
         if result[1]:
-            LOGGER.warning(f"auto_rename ffprobe stderr: {result[1]}")
+            LOGGER.warning(f"rename ffprobe stderr: {result[1]}")
         streams = eval(result[0]).get("streams", [])
         for stream in streams:
             ctype = stream.get("codec_type", "")
             if ctype == "video" and not quality:
+                w = int(stream.get("width",  0))
                 h = int(stream.get("height", 0))
+                if w and h:
+                    resolution = f"{w}x{h}"
                 quality = (
                     "480p"  if h <= 480  else
                     "540p"  if h <= 540  else
@@ -524,146 +570,171 @@ async def auto_rename_by_metadata(file_path, original_name):
             elif ctype == "subtitle":
                 sub_count += 1
     except Exception as e:
-        LOGGER.warning(f"auto_rename metadata extraction failed: {e}")
+        LOGGER.warning(f"rename metadata extraction failed: {e}")
 
     name = base
 
-    # ── Step 2: parse filename ────────────────────────────────────────────────
-    # Season / episode (detect before title strip so we know it's a series)
-    season_match = re_search(r'(?i)[Ss](\d{1,2})(?:[Ee]\d{1,2})?', name)
-    is_series    = bool(season_match)
-    season_str   = ""
-    if season_match:
-        season_str = f"S{int(season_match.group(1)):02d}"
+    season_match  = re_search(r'(?i)[Ss](\d{1,2})(?:[Ee]\d{1,2})?', name)
+    episode_match = re_search(r'(?i)[Ss]\d{1,2}[Ee](\d{1,2})', name)
+    is_series  = bool(season_match)
+    season_str = f"S{int(season_match.group(1)):02d}"  if season_match  else ""
+    episode_str= f"E{int(episode_match.group(1)):02d}" if episode_match else ""
 
-    # Year from filename
     year_match = re_search(r'[\(\[]?((?:19|20)\d{2})[\)\]]?', name)
-    year_str   = f"({year_match.group(1)})" if year_match else ""
+    year_raw   = year_match.group(1) if year_match else ""
+    year_str   = f"({year_raw})"     if year_raw   else ""
 
-    # Rip type — WEB-DL remapped to HDRip per user preference
-    _rip_patterns = [
-        (r'blu[.\-\s]?ray|bluray|bdrip',   'BluRay'),
-        (r'web[.\-\s]?dl',                  'HDRip'),   # WEB-DL → HDRip
-        (r'web[.\-\s]?rip|webrip',          'HDRip'),
-        (r'hdrip|hd[.\-\s]?rip',            'HDRip'),
-        (r'dvdrip|dvd[.\-\s]?scr',          'DVDRip'),
-        (r'hdtv',                            'HDTV'),
-        (r'camrip|cam',                      'CAMRip'),
-    ]
     rip_type = ""
-    for pattern, label in _rip_patterns:
+    for pattern, label in _RIP_PATTERNS:
         if re_search(pattern, name, IGNORECASE):
             rip_type = label
             break
 
-    # Video codec — filename takes priority over ffprobe
-    _codec_patterns = [
-        (r'(?i)\bx\.?265\b|\bh\.?265\b', 'x265'),
-        (r'(?i)\bHEVC\b',                 'x265'),
-        (r'(?i)\bx\.?264\b|\bh\.?264\b', 'x264'),
-        (r'(?i)\bAVC\b',                  'x264'),
-        (r'(?i)\bAV1\b',                  'AV1'),
-        (r'(?i)\bVP9\b',                  'VP9'),
-        (r'(?i)\bXviD\b|\bDivX\b',        'XviD'),
-    ]
     filename_codec = ""
-    for pattern, label in _codec_patterns:
+    for pattern, label in _CODEC_PATTERNS:
         if re_search(pattern, name):
             filename_codec = label
             break
     codec_str = filename_codec if filename_codec else ffprobe_codec
-    LOGGER.info(f"auto_rename codec: filename='{filename_codec}' ffprobe='{ffprobe_codec}' → '{codec_str}'")
+    LOGGER.info(f"rename codec: filename='{filename_codec}' ffprobe='{ffprobe_codec}' → '{codec_str}'")
 
-    # Title strip — stop at first meaningful token after the title
-    # S\d pattern MUST come before quality so "Brown S01 480p" stops at "Brown"
-    _strip_at = [
-        r'[\(\[]?(?:19|20)\d{2}[\)\]]?',          # year
-        r'(?i)\b[Ss]\d{1,2}(?:[Ee]\d{1,2})?\b',   # S01 / S01E01
-        r'(?i)\b[Ss]eason\s*\d{1,2}\b',            # Season 1
-        r'(?i)\b(?:480|540|720|1080|2160|4320)p\b', # quality
-        r'(?i)\bblu[.\-\s]?ray\b',
-        r'(?i)\bbdrip\b',
-        r'(?i)\bweb[.\-\s]?dl\b',
-        r'(?i)\bweb[.\-\s]?rip\b',
-        r'(?i)\bwebrip\b',
-        r'(?i)\bhdrip\b',
-        r'(?i)\bdvdrip\b',
-        r'(?i)\bhdtv\b',
-        r'(?i)\bx\.?264\b',
-        r'(?i)\bx\.?265\b',
-        r'(?i)\bh\.?264\b',
-        r'(?i)\bh\.?265\b',
-        r'(?i)\bhevc\b',
-        r'(?i)\bav1\b',
-        r'(?i)\bvp9\b',
-        r'(?i)\bxvid\b',
-    ]
-    title = name
+    title    = name
     earliest = len(title)
-    for pat in _strip_at:
+    for pat in _TITLE_STRIP_AT:
         m = re_search(pat, title)
         if m and m.start() < earliest:
             earliest = m.start()
     title = title[:earliest]
-
-    # Clean site watermarks, dots/underscores, extra spaces
     title = _SITE_TAGS_RE.sub('', title)
     title = re_sub(r'[._\-]+', ' ', title).strip()
     title = re_sub(r'\s+', ' ', title).strip()
 
-    if not title:
-        LOGGER.warning(f"auto_rename: could not extract title from '{original_name}', skipping")
-        return original_name
-
-    # ── Step 3: IMDB year lookup if year missing ──────────────────────────────
-    if not year_str:
+    if not year_str and title:
         year_str = await _imdb_year_lookup(title)
+        year_raw = year_str[1:-1] if year_str else ""
         if year_str:
-            LOGGER.info(f"auto_rename IMDB year: {title} → {year_str}")
+            LOGGER.info(f"rename IMDB year: {title} → {year_str}")
 
-    # ── Step 4: audio label ───────────────────────────────────────────────────
     if audio_count == 0:
         audio_str = ""
+        shortlang = ""
     elif audio_count == 1:
         audio_str = audio_langs[0] if audio_langs else ""
+        shortlang = audio_str
     elif audio_count == 2:
         if len(audio_langs) >= 2:
             audio_str = f"ORG. [Dual Audio] [{' - '.join(audio_langs[:2])}]"
         else:
             audio_str = "Dual Audio"
+        shortlang = "Dual"
     else:
         if audio_langs:
             audio_str = f"Multi Audio [{' - '.join(audio_langs[:3])}]"
         else:
             audio_str = "Multi Audio"
+        shortlang = "Multi"
 
-    # ESubs = 1 subtitle track, MSubs = more than 1
     sub_str = "MSubs" if sub_count > 1 else ("ESubs" if sub_count == 1 else "")
 
-    # ── Step 5: assemble filename ─────────────────────────────────────────────
-    parts = [title]
-    if year_str:
-        parts.append(year_str)
-    if quality:
-        parts.append(quality)
-    if codec_str == "x265":
-        parts.append("HEVC")
-    if rip_type:
-        parts.append(rip_type)
-    if audio_str:
-        parts.append(audio_str)
-    if is_series and season_str:
-        parts.append(season_str)
-        parts.append("Complete Series")
-    if codec_str:
-        parts.append(codec_str)
-    if audio_codec:
-        parts.append(audio_codec)
-    if sub_str:
-        parts.append(sub_str)
+    return {
+        "ext":         ext,
+        "title":       title,
+        "year":        year_str,
+        "year_raw":    year_raw,
+        "quality":     quality,
+        "resolution":  resolution,
+        "rip":         rip_type,
+        "season":      season_str,
+        "episode":     episode_str,
+        "is_series":   is_series,
+        "audio_str":   audio_str,
+        "audio_count": audio_count,
+        "audio_langs": audio_langs,
+        "shortlang":   shortlang,
+        "codec":       codec_str,
+        "hevc":        "HEVC" if codec_str == "x265" else "",
+        "audio_codec": audio_codec,
+        "sub_str":     sub_str,
+        "sub_count":   sub_count,
+    }
 
-    new_name = " ".join(parts) + ext
+
+async def auto_rename_by_metadata(file_path: str, original_name: str) -> str:
+    """
+    Auto-rename using fixed smart format based on file metadata.
+
+    Movie  : Title (Year) Quality RipType Audio  VideoCodec AudioCodec ESubs/MSubs
+    Series : Title (Year) Quality HEVC RipType Audio S01 Complete Series VideoCodec AudioCodec ESubs/MSubs
+    """
+    meta = await _collect_rename_meta(file_path, original_name)
+    if not meta["title"]:
+        LOGGER.warning(f"auto_rename: no title from '{original_name}', skipping")
+        return original_name
+
+    parts = [meta["title"]]
+    if meta["year"]:        parts.append(meta["year"])
+    if meta["quality"]:     parts.append(meta["quality"])
+    if meta["hevc"]:        parts.append(meta["hevc"])
+    if meta["rip"]:         parts.append(meta["rip"])
+    if meta["audio_str"]:   parts.append(meta["audio_str"])
+    if meta["is_series"] and meta["season"]:
+        parts.append(meta["season"])
+        parts.append("Complete Series")
+    if meta["codec"]:       parts.append(meta["codec"])
+    if meta["audio_codec"]: parts.append(meta["audio_codec"])
+    if meta["sub_str"]:     parts.append(meta["sub_str"])
+
+    new_name = " ".join(parts) + meta["ext"]
     LOGGER.info(f"auto_rename: '{original_name}' → '{new_name}'")
+    return new_name
+
+
+async def apply_custom_rename_format(fmt_str: str, file_path: str, original_name: str) -> str:
+    """
+    Apply user-defined format template to generate filename.
+
+    Supported placeholders:
+      {name}       → Clean title
+      {year}       → Year digits (e.g. 2026)
+      {quality}    → 480p / 720p / 1080p
+      {resolution} → 1280x720
+      {rip}        → HDRip / BluRay
+      {season}     → S01  (empty for movies)
+      {episode}    → E01  (empty if not episode)
+      {audio}      → Full audio label (Hindi / Dual Audio / Multi Audio […])
+      {shortlang}  → Dual / Hindi / Multi
+      {lib}        → x264 / x265
+      {audiocodec} → AAC / AC3 / DTS
+      {shortsub}   → ESubs / MSubs
+      {hevc}       → HEVC  (empty if not x265)
+      {extension}  → .mkv / .mp4
+    """
+    meta = await _collect_rename_meta(file_path, original_name)
+    if not meta["title"]:
+        LOGGER.warning(f"custom_rename: no title from '{original_name}', skipping")
+        return original_name
+
+    result = fmt_str
+    result = result.replace("{name}",       meta["title"])
+    result = result.replace("{year}",       meta["year_raw"])
+    result = result.replace("{quality}",    meta["quality"])
+    result = result.replace("{resolution}", meta["resolution"])
+    result = result.replace("{rip}",        meta["rip"])
+    result = result.replace("{season}",     meta["season"])
+    result = result.replace("{episode}",    meta["episode"])
+    result = result.replace("{audio}",      meta["audio_str"])
+    result = result.replace("{shortlang}",  meta["shortlang"])
+    result = result.replace("{lib}",        meta["codec"])
+    result = result.replace("{audiocodec}", meta["audio_codec"])
+    result = result.replace("{shortsub}",   meta["sub_str"])
+    result = result.replace("{hevc}",       meta["hevc"])
+    result = result.replace("{extension}",  meta["ext"])
+
+    result = re_sub(r' {2,}', ' ', result).strip()
+    result = re_sub(r'^[\s._\-]+|[\s._\-]+$', '', result)
+
+    new_name = result + meta["ext"]
+    LOGGER.info(f"custom_rename: '{original_name}' → '{new_name}'")
     return new_name
 
 
@@ -672,10 +743,18 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
     ftag, ctag = ("m", "MIRROR") if isMirror else ("l", "LEECH")
 
     _auto_rename = user_dict.get("auto_rename", False)
+    if _auto_rename is True:
+        _auto_rename = "auto"
     if not isMirror and _auto_rename and dirpath:
         file_path = ospath.join(dirpath, file_)
         if ospath.isfile(file_path):
-            renamed = await auto_rename_by_metadata(file_path, file_)
+            if _auto_rename == "auto":
+                renamed = await auto_rename_by_metadata(file_path, file_)
+            elif _auto_rename == "custom":
+                ar_fmt = user_dict.get("auto_rename_fmt", "")
+                renamed = await apply_custom_rename_format(ar_fmt, file_path, file_) if ar_fmt else file_
+            else:
+                renamed = file_
             if renamed != file_:
                 file_ = renamed
 
