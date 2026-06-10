@@ -8,8 +8,9 @@ from re import match as re_match
 from cryptography.fernet import InvalidToken
 
 from pyrogram import Client
-from pyrogram.enums import ParseMode
-from pyrogram.types import InputMediaPhoto
+from pyrogram.enums import ParseMode, MessageEntityType
+from pyrogram.types import InputMediaPhoto, MessageEntity
+from pyrogram.parser.html import HTML as PyroHTML
 from pyrogram.errors import (
     ReplyMarkupInvalid,
     FloodWait,
@@ -49,6 +50,39 @@ from bot.helper.ext_utils.bot_utils import (
 )
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.exceptions import TgLinkException
+from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
+
+
+def _build_custom_emoji_entities(client, text):
+    """Parse HTML text and inject custom emoji MessageEntity objects.
+    Returns (plain_text, entities) for use with parse_mode=DISABLED,
+    or (text, None) as fallback if no custom emojis are mapped."""
+    if not CUSTOM_EMOJI_MAP:
+        return text, None
+    try:
+        parsed = PyroHTML(client).parse(text)
+        plain = parsed["message"]
+        entities = list(parsed.get("entities") or [])
+        for emoji_char, doc_id in CUSTOM_EMOJI_MAP.items():
+            pos = 0
+            while True:
+                idx = plain.find(emoji_char, pos)
+                if idx == -1:
+                    break
+                utf16_off = len(plain[:idx].encode("utf-16-le")) // 2
+                utf16_len = len(emoji_char.encode("utf-16-le")) // 2
+                entities.append(
+                    MessageEntity(
+                        type=MessageEntityType.CUSTOM_EMOJI,
+                        offset=utf16_off,
+                        length=utf16_len,
+                        custom_emoji_id=int(doc_id),
+                    )
+                )
+                pos = idx + len(emoji_char)
+        return plain, entities
+    except Exception:
+        return text, None
 
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
@@ -76,8 +110,10 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise  # let outer except ReplyMarkupInvalid retry without buttons
             except Exception as e:
                 LOGGER.error(format_exc())
+        _text, _entities = _build_custom_emoji_entities(message._client, text)
+        _pm = ParseMode.DISABLED if _entities is not None else None
         return await message.reply(
-            text=text,
+            text=_text,
             quote=True,
             disable_web_page_preview=True,
             disable_notification=True,
@@ -89,6 +125,8 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 and not rply.caption
                 else None
             ),
+            entities=_entities,
+            parse_mode=_pm,
             **kwargs,
         )
     except FloodWait as f:
@@ -126,12 +164,16 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
+        _text, _entities = _build_custom_emoji_entities(bot, text)
+        _pm = ParseMode.DISABLED if _entities is not None else None
         return await bot.send_message(
             chat_id=chat_id,
-            text=text,
+            text=_text,
             disable_web_page_preview=True,
             disable_notification=True,
             reply_markup=buttons,
+            entities=_entities,
+            parse_mode=_pm,
         )
     except FloodWait as f:
         LOGGER.warning(str(f))
@@ -193,13 +235,17 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     LOGGER.error(str(e))
                 continue
             LOGGER.info("DEBUG CP 2")
+            _text, _entities = _build_custom_emoji_entities(bot, text)
+            _pm = ParseMode.DISABLED if _entities is not None else None
             sent = await bot.send_message(
                 chat_id=chat.id,
-                text=text,
+                text=_text,
                 disable_web_page_preview=True,
                 disable_notification=True,
                 reply_to_message_id=topic_id,
                 reply_markup=buttons,
+                entities=_entities,
+                parse_mode=_pm,
             )
             msg_dict[f"{chat.id}:{topic_id}"] = sent
         except FloodWait as f:
@@ -220,8 +266,14 @@ async def editMessage(message, text, buttons=None, photo=None):
                     InputMediaPhoto(photo, text), reply_markup=buttons
                 )
             return await message.edit_caption(caption=text, reply_markup=buttons)
+        _text, _entities = _build_custom_emoji_entities(message._client, text)
+        _pm = ParseMode.DISABLED if _entities is not None else None
         await message.edit(
-            text=text, disable_web_page_preview=True, reply_markup=buttons
+            text=_text,
+            disable_web_page_preview=True,
+            reply_markup=buttons,
+            entities=_entities,
+            parse_mode=_pm,
         )
     except FloodWait as f:
         LOGGER.warning(str(f))
