@@ -4,11 +4,24 @@ from importlib import import_module
 from random import choice as rchoice
 from bot import config_dict, LOGGER
 from bot.helper.themes import wzml_minimal
+from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
 
 AVL_THEMES = {}
 for theme in listdir("bot/helper/themes"):
     if theme.startswith("wzml_") and theme.endswith(".py"):
         AVL_THEMES[theme[5:-3]] = import_module(f"bot.helper.themes.{theme[:-3]}")
+
+
+def _apply_custom_emojis(text: str) -> str:
+    if not CUSTOM_EMOJI_MAP:
+        return text
+    for emoji, doc_id in CUSTOM_EMOJI_MAP.items():
+        if emoji in text:
+            text = text.replace(
+                emoji,
+                f'<tg-emoji emoji-id="{doc_id}">{emoji}</tg-emoji>'
+            )
+    return text
 
 
 def BotTheme(var_name, **format_vars):
@@ -29,4 +42,5 @@ def BotTheme(var_name, **format_vars):
     if text is None:
         text = getattr(wzml_minimal.WZMLStyle(), var_name)
 
-    return text.format_map(format_vars)
+    result = text.format_map(format_vars)
+    return _apply_custom_emojis(result)
