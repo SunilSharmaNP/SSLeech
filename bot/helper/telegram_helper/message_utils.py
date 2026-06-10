@@ -53,14 +53,14 @@ from bot.helper.ext_utils.exceptions import TgLinkException
 from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
 
 
-def _build_custom_emoji_entities(client, text):
+async def _build_custom_emoji_entities(client, text):
     """Parse HTML text and inject custom emoji MessageEntity objects.
     Returns (plain_text, entities) for use with parse_mode=DISABLED,
     or (text, None) as fallback if no custom emojis are mapped."""
     if not CUSTOM_EMOJI_MAP:
         return text, None
     try:
-        parsed = PyroHTML(client).parse(text)
+        parsed = await PyroHTML(client).parse(text)
         plain = parsed["message"]
         entities = list(parsed.get("entities") or [])
         for emoji_char, doc_id in CUSTOM_EMOJI_MAP.items():
@@ -110,7 +110,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise  # let outer except ReplyMarkupInvalid retry without buttons
             except Exception as e:
                 LOGGER.error(format_exc())
-        _text, _entities = _build_custom_emoji_entities(message._client, text)
+        _text, _entities = await _build_custom_emoji_entities(message._client, text)
         _pm = ParseMode.DISABLED if _entities is not None else None
         return await message.reply(
             text=_text,
@@ -164,7 +164,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
-        _text, _entities = _build_custom_emoji_entities(bot, text)
+        _text, _entities = await _build_custom_emoji_entities(bot, text)
         _pm = ParseMode.DISABLED if _entities is not None else None
         return await bot.send_message(
             chat_id=chat_id,
@@ -235,7 +235,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     LOGGER.error(str(e))
                 continue
             LOGGER.info("DEBUG CP 2")
-            _text, _entities = _build_custom_emoji_entities(bot, text)
+            _text, _entities = await _build_custom_emoji_entities(bot, text)
             _pm = ParseMode.DISABLED if _entities is not None else None
             sent = await bot.send_message(
                 chat_id=chat.id,
@@ -266,7 +266,7 @@ async def editMessage(message, text, buttons=None, photo=None):
                     InputMediaPhoto(photo, text), reply_markup=buttons
                 )
             return await message.edit_caption(caption=text, reply_markup=buttons)
-        _text, _entities = _build_custom_emoji_entities(message._client, text)
+        _text, _entities = await _build_custom_emoji_entities(message._client, text)
         _pm = ParseMode.DISABLED if _entities is not None else None
         await message.edit(
             text=_text,
