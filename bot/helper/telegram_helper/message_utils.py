@@ -53,16 +53,59 @@ from bot.helper.ext_utils.exceptions import TgLinkException
 from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
 
 
+_RAW_ENTITY_TYPE_MAP = {
+    "MessageEntityBold": MessageEntityType.BOLD,
+    "MessageEntityItalic": MessageEntityType.ITALIC,
+    "MessageEntityCode": MessageEntityType.CODE,
+    "MessageEntityPre": MessageEntityType.PRE,
+    "MessageEntityStrikethrough": MessageEntityType.STRIKETHROUGH,
+    "MessageEntityUnderline": MessageEntityType.UNDERLINE,
+    "MessageEntitySpoiler": MessageEntityType.SPOILER,
+    "MessageEntityBlockquote": MessageEntityType.BLOCKQUOTE,
+    "MessageEntityTextUrl": MessageEntityType.TEXT_LINK,
+    "MessageEntityMentionName": MessageEntityType.TEXT_MENTION,
+    "MessageEntityMention": MessageEntityType.MENTION,
+    "MessageEntityHashtag": MessageEntityType.HASHTAG,
+    "MessageEntityBotCommand": MessageEntityType.BOT_COMMAND,
+    "MessageEntityUrl": MessageEntityType.URL,
+    "MessageEntityEmail": MessageEntityType.EMAIL,
+    "MessageEntityPhone": MessageEntityType.PHONE_NUMBER,
+    "MessageEntityCashtag": MessageEntityType.CASHTAG,
+}
+
+
 async def _build_custom_emoji_entities(client, text):
     """Parse HTML text and inject custom emoji MessageEntity objects.
-    Returns (plain_text, entities) for use with parse_mode=DISABLED,
-    or (text, None) as fallback if no custom emojis are mapped."""
+    Converts raw MTProto entities → high-level MessageEntity (has __dict__)
+    so Pyrofork's send_message(entities=...) works correctly.
+    Returns (plain_text, entities) or (text, None) as fallback."""
     if not CUSTOM_EMOJI_MAP:
         return text, None
     try:
+        # Step 1: Parse HTML → plain text + raw MTProto entities
         parsed = await PyroHTML(client).parse(text)
         plain = parsed["message"]
-        entities = list(parsed.get("entities") or [])
+        raw_ents = parsed.get("entities") or []
+
+        # Step 2: Convert raw MTProto entities → high-level MessageEntity
+        # (raw types use __slots__, can't set _client; high-level types have __dict__)
+        hl_entities = []
+        for raw_ent in raw_ents:
+            ent_type = _RAW_ENTITY_TYPE_MAP.get(type(raw_ent).__name__)
+            if ent_type is None:
+                continue
+            kwargs = {
+                "type": ent_type,
+                "offset": raw_ent.offset,
+                "length": raw_ent.length,
+            }
+            if hasattr(raw_ent, "url") and raw_ent.url:
+                kwargs["url"] = raw_ent.url
+            if hasattr(raw_ent, "language") and raw_ent.language:
+                kwargs["language"] = raw_ent.language
+            hl_entities.append(MessageEntity(**kwargs))
+
+        # Step 3: Add custom emoji entities (already high-level)
         for emoji_char, doc_id in CUSTOM_EMOJI_MAP.items():
             pos = 0
             while True:
@@ -71,7 +114,7 @@ async def _build_custom_emoji_entities(client, text):
                     break
                 utf16_off = len(plain[:idx].encode("utf-16-le")) // 2
                 utf16_len = len(emoji_char.encode("utf-16-le")) // 2
-                entities.append(
+                hl_entities.append(
                     MessageEntity(
                         type=MessageEntityType.CUSTOM_EMOJI,
                         offset=utf16_off,
@@ -80,8 +123,10 @@ async def _build_custom_emoji_entities(client, text):
                     )
                 )
                 pos = idx + len(emoji_char)
-        return plain, entities
-    except Exception:
+
+        return plain, hl_entities if hl_entities else None
+    except Exception as e:
+        LOGGER.warning(f"Custom emoji build failed: {e}")
         return text, None
 
 
