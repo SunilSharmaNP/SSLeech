@@ -19,7 +19,7 @@ def _apply_custom_emojis(text: str) -> str:
         if emoji in text:
             text = text.replace(
                 emoji,
-                f'<emoji id="{doc_id}">{emoji}</emoji>:
+                f'<emoji id="{doc_id}">{emoji}</emoji>'
             )
     return text
 
