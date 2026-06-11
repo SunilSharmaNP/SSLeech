@@ -387,10 +387,12 @@ def hubcloud_bypass_single(url):
         href = fix_url(a.get("href", ""))
         txt = a.get_text(strip=True).lower()
 
-        if "fslv2" in txt:
-            t = "fslv2"
-        elif "fsl" in txt:
+        if "fsl" in txt:
             t = "fsl"
+        elif "google" in txt:
+            t = "google"
+        elif "cdn" in txt:
+            t = "cdn"
         elif "pixel" in href:
             t = "pixel"
         else:
@@ -402,7 +404,7 @@ def hubcloud_bypass_single(url):
         raise DirectDownloadLinkException("HubCloud: No mirrors found")
 
     # 🔥 priority
-    priority = {"fsl": 0, "fslv2": 2, "direct": 3, "cloud": 4, "cdn": 5, "pixel": 6}
+    priority = {"fsl": 0, "google": 2, "cdn": 3, "hub": 4, "cloud": 5, "pixel": 6}
     mirrors.sort(key=lambda x: priority.get(x["type"], 99))
 
     return mirrors[0]["url"]
