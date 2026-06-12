@@ -82,6 +82,7 @@ from .modules import (
     gd_clean,
     broadcast,
     category_select,
+    merge,
 )
 
 
@@ -451,6 +452,8 @@ async def main():
             & ~CustomFilters.blacklisted,
         )
     )
+    merge.register_handlers(bot)
+
     LOGGER.info(f"WZML-X Bot [@{bot_name}] Started!")
     if user:
         LOGGER.info(f"WZ's User [@{user.me.username}] Ready!")
