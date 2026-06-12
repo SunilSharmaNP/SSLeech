@@ -105,7 +105,7 @@ async def fast_concat(input_files, output_path, listener=None):
                 f.write(f"file '{safe}'\n")
 
         cmd = [
-            "ffmpeg", "-y",
+            "ffmpeg", "-hide_banner", "-ignore_unknown", "-y",
             "-f", "concat", "-safe", "0",
             "-i", concat_list,
             "-map", "0",
@@ -145,7 +145,8 @@ async def standardize_video(input_path, output_path, target_w, target_h, listene
         f"fps=30,format=yuv420p"
     )
     cmd = [
-        "ffmpeg", "-y", "-i", input_path,
+        "ffmpeg", "-hide_banner", "-ignore_unknown", "-y",
+        "-i", input_path,
         "-vf", vf,
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "128k",
@@ -245,20 +246,36 @@ async def merge_video_files(input_files, output_path, listener=None):
                 pass
 
 
+def _file_is_video(fname):
+    """
+    Check if a filename is a video file.
+    Handles filenames with trailing CLI-flag-like tokens (e.g. 'movie.mkv -vm').
+    """
+    import re as _re
+    clean = _re.sub(r'(\s+-\w+)+\s*$', '', fname).strip()
+    ext = os.path.splitext(clean)[1].lower()
+    if ext in VIDEO_EXTENSIONS:
+        return True
+    raw_ext = os.path.splitext(fname)[1].lower()
+    for ve in VIDEO_EXTENSIONS:
+        if raw_ext.lower().startswith(ve):
+            return True
+    return False
+
+
 def get_video_files_sorted(path):
     """
     Return a naturally-sorted list of all video files under `path`.
     Works for both a single file and a directory tree.
+    Handles filenames with trailing CLI-flag-like tokens (e.g. 'movie.mkv -vm').
     """
     if os.path.isfile(path):
-        ext = os.path.splitext(path)[1].lower()
-        return [path] if ext in VIDEO_EXTENSIONS else []
+        return [path] if _file_is_video(os.path.basename(path)) else []
 
     result = []
     for dirpath, _, filenames in os.walk(path):
         for fname in natsorted(filenames):
-            ext = os.path.splitext(fname)[1].lower()
-            if ext in VIDEO_EXTENSIONS:
+            if _file_is_video(fname):
                 result.append(os.path.join(dirpath, fname))
     return result
 
