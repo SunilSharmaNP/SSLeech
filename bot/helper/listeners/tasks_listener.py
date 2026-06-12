@@ -10,8 +10,10 @@ from aiofiles.os import path as aiopath, remove as aioremove, listdir, makedirs
 from os import walk, path as ospath
 from html import escape
 from aioshutil import move
-from asyncio import create_subprocess_exec, sleep, Event
+from asyncio import create_subprocess_exec, sleep, Event, wait_for, TimeoutError as ATimeoutError
 from pyrogram.enums import ChatType
+from pyrogram.handlers import MessageHandler
+from pyrogram.filters import create as pyrogram_create_filter
 
 from bot import (
     OWNER_ID,
@@ -76,6 +78,12 @@ from bot.helper.mirror_utils.upload_utils.pyrogramEngine import TgUploader
 from bot.helper.mirror_utils.upload_utils.ddlEngine import DDLUploader
 from bot.helper.mirror_utils.rclone_utils.transfer import RcloneTransferHelper
 from bot.helper.mirror_utils.status_utils.metadata_status import MetadataStatus
+from bot.helper.mirror_utils.status_utils.merge_status import MergeStatus
+from bot.helper.ext_utils.video_merge import (
+    merge_video_files,
+    get_video_files_sorted,
+    parse_episode_selection,
+)
 from bot.helper.telegram_helper.message_utils import (
     sendCustomMsg,
     sendMessage,
@@ -113,6 +121,8 @@ class MirrorLeechListener:
         source_url=None,
         logMessage=None,
         leech_utils={},
+        merge_video=False,
+        merge_output_name="",
     ):
         if sameDir is None:
             sameDir = {}
@@ -152,6 +162,8 @@ class MirrorLeechListener:
         self.botpmmsg = None
         self.upload_details = {}
         self.leech_utils = leech_utils
+        self.merge_video = merge_video
+        self.merge_output_name = merge_output_name
         self.source_url = (
             source_url
             if source_url and source_url.startswith("http")
@@ -308,6 +320,12 @@ class MirrorLeechListener:
         if self.join and await aiopath.isdir(dl_path):
             await join_files(dl_path)
 
+        if self.merge_video and not self.extract and await aiopath.isdir(dl_path):
+            merged = await self._do_folder_merge(dl_path, name, size, gid)
+            if merged is None:
+                return
+            up_path = merged
+
         if self.extract:
             pswd = self.extract if isinstance(self.extract, str) else ""
             try:
@@ -409,6 +427,13 @@ class MirrorLeechListener:
                 self.newDir = ""
                 up_path = dl_path
 
+        if self.merge_video and self.extract and await aiopath.isdir(up_path or dl_path):
+            _extract_dir = up_path if (up_path and up_path != dl_path) else dl_path
+            merged = await self._do_zip_merge(_extract_dir, name, size, gid)
+            if merged is None:
+                return
+            up_path = merged
+
         if metadata := self.user_dict.get("lmeta") or config_dict["METADATA"]:
             meta_path = up_path or dl_path
             self.newDir = f"{self.dir}10000"
@@ -482,7 +507,7 @@ class MirrorLeechListener:
             elif not self.seed:
                 await clean_target(dl_path)
 
-        if not self.compress and not self.extract:
+        if not self.compress and not self.extract and not up_path:
             up_path = dl_path
 
         up_dir, up_name = up_path.rsplit("/", 1)
@@ -605,7 +630,140 @@ class MirrorLeechListener:
                 )
             await update_all_messages()
             await RCTransfer.upload(up_path, size)
-    
+
+    def _get_merge_output_path(self):
+        output_name = self.merge_output_name or f"Merged_{self.uid}.mkv"
+        if not output_name.lower().endswith((".mkv", ".mp4", ".avi", ".mov")):
+            output_name += ".mkv"
+        return ospath.join(self.dir, output_name)
+
+    async def _do_folder_merge(self, folder_path, name, size, gid):
+        LOGGER.info(f"Starting folder merge: {folder_path}")
+        video_files = await sync_to_async(get_video_files_sorted, folder_path)
+        if not video_files:
+            await self.onUploadError(
+                "❌ 𝐍𝐨 𝐯𝐢𝐝𝐞𝐨 𝐟𝐢𝐥𝐞𝐬 𝐟𝐨𝐮𝐧𝐝 𝐢𝐧 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐞𝐝 𝐟𝐨𝐥𝐝𝐞𝐫!"
+            )
+            return None
+        if len(video_files) == 1:
+            LOGGER.info("Only one video, skipping merge — using as-is.")
+            return video_files[0]
+        output_path = self._get_merge_output_path()
+        async with download_dict_lock:
+            download_dict[self.uid] = MergeStatus(name, size, gid, self)
+        await update_all_messages()
+        LOGGER.info(
+            f"Merging {len(video_files)} videos → {ospath.basename(output_path)}"
+        )
+        success = await merge_video_files(video_files, output_path, self)
+        if self.suproc == "cancelled":
+            return None
+        if not success:
+            await self.onUploadError("❌ 𝐌𝐞𝐫𝐠𝐞 𝐅𝐚𝐢𝐥𝐞𝐝! 𝐂𝐡𝐞𝐜𝐤 𝐥𝐨𝐠𝐬.")
+            return None
+        LOGGER.info(f"Merge done: {output_path}")
+        try:
+            await clean_target(folder_path)
+        except Exception:
+            pass
+        return output_path
+
+    async def _do_zip_merge(self, extracted_dir, name, size, gid):
+        LOGGER.info(f"Starting ZIP merge from: {extracted_dir}")
+        video_files = await sync_to_async(get_video_files_sorted, extracted_dir)
+        if not video_files:
+            await self.onUploadError(
+                "❌ 𝐍𝐨 𝐯𝐢𝐝𝐞𝐨 𝐟𝐢𝐥𝐞𝐬 𝐟𝐨𝐮𝐧𝐝 𝐚𝐟𝐭𝐞𝐫 𝐞𝐱𝐭𝐫𝐚𝐜𝐭𝐢𝐨𝐧!"
+            )
+            return None
+        if len(video_files) == 1:
+            LOGGER.info("Only one video after extract, skipping merge.")
+            return video_files[0]
+        ep_list_lines = "\n".join(
+            f"  <b>{i}.</b> <code>{ospath.basename(ep)}</code>"
+            for i, ep in enumerate(video_files, 1)
+        )
+        prompt = await sendMessage(
+            self.message,
+            f"📦 <b>𝐄𝐱𝐭𝐫𝐚𝐜𝐭𝐞𝐝 𝐕𝐢𝐝𝐞𝐨𝐬 — 𝐓𝐨𝐭𝐚𝐥: {len(video_files)}</b>\n\n"
+            f"{ep_list_lines}\n\n"
+            f"📝 <b>𝐑𝐞𝐩𝐥𝐲 𝐰𝐢𝐭𝐡 𝐞𝐩𝐢𝐬𝐨𝐝𝐞 𝐬𝐞𝐥𝐞𝐜𝐭𝐢𝐨𝐧:</b>\n"
+            f"• <code>all</code> — 𝐌𝐞𝐫𝐠𝐞 𝐚𝐥𝐥\n"
+            f"• <code>1-5</code> — 𝐄𝐩𝐢𝐬𝐨𝐝𝐞𝐬 1 𝐭𝐨 5\n"
+            f"• <code>1,3,5</code> — 𝐒𝐩𝐞𝐜𝐢𝐟𝐢𝐜 𝐞𝐩𝐢𝐬𝐨𝐝𝐞𝐬\n\n"
+            f"⏳ <i>𝐓𝐢𝐦𝐞𝐨𝐮𝐭: 120𝐬 (𝐰𝐢𝐥𝐥 𝐦𝐞𝐫𝐠𝐞 𝐚𝐥𝐥 𝐨𝐧 𝐭𝐢𝐦𝐞𝐨𝐮𝐭)</i>",
+        )
+        user_id = self.message.from_user.id
+        chat_id = self.message.chat.id
+        reply_event = Event()
+        result_holder = {}
+
+        async def _ep_filter(_, __, msg):
+            u = msg.from_user or msg.sender_chat
+            return bool(
+                u
+                and getattr(u, "id", None) == user_id
+                and msg.chat.id == chat_id
+                and msg.text
+            )
+
+        async def _ep_handler(_, msg):
+            result_holder["text"] = msg.text.strip()
+            result_holder["msg"] = msg
+            reply_event.set()
+
+        handler_entry = bot.add_handler(
+            MessageHandler(
+                _ep_handler,
+                filters=pyrogram_create_filter(_ep_filter),
+            ),
+            group=-1,
+        )
+        try:
+            await wait_for(reply_event.wait(), timeout=120)
+        except ATimeoutError:
+            LOGGER.info("Episode selection timed out — merging all episodes")
+            selected_indices = list(range(len(video_files)))
+        else:
+            try:
+                await deleteMessage(result_holder.get("msg"))
+            except Exception:
+                pass
+            raw_text = result_holder.get("text", "all")
+            selected_indices = parse_episode_selection(raw_text, len(video_files))
+            if selected_indices is None:
+                await sendMessage(
+                    self.message,
+                    "⚠️ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐬𝐞𝐥𝐞𝐜𝐭𝐢𝐨𝐧 — 𝐦𝐞𝐫𝐠𝐢𝐧𝐠 𝐚𝐥𝐥.",
+                )
+                selected_indices = list(range(len(video_files)))
+        finally:
+            bot.remove_handler(*handler_entry)
+
+        try:
+            await deleteMessage(prompt)
+        except Exception:
+            pass
+
+        selected_files = [video_files[i] for i in selected_indices]
+        LOGGER.info(f"Merging {len(selected_files)} selected episodes → {self.merge_output_name}")
+        output_path = self._get_merge_output_path()
+        async with download_dict_lock:
+            download_dict[self.uid] = MergeStatus(name, size, gid, self)
+        await update_all_messages()
+        success = await merge_video_files(selected_files, output_path, self)
+        if self.suproc == "cancelled":
+            return None
+        if not success:
+            await self.onUploadError("❌ 𝐌𝐞𝐫𝐠𝐞 𝐅𝐚𝐢𝐥𝐞𝐝! 𝐂𝐡𝐞𝐜𝐤 𝐥𝐨𝐠𝐬.")
+            return None
+        LOGGER.info(f"ZIP merge done: {output_path}")
+        try:
+            await clean_target(extracted_dir)
+        except Exception:
+            pass
+        return output_path
+
     async def onUploadComplete(
         self, link, size, files, folders, mime_type, name, rclonePath="", private=False
     ):
