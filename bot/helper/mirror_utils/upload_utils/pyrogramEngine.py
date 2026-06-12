@@ -62,6 +62,7 @@ from bot.helper.ext_utils.leech_utils import (
     get_mediainfo_link,
     format_filename,
 )
+from bot.helper.ext_utils.spidy_api import fetch_spidy_poster
 
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
@@ -98,6 +99,8 @@ class TgUploader:
         self.__user_id = listener.message.from_user.id
         self.__leechmsg = {}
         self.__leech_utils = self.__listener.leech_utils
+        self.__auto_poster = False
+        self.__spidy_thumb = None
 
     async def get_custom_thumb(self, thumb):
         if is_telegram_link(thumb):
@@ -391,6 +394,7 @@ class TgUploader:
         )
         if not await aiopath.exists(self.__thumb):
             self.__thumb = None
+        self.__auto_poster = user_dict.get("auto_poster", False)
 
     async def __msg_to_reply(self):
         msg_link = self.__listener.message.link if self.__listener.isSuperGroup else ""
@@ -712,6 +716,19 @@ class TgUploader:
                     thumb = thumb_path
                 elif is_audio and not is_video:
                     thumb = await get_audio_thumb(self.__up_path)
+
+            if (
+                self.__auto_poster
+                and thumb is None
+                and self.__thumb is None
+                and not self.__leech_utils.get("thumb")
+                and (is_video or is_audio or not is_image)
+            ):
+                spidy_key = config_dict.get("SPIDY_API_KEY", "")
+                spidy_poster = await fetch_spidy_poster(file, spidy_key)
+                if spidy_poster:
+                    LOGGER.info(f"Auto Poster: Using Spidy poster for '{file}'")
+                    thumb = spidy_poster
 
             if (
                 self.__as_doc
