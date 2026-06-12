@@ -101,6 +101,7 @@ class TgUploader:
         self.__leech_utils = self.__listener.leech_utils
         self.__auto_poster = False
         self.__spidy_thumb = None
+        self.__current_cover = None
 
     async def get_custom_thumb(self, thumb):
         if is_telegram_link(thumb):
@@ -241,7 +242,7 @@ class TgUploader:
             return video_msg
 
     async def __copy_file(self):
-        has_cover = self.__thumb and await aiopath.exists(self.__thumb)
+        has_cover = self.__current_cover and await aiopath.exists(self.__current_cover)
         is_video_msg = self.__sent_msg and self.__sent_msg.video
         
         try:
@@ -264,9 +265,9 @@ class TgUploader:
                 if copied and is_video_msg and has_cover:
                     await self.__set_video_cover(
                         copied, 
-                        self.__thumb, 
+                        self.__current_cover, 
                         copied.caption,
-                        copied.caption_entities,  # ADD THIS LINE
+                        copied.caption_entities,
                         copied.reply_markup
                     )
                 
@@ -302,9 +303,9 @@ class TgUploader:
                     if leech_copy and is_video_msg and has_cover:
                         await self.__set_video_cover(
                             leech_copy, 
-                            self.__thumb, 
+                            self.__current_cover, 
                             leech_copy.caption,
-                            leech_copy.caption_entities,  # ADD THIS LINE
+                            leech_copy.caption_entities,
                             leech_copy.reply_markup
                         )
                     
@@ -330,9 +331,9 @@ class TgUploader:
                             if dump_copy and is_video_msg and has_cover:
                                 await self.__set_video_cover(
                                     dump_copy, 
-                                    self.__thumb, 
+                                    self.__current_cover, 
                                     dump_copy.caption,
-                                    dump_copy.caption_entities,  # ADD THIS LINE
+                                    dump_copy.caption_entities,
                                     dump_copy.reply_markup
                                 )
                             
@@ -504,14 +505,14 @@ class TgUploader:
             quote=True,
             disable_notification=True,
         )
-        has_cover = self.__thumb and await aiopath.exists(self.__thumb)
+        has_cover = self.__current_cover and await aiopath.exists(self.__current_cover)
         
         if has_cover and key == "videos":
             for msg_item in msgs_list:
                 if msg_item.video:
                     await self.__set_video_cover(
                         msg_item, 
-                        self.__thumb, 
+                        self.__current_cover, 
                         msg_item.caption,
                         None
                     )
@@ -543,7 +544,7 @@ class TgUploader:
                         if copied_msg.video:
                             await self.__set_video_cover(
                                 copied_msg, 
-                                self.__thumb, 
+                                self.__current_cover, 
                                 copied_msg.caption,
                                 None
                             )
@@ -567,7 +568,7 @@ class TgUploader:
                                     if dump_msg.video:
                                         await self.__set_video_cover(
                                             dump_msg, 
-                                            self.__thumb, 
+                                            self.__current_cover, 
                                             dump_msg.caption,
                                             None
                                         )
@@ -738,6 +739,7 @@ class TgUploader:
                 key = "documents"
                 if is_video and thumb is None:
                     thumb = await take_ss(self.__up_path, None)
+                self.__current_cover = thumb
                 if self.__is_cancelled:
                     return
                 buttons = await self.__buttons(self.__up_path, is_video)
@@ -773,6 +775,7 @@ class TgUploader:
                 duration = (await get_media_info(self.__up_path))[0]
                 if thumb is None:
                     thumb = await take_ss(self.__up_path, duration)
+                self.__current_cover = thumb
                 if thumb is not None:
                     with Image.open(thumb) as img:
                         width, height = img.size
@@ -800,10 +803,6 @@ class TgUploader:
                     return
                 buttons = await self.__buttons(self.__up_path, is_video)
                 
-                user_dict = user_data.get(self.__user_id, {})
-                if self.__thumb and await aiopath.exists(self.__thumb):
-                    thumb = self.__thumb
-                
                 nrml_media = await self.__client.send_video(
                     chat_id=self.__sent_msg.chat.id,
                     reply_to_message_id=self.__sent_msg.id,
@@ -819,9 +818,8 @@ class TgUploader:
                     reply_markup=buttons,
                 )
                 
-                user_dict = user_data.get(self.__user_id, {})
-                if self.__thumb and await aiopath.exists(self.__thumb):
-                    await self.__set_video_cover(nrml_media, self.__thumb, cap_mono, buttons)
+                if self.__current_cover and await aiopath.exists(self.__current_cover):
+                    await self.__set_video_cover(nrml_media, self.__current_cover, cap_mono, buttons)
                 
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
                     try:
