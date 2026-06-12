@@ -102,6 +102,7 @@ class TgUploader:
         self.__auto_poster = False
         self.__spidy_thumb = None
         self.__current_cover = None
+        self.__orig_filename = None
 
     async def get_custom_thumb(self, thumb):
         if is_telegram_link(thumb):
@@ -607,6 +608,7 @@ class TgUploader:
                     if self.__is_cancelled:
                         return
                     self.__prm_media = True if f_size > 2097152000 else False
+                    self.__orig_filename = file_
                     cap_mono, file_ = await self.__prepare_file(file_, dirpath)
                     if self.__last_msg_in_group:
                         group_lists = [
@@ -721,15 +723,18 @@ class TgUploader:
             if (
                 self.__auto_poster
                 and thumb is None
-                and self.__thumb is None
                 and not self.__leech_utils.get("thumb")
                 and (is_video or is_audio or not is_image)
             ):
                 spidy_key = config_dict.get("SPIDY_API_KEY", "")
-                spidy_poster = await fetch_spidy_poster(file, spidy_key)
+                search_name = self.__orig_filename or file
+                LOGGER.info(f"Auto Poster: Searching Spidy for '{search_name}'")
+                spidy_poster = await fetch_spidy_poster(search_name, spidy_key)
                 if spidy_poster:
-                    LOGGER.info(f"Auto Poster: Using Spidy poster for '{file}'")
+                    LOGGER.info(f"Auto Poster: Poster found, using for '{file}'")
                     thumb = spidy_poster
+                else:
+                    LOGGER.info(f"Auto Poster: No poster found for '{search_name}'")
 
             if (
                 self.__as_doc
