@@ -11,6 +11,7 @@ from cloudscraper import create_scraper
 
 from bot import (
     bot,
+    OWNER_ID,
     DOWNLOAD_DIR,
     LOGGER,
     config_dict,
@@ -512,7 +513,8 @@ async def _mirror_leech(
 
     if merge_video:
         _u_dict = user_data.get(message.from_user.id, {})
-        if not _u_dict.get("merge_video", False):
+        _is_owner = message.from_user.id == OWNER_ID
+        if not _is_owner and not _u_dict.get("merge_video", False):
             await sendMessage(
                 message,
                 "❌ <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ</b> ᴅɪsᴀʙʟᴇᴅ!\n\n"
