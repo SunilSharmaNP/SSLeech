@@ -504,14 +504,43 @@ _TITLE_STRIP_AT = [
 ]
 
 
+_MEDIA_EXTS = {'.mkv', '.mp4', '.avi', '.mov', '.flv', '.wmv', '.webm',
+               '.ts', '.m4v', '.mpg', '.mpeg', '.3gp', '.rmvb', '.m2ts'}
+
+
+def _clean_media_filename(name: str) -> str:
+    """Strip trailing CLI-flag-like tokens (e.g. ' -vm', ' -abc') from a filename."""
+    import re as _re
+    cleaned = _re.sub(r'(\s+-\w+)+\s*$', '', name).strip()
+    return cleaned if cleaned else name
+
+
+def _get_media_ext(name: str) -> str:
+    """
+    Extract the real media extension from a filename that may contain
+    trailing CLI-flag-like tokens.
+    e.g. 'merge.mkv -vm' → '.mkv'
+    """
+    clean = _clean_media_filename(name)
+    _, ext = ospath.splitext(clean)
+    if ext.lower() in _MEDIA_EXTS:
+        return ext
+    _, raw_ext = ospath.splitext(name)
+    for ve in _MEDIA_EXTS:
+        if raw_ext.lower().startswith(ve):
+            return ve
+    return ext
+
+
 async def _collect_rename_meta(file_path: str, original_name: str) -> dict:
     """
     Shared metadata collector for both Auto and Custom rename modes.
     Runs ffprobe on file_path and parses original_name.
     Returns a dict with all values needed to fill any rename template.
     """
-    ext  = ospath.splitext(original_name)[1]
-    base = ospath.splitext(original_name)[0]
+    original_name = _clean_media_filename(original_name)
+    ext  = _get_media_ext(original_name)
+    base = ospath.splitext(_clean_media_filename(original_name))[0]
 
     quality       = ""
     resolution    = ""
@@ -743,12 +772,13 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
     ftag, ctag = ("m", "MIRROR") if isMirror else ("l", "LEECH")
 
     disk_file_ = file_
+    file_ = _clean_media_filename(file_)
 
     _auto_rename = user_dict.get("auto_rename", False)
     if _auto_rename is True:
         _auto_rename = "auto"
     if not isMirror and _auto_rename and dirpath:
-        file_path = ospath.join(dirpath, file_)
+        file_path = ospath.join(dirpath, disk_file_)
         if ospath.isfile(file_path):
             if _auto_rename == "auto":
                 renamed = await auto_rename_by_metadata(file_path, file_)
