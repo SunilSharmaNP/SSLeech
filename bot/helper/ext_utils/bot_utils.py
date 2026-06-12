@@ -506,15 +506,15 @@ def arg_parser(items, arg_base):
         if part in arg_base:
             if arg_start == -1:
                 arg_start = i
-            if i + 1 == t and part in bool_arg_set or part in ["-s", "-j"]:
+            if part in bool_arg_set:
+                arg_base[part] = True
+            elif i + 1 == t or part in ["-s", "-j"]:
                 arg_base[part] = True
             else:
                 sub_list = []
                 for j in range(i + 1, t):
                     item = items[j].strip()
                     if item in arg_base:
-                        if part in bool_arg_set and not sub_list:
-                            arg_base[part] = True
                         break
                     sub_list.append(item.strip())
                     i += 1
