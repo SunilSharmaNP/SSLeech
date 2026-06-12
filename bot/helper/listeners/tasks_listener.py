@@ -320,11 +320,24 @@ class MirrorLeechListener:
         if self.join and await aiopath.isdir(dl_path):
             await join_files(dl_path)
 
-        if self.merge_video and not self.extract and await aiopath.isdir(dl_path):
-            merged = await self._do_folder_merge(dl_path, name, size, gid)
-            if merged is None:
-                return
-            up_path = merged
+        if self.merge_video and not self.extract:
+            merge_dir = dl_path
+            merge_name = name
+            if not await aiopath.isdir(dl_path) and self.sameDir:
+                folder_n = self.sameDir.get("name", "").lstrip("/")
+                if folder_n:
+                    candidate = ospath.join(self.dir, folder_n)
+                    if await aiopath.isdir(candidate):
+                        merge_dir = candidate
+                        merge_name = folder_n
+                        LOGGER.info(f"merge_video: found sameDir subfolder: {merge_dir}")
+            if await aiopath.isdir(merge_dir):
+                merged = await self._do_folder_merge(merge_dir, merge_name, size, gid)
+                if merged is None:
+                    return
+                up_path = merged
+            else:
+                LOGGER.info(f"merge_video: dl_path is a single file, no folder merge needed: {dl_path}")
 
         if self.extract:
             pswd = self.extract if isinstance(self.extract, str) else ""
