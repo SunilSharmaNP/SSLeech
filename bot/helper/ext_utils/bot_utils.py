@@ -496,40 +496,38 @@ def get_mega_link_type(url):
 def arg_parser(items, arg_base):
     if not items:
         return arg_base
-    bool_arg_set = {"-b", "-e", "-z", "-s", "-j", "-d", "-mv", "-mergevideo"}
-    t = len(items)
-    i = 0
-    arg_start = -1
 
-    while i + 1 <= t:
+    bool_arg_set = {"-b", "-e", "-z", "-s", "-j", "-d", "-mv", "-mergevideo"}
+    _url_prefixes = ("http://", "https://", "magnet:", "ftp://", "mfc:", "mrcc:")
+
+    consumed = set()
+    i = 0
+    while i < len(items):
         part = items[i].strip()
         if part in arg_base:
-            if arg_start == -1:
-                arg_start = i
-            if part in bool_arg_set:
-                arg_base[part] = True
-            elif i + 1 == t or part in ["-s", "-j"]:
+            consumed.add(i)
+            if part in bool_arg_set or part in ("-s", "-j"):
                 arg_base[part] = True
             else:
                 sub_list = []
-                for j in range(i + 1, t):
-                    item = items[j].strip()
-                    if item in arg_base:
+                j = i + 1
+                while j < len(items):
+                    nxt = items[j].strip()
+                    if nxt in arg_base or any(nxt.startswith(p) for p in _url_prefixes):
                         break
-                    sub_list.append(item.strip())
-                    i += 1
+                    sub_list.append(nxt)
+                    consumed.add(j)
+                    j += 1
                 if sub_list:
                     arg_base[part] = " ".join(sub_list)
+                    i = j - 1
+                else:
+                    arg_base[part] = True
         i += 1
 
-    link = []
-    if items[0].strip() not in arg_base:
-        if arg_start == -1:
-            link.extend(item.strip() for item in items)
-        else:
-            link.extend(items[r].strip() for r in range(arg_start))
-        if link:
-            arg_base["link"] = " ".join(link)
+    link_parts = [items[k].strip() for k in range(len(items)) if k not in consumed and items[k].strip()]
+    if link_parts:
+        arg_base["link"] = " ".join(link_parts)
     return arg_base
 
 
