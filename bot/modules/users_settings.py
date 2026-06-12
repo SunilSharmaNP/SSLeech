@@ -481,6 +481,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(_ar_label, f"userset {user_id} auto_rename")
 
+        auto_poster = user_dict.get("auto_poster", False)
+        buttons.ibutton(
+            f"{'✅️' if auto_poster else ''} 🎬 𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ",
+            f"userset {user_id} auto_poster",
+        )
+
         _ar_display = (
             "🤖 𝐀ᴜᴛᴏ"    if _ar_mode == "auto"   else
             "✏️ 𝐂ᴜsᴛᴏᴍ" if _ar_mode == "custom" else
@@ -502,6 +508,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             LREMNAME=escape(lremname),
             LMETA=escape(lmeta),
             AUTO_RENAME=_ar_display,
+            AUTO_POSTER="✅ 𝐄ɴᴀʙʟᴇᴅ" if auto_poster else "❌ 𝐃ɪsᴀʙʟᴇᴅ",
         )
 
         buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
@@ -1112,6 +1119,15 @@ async def edit_user_settings(client, query):
         await query.answer()
         update_user_ldata(
             user_id, "media_group", not user_dict.get("media_group", False)
+        )
+        await update_user_settings(query, "leech")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "auto_poster":
+        handler_dict[user_id] = False
+        await query.answer()
+        update_user_ldata(
+            user_id, "auto_poster", not user_dict.get("auto_poster", False)
         )
         await update_user_settings(query, "leech")
         if DATABASE_URL:
