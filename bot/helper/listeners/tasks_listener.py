@@ -632,9 +632,14 @@ class MirrorLeechListener:
             await RCTransfer.upload(up_path, size)
 
     def _get_merge_output_path(self):
+        import re as _re
         output_name = self.merge_output_name or f"Merged_{self.uid}.mkv"
-        if not output_name.lower().endswith((".mkv", ".mp4", ".avi", ".mov")):
-            output_name += ".mkv"
+        clean_name = _re.sub(r'(\s+-\w+)+\s*$', '', output_name).strip() or output_name
+        video_exts = (".mkv", ".mp4", ".avi", ".mov", ".flv", ".wmv", ".webm", ".ts", ".m4v")
+        if not any(clean_name.lower().endswith(ext) for ext in video_exts):
+            output_name = clean_name + ".mkv"
+        else:
+            output_name = clean_name
         return ospath.join(self.dir, output_name)
 
     async def _do_folder_merge(self, folder_path, name, size, gid):
