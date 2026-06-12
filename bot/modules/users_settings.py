@@ -487,6 +487,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             f"userset {user_id} auto_poster",
         )
 
+        merge_video = user_dict.get("merge_video", False)
+        buttons.ibutton(
+            f"{'✅️' if merge_video else ''} 🎞️ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ",
+            f"userset {user_id} merge_video",
+        )
+
         _ar_display = (
             "🤖 𝐀ᴜᴛᴏ"    if _ar_mode == "auto"   else
             "✏️ 𝐂ᴜsᴛᴏᴍ" if _ar_mode == "custom" else
@@ -509,6 +515,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             LMETA=escape(lmeta),
             AUTO_RENAME=_ar_display,
             AUTO_POSTER="✅ 𝐄ɴᴀʙʟᴇᴅ" if auto_poster else "❌ 𝐃ɪsᴀʙʟᴇᴅ",
+            MERGE_VIDEO="✅ 𝐄ɴᴀʙʟᴇᴅ" if merge_video else "❌ 𝐃ɪsᴀʙʟᴇᴅ",
         )
 
         buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
@@ -1128,6 +1135,15 @@ async def edit_user_settings(client, query):
         await query.answer()
         update_user_ldata(
             user_id, "auto_poster", not user_dict.get("auto_poster", False)
+        )
+        await update_user_settings(query, "leech")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "merge_video":
+        handler_dict[user_id] = False
+        await query.answer()
+        update_user_ldata(
+            user_id, "merge_video", not user_dict.get("merge_video", False)
         )
         await update_user_settings(query, "leech")
         if DATABASE_URL:
