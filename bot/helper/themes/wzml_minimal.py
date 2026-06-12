@@ -332,7 +332,8 @@ class WZMLStyle:
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
 ┠<b> 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
-┖<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
+┠<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
+┖<b> 𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
