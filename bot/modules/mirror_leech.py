@@ -122,6 +122,8 @@ async def _mirror_leech(
         "-screenshots": "",
         "-t": "",
         "-thumb": "",
+        "-mv": False,
+        "-mergevideo": False,
     }
 
     args = arg_parser(input_list[1:], arg_base)
@@ -158,6 +160,7 @@ async def _mirror_leech(
     pssw = args["-p"] or args["-pass"]
     thumb = args["-t"] or args["-thumb"]
     sshots = int(ss) if (ss := (args["-ss"] or args["-screenshots"])).isdigit() else 0
+    merge_video = bool(args["-mv"] or args["-mergevideo"])
     bulk_start = 0
     bulk_end = 0
     ratio = None
@@ -191,6 +194,18 @@ async def _mirror_leech(
         if sameDir is None:
             sameDir = {"total": multi, "tasks": set(), "name": folder_name}
         sameDir["tasks"].add(message.id)
+
+    if merge_video and not isBulk:
+        if multi > 1 and sameDir is None:
+            seed = False
+            ratio = None
+            seed_time = None
+            folder_name = f"/mv_{message.id}"
+            sameDir = {"total": multi, "tasks": set(), "name": folder_name}
+            sameDir["tasks"].add(message.id)
+        elif sameDir is not None and not folder_name:
+            folder_name = sameDir.get("name", "")
+            sameDir["tasks"].add(message.id)
 
     if isBulk and config_dict.get("DISABLE_BULK"):
         await sendMessage(message, "❌ Bulk downloads are currently disabled.")
@@ -495,6 +510,19 @@ async def _mirror_leech(
             await delete_links(message)
             return
 
+    if merge_video:
+        _u_dict = user_data.get(message.from_user.id, {})
+        if not _u_dict.get("merge_video", False):
+            await sendMessage(
+                message,
+                "❌ <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ</b> ᴅɪsᴀʙʟᴇᴅ!\n\n"
+                "𝐄ɴᴀʙʟᴇ ɪᴛ: <b>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs → 𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs → 🎬 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ</b>",
+            )
+            await delete_links(message)
+            return
+
+    _dl_name = "" if (merge_video and multi > 1) else name
+
     listener = MirrorLeechListener(
         message,
         compress,
@@ -512,15 +540,17 @@ async def _mirror_leech(
         index_link=index_link,
         source_url=org_link or link,
         leech_utils={"screenshots": sshots, "thumb": thumb},
+        merge_video=merge_video,
+        merge_output_name=name if merge_video else "",
     )
 
     if file_ is not None:
         await delete_links(message)
         await TelegramDownloadHelper(listener).add_download(
-            reply_to, f"{path}/", name, session, decrypter
+            reply_to, f"{path}/", _dl_name, session, decrypter
         )
     elif isinstance(link, dict):
-        await add_direct_download(link, path, listener, name)
+        await add_direct_download(link, path, listener, _dl_name)
     elif is_rclone_path(link):
         if link.startswith("mrcc:"):
             link = link.split("mrcc:", 1)[1]
@@ -533,13 +563,13 @@ async def _mirror_leech(
             )
             await delete_links(message)
             return
-        await add_rclone_download(link, config_path, f"{path}/", name, listener)
+        await add_rclone_download(link, config_path, f"{path}/", _dl_name, listener)
     elif is_gdrive_link(link):
         await delete_links(message)
-        await add_gd_download(link, path, listener, name, org_link)
+        await add_gd_download(link, path, listener, _dl_name, org_link)
     elif is_mega_link(link):
         await delete_links(message)
-        await add_mega_download(link, f"{path}/", listener, name)
+        await add_mega_download(link, f"{path}/", listener, _dl_name)
     elif isQbit and "real-debrid" not in link:
         await add_qb_torrent(link, path, listener, ratio, seed_time)
     elif not is_telegram_link(link):
@@ -548,7 +578,7 @@ async def _mirror_leech(
             headers += (
                 f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
             )
-        await add_aria2c_download(link, path, listener, name, headers, ratio, seed_time)
+        await add_aria2c_download(link, path, listener, _dl_name, headers, ratio, seed_time)
     await delete_links(message)
 
 
