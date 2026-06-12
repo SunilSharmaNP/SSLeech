@@ -11,39 +11,56 @@ from logging import getLogger
 LOGGER = getLogger(__name__)
 SPIDY_API_BASE = "https://poster-api.ispidy.com/v1/fetch"
 
+_BOT_PREFIX_RE = re.compile(
+    r'^(?:[\[\(][A-Za-z0-9@_\-]{1,20}[\]\)]\s*(?:[\|\-:]\s*)?'
+    r'|[A-Za-z0-9@_\-]{1,20}\s*[\|\-:]\s*)',
+    re.IGNORECASE,
+)
+
+_QUALITY_TAGS = [
+    r'[Ss]\d{1,2}[Ee]\d{1,2}',
+    r'[Ss]eason[\s._-]*\d{1,2}',
+    r'(19|20)\d{2}',
+    r'\d{3,4}p',
+    r'BluRay', r'Blu[-.]?Ray',
+    r'WEBRip', r'WEB[-.]DL', r'WEBDL',
+    r'AMZN', r'NF', r'DSNP', r'ATVP', r'HMAX',
+    r'HDTV', r'HDRip', r'DVDRip', r'BDRip',
+    r'x264', r'x265', r'HEVC', r'AVC', r'H\.264', r'H\.265',
+    r'AAC', r'DD[+\.]?5', r'DTS', r'Atmos', r'TrueHD',
+    r'CVBR', r'ESub', r'MSub', r'Multi',
+]
+
 
 def parse_filename_for_search(filename):
     """Extract title, year and season from filename for Spidy API search."""
-    name = ospath.splitext(filename)[0]
+    name = ospath.splitext(ospath.basename(filename))[0]
+
+    name = _BOT_PREFIX_RE.sub('', name).strip()
 
     year_match = re.search(r'(19|20)\d{2}', name)
     year = year_match.group(0) if year_match else None
 
-    season_match = re.search(r'[Ss](\d{1,2})[Ee]\d|[Ss]eason[\s._-]*(\d{1,2})', name, re.IGNORECASE)
+    season_match = re.search(
+        r'[Ss](\d{1,2})[Ee]\d|[Ss]eason[\s._-]*(\d{1,2})',
+        name,
+        re.IGNORECASE,
+    )
     season = None
     if season_match:
         season = (season_match.group(1) or season_match.group(2)).lstrip('0') or '1'
 
-    title_part = name
-    cut_patterns = [
-        r'(19|20)\d{2}',
-        r'[Ss]\d{1,2}[Ee]\d{1,2}',
-        r'[Ss]eason[\s._-]*\d{1,2}',
-        r'\d{3,4}p',
-        r'BluRay', r'Blu-Ray',
-        r'WEBRip', r'WEB-DL', r'WEB\.DL',
-        r'HDTV', r'HDRip', r'DVDRip',
-        r'x264', r'x265', r'HEVC', r'AVC',
-        r'AAC', r'DD5', r'DTS',
-    ]
-    for pattern in cut_patterns:
-        m = re.search(pattern, title_part, re.IGNORECASE)
-        if m:
-            title_part = title_part[:m.start()]
-            break
+    earliest_pos = len(name)
+    for pattern in _QUALITY_TAGS:
+        m = re.search(pattern, name, re.IGNORECASE)
+        if m and m.start() < earliest_pos:
+            earliest_pos = m.start()
 
-    title = re.sub(r'[._\-]', ' ', title_part).strip()
+    title_part = name[:earliest_pos]
+
+    title = re.sub(r'[._\-\+]', ' ', title_part).strip()
     title = re.sub(r'\s+', ' ', title).strip()
+    title = re.sub(r'[\[\(\]\)]', '', title).strip()
 
     return title, year, season
 
@@ -58,17 +75,19 @@ async def fetch_spidy_poster(filename, api_key):
         return None
 
     title, year, season = parse_filename_for_search(filename)
+    LOGGER.info(f"Spidy API: Parsed — title='{title}' year={year} season={season} from '{ospath.basename(filename)}'")
 
-    if title:
-        params = {"api_key": api_key, "title": title}
-        if year:
-            params["year"] = year
-        if season:
-            params["season"] = season
-    else:
-        params = {"api_key": api_key, "query": filename}
+    if not title:
+        LOGGER.info(f"Spidy API: Could not parse title from '{filename}', skipping")
+        return None
 
-    LOGGER.info(f"Spidy API search params: {params}")
+    params = {"api_key": api_key, "title": title}
+    if year:
+        params["year"] = year
+    if season:
+        params["season"] = season
+
+    LOGGER.info(f"Spidy API: Requesting with params {params}")
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -78,16 +97,17 @@ async def fetch_spidy_poster(filename, api_key):
                 timeout=aiohttp.ClientTimeout(total=15),
             ) as resp:
                 if resp.status == 401:
-                    LOGGER.error("Spidy API: Invalid API key")
+                    LOGGER.error("Spidy API: Invalid API key (401)")
                     return None
                 if resp.status == 429:
-                    LOGGER.warning("Spidy API: Rate limit hit")
+                    LOGGER.warning("Spidy API: Rate limit hit (429)")
                     return None
                 if resp.status != 200:
-                    LOGGER.warning(f"Spidy API returned status {resp.status}")
+                    LOGGER.warning(f"Spidy API: Unexpected status {resp.status}")
                     return None
 
                 data = await resp.json()
+                LOGGER.info(f"Spidy API: Raw response: {str(data)[:300]}")
 
             landscape_url = None
             results = data.get("results", [])
@@ -100,17 +120,39 @@ async def fetch_spidy_poster(filename, api_key):
                 landscape_url = data["landscape"]
 
             if not landscape_url:
-                LOGGER.info(f"Spidy API: No landscape poster found for '{filename}'")
+                LOGGER.info(f"Spidy API: No landscape poster in response for title='{title}'")
+                if not results and year:
+                    LOGGER.info("Spidy API: Retrying without year...")
+                    params_no_year = {"api_key": api_key, "title": title}
+                    if season:
+                        params_no_year["season"] = season
+                    async with session.get(
+                        SPIDY_API_BASE,
+                        params=params_no_year,
+                        timeout=aiohttp.ClientTimeout(total=15),
+                    ) as resp2:
+                        if resp2.status == 200:
+                            data2 = await resp2.json()
+                            results2 = data2.get("results", [])
+                            for r in results2:
+                                if r.get("landscape"):
+                                    landscape_url = r["landscape"]
+                                    break
+                            if not landscape_url and data2.get("landscape"):
+                                landscape_url = data2["landscape"]
+
+            if not landscape_url:
+                LOGGER.info(f"Spidy API: No poster found for '{title}'")
                 return None
 
-            LOGGER.info(f"Spidy API: Poster URL found: {landscape_url}")
+            LOGGER.info(f"Spidy API: Downloading poster from {landscape_url}")
 
             async with session.get(
                 landscape_url,
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as img_resp:
                 if img_resp.status != 200:
-                    LOGGER.warning(f"Spidy API: Failed to download poster image (HTTP {img_resp.status})")
+                    LOGGER.warning(f"Spidy API: Image download failed (HTTP {img_resp.status})")
                     return None
                 img_data = await img_resp.read()
 
@@ -125,9 +167,9 @@ async def fetch_spidy_poster(filename, api_key):
         LOGGER.info(f"Spidy API: Poster saved to {temp_path}")
         return temp_path
 
-    except aiohttp.ClientConnectorError:
-        LOGGER.error("Spidy API: Cannot connect to poster API server")
+    except aiohttp.ClientConnectorError as e:
+        LOGGER.error(f"Spidy API: Connection error — {e}")
         return None
     except Exception as e:
-        LOGGER.error(f"Spidy API error for '{filename}': {e}")
+        LOGGER.error(f"Spidy API: Unexpected error for '{filename}': {e}", exc_info=True)
         return None
