@@ -78,7 +78,7 @@ class MergeStatus:
             self.__listener.suproc.kill()
         else:
             self.__listener.suproc = "cancelled"
-        await self.__listener.onUploadError("𝐌𝐞𝐫𝐠𝐢𝐧𝐠 𝐒𝐭𝐨𝐩𝐩𝐞𝐝 𝐁𝐲 𝐔𝐬𝐞𝐫!")
+        await self.__listener.onUploadError("🚫 𝐌ᴇʀɢɪɴɢ 𝐒ᴛᴏᴘᴘᴇᴅ 𝐁ʏ 𝐔sᴇʀ!")
 
     def eng(self):
         return EngineStatus().STATUS_SPLIT_MERGE
