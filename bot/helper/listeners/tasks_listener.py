@@ -13,7 +13,7 @@ from aioshutil import move
 from asyncio import create_subprocess_exec, sleep, Event, wait_for, TimeoutError as ATimeoutError
 from asyncio.subprocess import PIPE
 from pyrogram.enums import ChatType
-from pyrogram.handlers import MessageHandler
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import create as pyrogram_create_filter
 
 from bot import (
@@ -299,7 +299,7 @@ class MirrorLeechListener:
                 gid = download.gid()
         LOGGER.info(f"Download Completed: {name}")
         if multi_links:
-            await self.onUploadError("Downloaded! Starting other part of the Task...")
+            await self.onUploadError("✅ 𝐏𝐚𝐫𝐭 𝐑𝐞𝐚𝐝𝐲 — 𝐰𝐚𝐢𝐭𝐢𝐧𝐠 𝐟𝐨𝐫 𝐫𝐞𝐦𝐚𝐢𝐧𝐢𝐧𝐠 𝐩𝐚𝐫𝐭𝐬 𝐭𝐨 𝐜𝐨𝐦𝐩𝐥𝐞𝐭𝐞…")
             return
         if (
             name == "None"
@@ -799,33 +799,41 @@ class MirrorLeechListener:
         LOGGER.info(f"Starting ZIP merge from: {extracted_dir}")
         video_files = await sync_to_async(get_video_files_sorted, extracted_dir)
         if not video_files:
-            await self.onUploadError(
-                "❌ 𝐍𝐨 𝐯𝐢𝐝𝐞𝐨 𝐟𝐢𝐥𝐞𝐬 𝐟𝐨𝐮𝐧𝐝 𝐚𝐟𝐭𝐞𝐫 𝐞𝐱𝐭𝐫𝐚𝐜𝐭𝐢𝐨𝐧!"
-            )
+            await self.onUploadError("❌ 𝐍ᴏ 𝐕ɪᴅᴇᴏs 𝐅ᴏᴜɴᴅ 𝐀ꜰᴛᴇʀ 𝐄xᴛʀᴀᴄᴛɪᴏɴ!")
             return None
         if len(video_files) == 1:
             LOGGER.info("Only one video after extract, skipping merge.")
             return video_files[0]
-        ep_list_lines = "\n".join(
+
+        ep_lines = "\n".join(
             f"  <b>{i}.</b> <code>{ospath.basename(ep)}</code>"
             for i, ep in enumerate(video_files, 1)
         )
+        btns = ButtonMaker()
+        btns.ibutton(f"📥 𝐀ʟʟ 𝐄ᴘɪsᴏᴅᴇs", f"zipep {self.uid} all")
+        btns.ibutton(f"❌ 𝐂ᴀɴᴄᴇʟ 𝐌ᴇʀɢᴇ", f"zipep {self.uid} cancel")
+        markup = btns.build_menu(2)
+
         prompt = await sendMessage(
             self.message,
-            f"📦 <b>𝐄𝐱𝐭𝐫𝐚𝐜𝐭𝐞𝐝 𝐕𝐢𝐝𝐞𝐨𝐬 — 𝐓𝐨𝐭𝐚𝐥: {len(video_files)}</b>\n\n"
-            f"{ep_list_lines}\n\n"
-            f"📝 <b>𝐑𝐞𝐩𝐥𝐲 𝐰𝐢𝐭𝐡 𝐞𝐩𝐢𝐬𝐨𝐝𝐞 𝐬𝐞𝐥𝐞𝐜𝐭𝐢𝐨𝐧:</b>\n"
-            f"• <code>all</code> — 𝐌𝐞𝐫𝐠𝐞 𝐚𝐥𝐥\n"
-            f"• <code>1-5</code> — 𝐄𝐩𝐢𝐬𝐨𝐝𝐞𝐬 1 𝐭𝐨 5\n"
-            f"• <code>1,3,5</code> — 𝐒𝐩𝐞𝐜𝐢𝐟𝐢𝐜 𝐞𝐩𝐢𝐬𝐨𝐝𝐞𝐬\n\n"
-            f"⏳ <i>𝐓𝐢𝐦𝐞𝐨𝐮𝐭: 120𝐬 (𝐰𝐢𝐥𝐥 𝐦𝐞𝐫𝐠𝐞 𝐚𝐥𝐥 𝐨𝐧 𝐭𝐢𝐦𝐞𝐨𝐮𝐭)</i>",
+            f"<b>📦 𝐙ɪᴘ 𝐌ᴇʀɢᴇ — 𝐄ᴘɪsᴏᴅᴇ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"<b>🎞 𝐅ᴏᴜɴᴅ {len(video_files)} 𝐕ɪᴅᴇᴏs:</b>\n{ep_lines}\n\n"
+            f"<b>📝 𝐒ᴇʟᴇᴄᴛɪᴏɴ 𝐅ᴏʀᴍᴀᴛ:</b>\n"
+            f"  • 𝐀ʟʟ    → <code>all</code>\n"
+            f"  • 𝐑ᴀɴɢᴇ  → <code>1-5</code>\n"
+            f"  • 𝐏ɪᴄᴋ   → <code>1,3,7</code>\n"
+            f"  • 𝐒ɪɴɢʟᴇ → <code>4</code>\n\n"
+            f"⏳ <i>𝐓ʏᴘᴇ ʏᴏᴜʀ sᴇʟᴇᴄᴛɪᴏɴ ᴏʀ ᴜsᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ — 𝐓ɪᴍᴇᴏᴜᴛ: 120s</i>",
+            markup,
         )
+
         user_id = self.message.from_user.id
         chat_id = self.message.chat.id
         reply_event = Event()
         result_holder = {}
 
-        async def _ep_filter(_, __, msg):
+        async def _ep_text_filter(_, __, msg):
             u = msg.from_user or msg.sender_chat
             return bool(
                 u
@@ -834,46 +842,73 @@ class MirrorLeechListener:
                 and msg.text
             )
 
-        async def _ep_handler(_, msg):
+        async def _ep_text_handler(_, msg):
             result_holder["text"] = msg.text.strip()
             result_holder["msg"] = msg
+            result_holder["is_button"] = False
             reply_event.set()
 
-        handler_entry = bot.add_handler(
-            MessageHandler(
-                _ep_handler,
-                filters=pyrogram_create_filter(_ep_filter),
+        async def _ep_btn_handler(_, query):
+            if query.from_user.id != user_id:
+                await query.answer("𝐍𝐨𝐭 𝐘𝐨𝐮𝐫𝐬!", show_alert=True)
+                return
+            await query.answer()
+            result_holder["text"] = query.data.split()[-1]  # "all" or "cancel"
+            result_holder["is_button"] = True
+            reply_event.set()
+
+        msg_entry = bot.add_handler(
+            MessageHandler(_ep_text_handler, filters=pyrogram_create_filter(_ep_text_filter)),
+            group=-1,
+        )
+        btn_entry = bot.add_handler(
+            CallbackQueryHandler(
+                _ep_btn_handler,
+                filters=pyrogram_create_filter(
+                    lambda _, __, q: q.data.startswith(f"zipep {self.uid}")
+                ),
             ),
             group=-1,
         )
+
+        timed_out = False
         try:
             await wait_for(reply_event.wait(), timeout=120)
         except ATimeoutError:
             LOGGER.info("Episode selection timed out — merging all episodes")
-            selected_indices = list(range(len(video_files)))
-        else:
-            try:
-                await deleteMessage(result_holder.get("msg"))
-            except Exception:
-                pass
-            raw_text = result_holder.get("text", "all")
-            selected_indices = parse_episode_selection(raw_text, len(video_files))
-            if selected_indices is None:
-                await sendMessage(
-                    self.message,
-                    "⚠️ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐬𝐞𝐥𝐞𝐜𝐭𝐢𝐨𝐧 — 𝐦𝐞𝐫𝐠𝐢𝐧𝐠 𝐚𝐥𝐥.",
-                )
-                selected_indices = list(range(len(video_files)))
+            timed_out = True
         finally:
-            bot.remove_handler(*handler_entry)
+            bot.remove_handler(*msg_entry)
+            bot.remove_handler(*btn_entry)
 
         try:
             await deleteMessage(prompt)
         except Exception:
             pass
 
+        if timed_out:
+            selected_indices = list(range(len(video_files)))
+        else:
+            if not result_holder.get("is_button"):
+                try:
+                    await deleteMessage(result_holder.get("msg"))
+                except Exception:
+                    pass
+
+            raw_text = result_holder.get("text", "all")
+            if raw_text == "cancel":
+                await self.onUploadError("🚫 𝐌ᴇʀɢᴇ 𝐂ᴀɴᴄᴇʟʟᴇᴅ 𝐁ʏ 𝐔sᴇʀ!")
+                return None
+            selected_indices = parse_episode_selection(raw_text, len(video_files))
+            if selected_indices is None:
+                await sendMessage(
+                    self.message,
+                    "⚠️ <b>𝐈ɴᴠᴀʟɪᴅ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b> — 𝐌ᴇʀɢɪɴɢ ᴀʟʟ ᴇᴘɪsᴏᴅᴇs.",
+                )
+                selected_indices = list(range(len(video_files)))
+
         selected_files = [video_files[i] for i in selected_indices]
-        LOGGER.info(f"Merging {len(selected_files)} selected episodes → {self.merge_output_name}")
+        LOGGER.info(f"Merging {len(selected_files)} episode(s) → {self.merge_output_name}")
         output_path = self._get_merge_output_path()
         async with download_dict_lock:
             download_dict[self.uid] = MergeStatus(name, size, gid, self)
@@ -882,7 +917,7 @@ class MirrorLeechListener:
         if self.suproc == "cancelled":
             return None
         if not success:
-            await self.onUploadError("❌ 𝐌𝐞𝐫𝐠𝐞 𝐅𝐚𝐢𝐥𝐞𝐝! 𝐂𝐡𝐞𝐜𝐤 𝐥𝐨𝐠𝐬.")
+            await self.onUploadError("❌ 𝐌ᴇʀɢᴇ 𝐅ᴀɪʟᴇᴅ! 𝐂ʜᴇᴄᴋ 𝐋ᴏɢs.")
             return None
         LOGGER.info(f"ZIP merge done: {output_path}")
         try:
@@ -1205,12 +1240,14 @@ class MirrorLeechListener:
             if self.sameDir and self.uid in self.sameDir["tasks"]:
                 self.sameDir["tasks"].remove(self.uid)
                 self.sameDir["total"] -= 1
-        msg = f"""<i><b>Download Stopped!</b></i>
-┠ <b>Task for:</b> {self.tag}
-┃
-┠ <b>Due To:</b> {escape(error)}
-┠ <b>Mode:</b> {self.upload_details['mode']}
-┖ <b>Elapsed:</b> {get_readable_time(time() - self.message.date.timestamp())}"""
+        msg = (
+            f"<b>⛔ 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
+            f"┃\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
+            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
+        )
         await sendMessage(self.message, msg, button)
         if count == 0:
             await self.clean()
@@ -1247,12 +1284,14 @@ class MirrorLeechListener:
             if self.uid in download_dict.keys():
                 del download_dict[self.uid]
             count = len(download_dict)
-        msg = f"""<i><b>Upload Stopped!</b></i>
-┠ <b>Task for:</b> {self.tag}
-┃
-┠ <b>Due To:</b> {escape(error)}
-┠ <b>Mode:</b> {self.upload_details['mode']}
-┖ <b>Elapsed:</b> {get_readable_time(time() - self.message.date.timestamp())}"""
+        msg = (
+            f"<b>⚠️ 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
+            f"┃\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
+            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
+        )
         await sendMessage(self.message, msg)
         if count == 0:
             await self.clean()
