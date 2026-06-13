@@ -3,28 +3,28 @@
 Merge Module — /startmerge{suffix}  |  /sm{suffix}
 
 Uses the existing MirrorLeechListener + sameDir mechanism so every queued
-download/merge/upload shows up in the standard /status progress UI — exactly
-like a normal leech task.
+download / merge / upload appears in the standard /status progress UI —
+exactly like a normal leech task.
 
 Merge modes
 -----------
-  vv  → Video + Video   : concatenate via existing merge_video_files()
-  va  → Video + Audio   : FFmpeg audio-mux  (new _do_audio_mux in tasks_listener)
-  vs  → Video + Subs    : FFmpeg subtitle embed (new _do_subtitle_embed)
-  zip → Zip Merge       : compress=True in listener → existing 7z logic
+  vv  → Video + Video     : concatenate via existing merge_video_files()
+  va  → Video + Audio     : FFmpeg audio-mux  (_do_audio_mux in tasks_listener)
+  vs  → Video + Subtitles : FFmpeg subtitle embed (_do_subtitle_embed)
+  zip → Zip/Archive Merge : download ZIP archives → extract → episode select → merge
 
 Flow
 ----
   1. /startmerge → check merge_video enabled → show mode menu
   2. User selects mode → collect phase (send files / links one by one)
-  3. ⚡ Merge Now → ask output filename → dispatch all downloads with
-     shared sameDir dict → existing download/merge/upload pipeline takes over
-  4. Session auto-clears; merge_video auto-disabled after completion
+  3. ⚡ Merge Now → ask output filename (with Skip / Back buttons)
+  4. Dispatch ALL downloads simultaneously via create_task() with shared sameDir
+  5. Existing download / merge / upload pipeline takes over (shows in /status)
+  6. Session auto-clears; merge_video auto-disabled after dispatch
 """
 
 import re
-from asyncio import sleep
-from os import path as ospath
+from asyncio import create_task
 
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex, create as pyro_create
@@ -45,37 +45,31 @@ from bot.helper.mirror_utils.download_utils.mega_download import add_mega_downlo
 from bot.helper.mirror_utils.download_utils.gd_download import add_gd_download
 
 
-# ── Per-user session state ────────────────────────────────────────────────────
-# {
-#   uid: {
-#     "mode":     str,       "vv"|"va"|"vs"|"zip"
-#     "queue":    list[dict] {"label":str, "type":"url"|"tgfile", "data":str, "msg":Message}
-#     "menu_msg": Message,
-#     "step":     str,       "mode"|"collect"|"await_name"
-#     "chat_id":  int,
-#     "orig_msg": Message,
-#     "ask_msg":  Message|None,
-#   }
-# }
+# ── Per-user session state ─────────────────────────────────────────────────────
 merge_sessions: dict = {}
 
-# ── Mode labels & hints ───────────────────────────────────────────────────────
 MODES = {
     "vv":  "🎬 𝐕ɪᴅᴇᴏ + 𝐕ɪᴅᴇᴏ",
     "va":  "🎵 𝐕ɪᴅᴇᴏ + 𝐀ᴜᴅɪᴏ",
     "vs":  "📝 𝐕ɪᴅᴇᴏ + 𝐒ᴜʙᴛɪᴛʟᴇs",
-    "zip": "🗜️ 𝐙ɪᴘ 𝐌ᴇʀɢᴇ",
+    "zip": "📦 𝐙ɪᴘ/𝐀ʀᴄʜɪᴠᴇ → 𝐌ᴇʀɢᴇ",
 }
 
 MODE_HINTS = {
-    "vv":  "➲ 𝐒ᴇɴᴅ ᴠɪᴅᴇᴏ ʟɪɴᴋs/ғɪʟᴇs ᴏɴᴇ ʙʏ ᴏɴᴇ — ᴡɪʟʟ ʙᴇ ᴄᴏɴᴄᴀᴛᴇɴᴀᴛᴇᴅ ɪɴ ᴏʀᴅᴇʀ.",
-    "va":  "➲ <b>𝐅ɪʀsᴛ</b> sᴇɴᴅ ᴠɪᴅᴇᴏ, <b>ᴛʜᴇɴ</b> ᴀᴜᴅɪᴏ ʟɪɴᴋ/ғɪʟᴇ (mp3, m4a…).",
-    "vs":  "➲ <b>𝐅ɪʀsᴛ</b> sᴇɴᴅ ᴠɪᴅᴇᴏ, <b>ᴛʜᴇɴ</b> sᴜʙᴛɪᴛʟᴇ ʟɪɴᴋ/ғɪʟᴇ (.srt, .ass…).",
-    "zip": "➲ 𝐒ᴇɴᴅ ᴀɴʏ ʟɪɴᴋs/ғɪʟᴇs — ᴀʟʟ ᴡɪʟʟ ʙᴇ ᴘᴀᴄᴋᴇᴅ ɪɴᴛᴏ ᴏɴᴇ ZIP.",
+    "vv":  "➲ 𝐒ᴇɴᴅ ᴠɪᴅᴇᴏ ʟɪɴᴋs/ғɪʟᴇs ᴏɴᴇ ʙʏ ᴏɴᴇ — ᴄᴏɴᴄᴀᴛᴇɴᴀᴛᴇᴅ ɪɴ ᴏʀᴅᴇʀ.",
+    "va":  "➲ <b>𝐅ɪʀsᴛ</b> ᴠɪᴅᴇᴏ, <b>ᴛʜᴇɴ</b> ᴀᴜᴅɪᴏ ʟɪɴᴋ/ғɪʟᴇ (mp3, m4a…).",
+    "vs":  "➲ <b>𝐅ɪʀsᴛ</b> ᴠɪᴅᴇᴏ, <b>ᴛʜᴇɴ</b> sᴜʙ ʟɪɴᴋ/ғɪʟᴇ (.srt, .ass…).",
+    "zip": "➲ 𝐒ᴇɴᴅ ZIP/ʀᴀʀ ᴀʀᴄʜɪᴠᴇs — ᴇxᴛʀᴀᴄᴛᴇᴅ ᴇᴘɪsᴏᴅᴇs ᴡɪʟʟ ʙᴇ ᴍᴇʀɢᴇᴅ.",
 }
 
+# All Telegram media types that can be downloaded
+_TG_MEDIA_ATTRS = (
+    "document", "video", "audio", "animation",
+    "voice", "video_note", "photo",
+)
 
-# ── UI helpers ────────────────────────────────────────────────────────────────
+
+# ── UI helpers ─────────────────────────────────────────────────────────────────
 
 def _queue_menu(uid: int, mode: str, queue: list) -> tuple:
     lines = "\n".join(
@@ -109,7 +103,27 @@ async def _clear_session(uid: int):
                 pass
 
 
-# ── /startmerge command ───────────────────────────────────────────────────────
+def _get_tg_media(message):
+    """Return the media object from any Telegram file message."""
+    for attr in _TG_MEDIA_ATTRS:
+        media = getattr(message, attr, None)
+        if media is not None:
+            return media
+    return None
+
+
+def _get_tg_filename(message) -> str:
+    """Best-effort filename from a Telegram file message."""
+    media = _get_tg_media(message)
+    if media is None:
+        return f"file_{message.id}"
+    return (
+        getattr(media, "file_name", None)
+        or f"{type(media).__name__}_{getattr(media, 'file_unique_id', message.id)}"
+    )
+
+
+# ── /startmerge command ────────────────────────────────────────────────────────
 
 @new_task
 async def start_merge(client, message):
@@ -120,11 +134,10 @@ async def start_merge(client, message):
         return await sendMessage(
             message,
             "⚠️ <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ</b> ɪs ᴅɪsᴀʙʟᴇᴅ!\n\n"
-            f"𝐄ɴᴀʙʟᴇ ɪᴛ: <code>/{BotCommands.UserSetCommand[0]}</code> "
+            f"𝐄ɴᴀʙʟᴇ: <code>/{BotCommands.UserSetCommand[0]}</code> "
             "→ 𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs → 🎞️ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ ✅",
         )
 
-    # Reset any stale session
     if uid in merge_sessions:
         await _clear_session(uid)
 
@@ -134,11 +147,11 @@ async def start_merge(client, message):
     btns.ibutton("❌ 𝐂ᴀɴᴄᴇʟ", f"merge {uid} cancel")
 
     text = (
-        "🎞️ <b><u>𝐌ᴇʀɢᴇ 𝐌ᴏᴅᴇ — 𝐒ᴇʟᴇᴄᴛ 𝐓ʏᴘᴇ</u></b>\n\n"
+        "🎞️ <b><u>𝐌ᴇʀɢᴇ — 𝐒ᴇʟᴇᴄᴛ 𝐌ᴏᴅᴇ</u></b>\n\n"
         "🎬 <b>Video + Video</b> — ᴄᴏɴᴄᴀᴛᴇɴᴀᴛᴇ ᴍᴜʟᴛɪᴘʟᴇ ᴠɪᴅᴇᴏs\n"
         "🎵 <b>Video + Audio</b> — ᴍᴜx ᴀᴜᴅɪᴏ ᴛʀᴀᴄᴋ ɪɴᴛᴏ ᴠɪᴅᴇᴏ\n"
-        "📝 <b>Video + Subtitles</b> — ᴇᴍʙᴇᴅ sᴜʙs ɪɴᴛᴏ ᴠɪᴅᴇᴏ\n"
-        "🗜️ <b>Zip Merge</b> — ᴘᴀᴄᴋ ᴀʟʟ ғɪʟᴇs ɪɴᴛᴏ ᴀ ZIP"
+        "📝 <b>Video + Subs</b>  — ᴇᴍʙᴇᴅ sᴜʙᴛɪᴛʟᴇs ɪɴᴛᴏ ᴠɪᴅᴇᴏ\n"
+        "📦 <b>Zip/Archive</b>   — ᴇxᴛʀᴀᴄᴛ ᴀʀᴄʜɪᴠᴇs ᴀɴᴅ ᴍᴇʀɢᴇ ᴇᴘɪsᴏᴅᴇs"
     )
     menu = await sendMessage(message, text, btns.build_menu(2))
     merge_sessions[uid] = {
@@ -152,7 +165,7 @@ async def start_merge(client, message):
     }
 
 
-# ── Callback query handler ────────────────────────────────────────────────────
+# ── Callback query handler ─────────────────────────────────────────────────────
 
 @new_task
 async def merge_callback(client, query):
@@ -197,24 +210,54 @@ async def merge_callback(client, query):
         await editMessage(query.message, text, markup)
         return
 
-    # ── Merge Now ──────────────────────────────────────────────────────────
+    # ── Merge Now → show filename prompt ───────────────────────────────────
     if action == "start":
         if not session["queue"]:
             return await query.answer("𝐐ᴜᴇᴜᴇ ɪs ᴇᴍᴘᴛʏ!", show_alert=True)
         if session["step"] == "await_name":
             return
         session["step"] = "await_name"
+        btns = ButtonMaker()
+        btns.ibutton("⏭ 𝐒ᴋɪᴘ (𝐀ᴜᴛᴏ-𝐧𝐚ᴍᴇ)", f"merge {uid} skip_name")
+        btns.ibutton("◀ 𝐁ᴀᴄᴋ ᴛᴏ 𝐐ᴜᴇᴜᴇ", f"merge {uid} back_to_collect")
         ask = await sendMessage(
             session["orig_msg"],
-            "📝 <b>𝐄ɴᴛᴇʀ 𝐎ᴜᴛᴘᴜᴛ 𝐅ɪʟᴇɴᴀᴍᴇ</b> <i>(ᴡɪᴛʜᴏᴜᴛ ᴇxᴛᴇɴsɪᴏɴ)</i>\n\n"
-            "ᴏʀ sᴇɴᴅ <code>skip</code> ᴛᴏ ᴜsᴇ ᴀᴜᴛᴏ-ɴᴀᴍᴇ.\n\n"
-            "⏱ <b>𝐓ɪᴍᴇᴏᴜᴛ: 60s</b>",
+            "📝 <b>𝐎ᴜᴛᴘᴜᴛ 𝐅ɪʟᴇɴᴀᴍᴇ</b>\n\n"
+            "𝐓ʏᴘᴇ ᴀ ɴᴀᴍᴇ <i>(ᴡɪᴛʜᴏᴜᴛ ᴇxᴛᴇɴsɪᴏɴ)</i> ᴏʀ ᴜsᴇ ᴀ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ.\n\n"
+            "⏱ <b>𝐓ɪᴍᴇᴏᴜᴛ: 60s</b> — ᴀᴜᴛᴏ-ɴᴀᴍᴇ ᴏɴ ᴇxᴘɪʀʏ",
+            btns.build_menu(2),
         )
         session["ask_msg"] = ask
         return
 
+    # ── Skip filename ──────────────────────────────────────────────────────
+    if action == "skip_name":
+        if session["step"] != "await_name":
+            return
+        try:
+            await deleteMessage(session.get("ask_msg"))
+        except Exception:
+            pass
+        session["ask_msg"] = None
+        await _dispatch_all_downloads(client, uid, session, "")
+        return
 
-# ── Message handler — collect files/links or capture output filename ──────────
+    # ── Back to queue collect ──────────────────────────────────────────────
+    if action == "back_to_collect":
+        if session["step"] != "await_name":
+            return
+        try:
+            await deleteMessage(session.get("ask_msg"))
+        except Exception:
+            pass
+        session["ask_msg"] = None
+        session["step"] = "collect"
+        text, markup = _queue_menu(uid, session["mode"], session["queue"])
+        await editMessage(session["menu_msg"], text, markup)
+        return
+
+
+# ── Message handler — collect files/links OR capture filename ──────────────────
 
 @new_task
 async def merge_message_handler(client, message):
@@ -225,14 +268,16 @@ async def merge_message_handler(client, message):
 
     # ── Capture output filename ────────────────────────────────────────────
     if session["step"] == "await_name":
-        raw = (message.text or "").strip()
-        out_name = re.sub(r'[\\/:*?"<>|]', "_", raw) if raw and raw.lower() != "skip" else ""
+        # Only process text replies (not files sent by mistake)
+        if not message.text:
+            return
+        raw = message.text.strip()
+        out_name = re.sub(r'[\\/:*?"<>|]', "_", raw) if raw else ""
         try:
             await deleteMessage(session.get("ask_msg"))
         except Exception:
             pass
         await deleteMessage(message)
-        # Hand off to existing download infrastructure
         await _dispatch_all_downloads(client, uid, session, out_name)
         return
 
@@ -241,6 +286,7 @@ async def merge_message_handler(client, message):
         return
 
     item = None
+
     if message.text:
         url = message.text.strip()
         if (
@@ -252,10 +298,12 @@ async def merge_message_handler(client, message):
             or is_telegram_link(url)
         ):
             item = {"label": url, "type": "url", "data": url, "msg": message}
-    elif message.document or message.video or message.audio:
-        media = message.document or message.video or message.audio
-        fname = getattr(media, "file_name", None) or f"file_{message.id}"
-        item = {"label": fname, "type": "tgfile", "data": fname, "msg": message}
+    else:
+        # Accept any Telegram media type (video, document, audio, animation, etc.)
+        media = _get_tg_media(message)
+        if media is not None:
+            fname = _get_tg_filename(message)
+            item = {"label": fname, "type": "tgfile", "data": fname, "msg": message}
 
     if item:
         session["queue"].append(item)
@@ -264,24 +312,24 @@ async def merge_message_handler(client, message):
         await editMessage(session["menu_msg"], text, markup)
 
 
-# ── Core: dispatch all downloads via existing MirrorLeechListener pipeline ─────
+# ── Core: dispatch all downloads simultaneously ────────────────────────────────
 
 async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str):
     """
-    Creates a shared sameDir dict and one MirrorLeechListener per queued item,
-    then dispatches each to the appropriate existing downloader.
+    Builds a shared sameDir dict and creates one MirrorLeechListener per
+    queued item. All downloads are fired simultaneously via create_task() so
+    they appear together in /status and don't wait for each other.
 
-    The existing onDownloadComplete logic in tasks_listener will:
-      - Move files from each completed task into the last task's directory
-      - When all tasks finish → call _do_folder_merge (vv/va/vs) or compress (zip)
-      - Upload via existing TgUploader / rclone pipeline
-      - Show progress in /status
+    The existing onDownloadComplete logic in tasks_listener handles:
+      • Moving files from each completed task into the last task's sameDir dir
+      • When all tasks finish → _do_folder_merge (vv/va/vs) or _do_zip_merge (zip)
+      • Upload via existing TgUploader / rclone pipeline
     """
-    mode = session["mode"]
-    queue = session["queue"]
+    mode    = session["mode"]
+    queue   = session["queue"]
     orig_msg = session["orig_msg"]
 
-    # Clear menu before dispatching
+    # Dismiss UI
     try:
         await deleteMessage(session["menu_msg"])
     except Exception:
@@ -300,21 +348,25 @@ async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str
             pass
 
     total = len(queue)
-    is_zip = (mode == "zip")
 
-    # folder_name is a subdirectory under each task's DOWNLOAD_DIR/{uid}/
-    # For zip, use out_name as the folder so 7z names the archive correctly.
-    if is_zip and out_name:
-        folder_name = f"/{out_name}"
-    else:
-        folder_name = f"/merge_{orig_msg.id}"
+    # Mode flags for MirrorLeechListener
+    # vv / va / vs → merge_video=True, extract=False
+    # zip           → merge_video=True, extract=True  (triggers _do_zip_merge)
+    is_zip      = (mode == "zip")
+    do_extract  = is_zip
+    do_merge    = True          # all modes use merge_video=True
 
-    # shared_sameDir ties all listeners together (same object reference)
+    # folder_name becomes the sameDir subdirectory under each task's DOWNLOAD_DIR/{uid}/
+    # It MUST start with "/" — this is how mirror_leech.py builds the path:
+    #   path = f"{DOWNLOAD_DIR}{message.id}{folder_name}"
+    folder_name = f"/merge_{orig_msg.id}"
+
+    # Shared sameDir dict ties all listeners together (same object reference)
     shared_sameDir = {
-        "total": total,
-        "tasks": {item["msg"].id for item in queue},
-        "name": folder_name,
-        "merge_mode": mode,       # read by _do_folder_merge in tasks_listener
+        "total":      total,
+        "tasks":      {item["msg"].id for item in queue},
+        "name":       folder_name,
+        "merge_mode": mode,   # read by _do_folder_merge in tasks_listener
     }
 
     tag = (
@@ -324,46 +376,59 @@ async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str
     )
 
     for item in queue:
-        msg = item["msg"]
-        # path INCLUDES folder_name → files land in the correct sameDir subfolder
+        msg  = item["msg"]
+        # path includes folder_name so files land in the right sameDir subfolder
         path = f"{DOWNLOAD_DIR}{msg.id}{folder_name}"
 
-        if item["type"] == "tgfile":
-            src_url = getattr(msg, "link", None) or f"tg_merge_{msg.id}"
-        else:
-            src_url = item["data"]
+        # source_url prevents __parseSource from crashing on reply_to_message=None
+        src_url = (
+            getattr(msg, "link", None) or f"tg_merge_{msg.id}"
+            if item["type"] == "tgfile"
+            else item["data"]
+        )
 
         listener = MirrorLeechListener(
             msg,
-            compress=is_zip,            # zip mode → existing 7z logic
+            compress=False,
+            extract=do_extract,         # True for zip mode → triggers _do_zip_merge
             isLeech=True,
             tag=tag,
             sameDir=shared_sameDir,
-            merge_video=(not is_zip),   # vv/va/vs → _do_folder_merge
+            merge_video=do_merge,
             merge_output_name=(out_name if not is_zip else ""),
-            source_url=src_url,         # prevents __parseSource reply_to crash
-            leech_utils={"screenshots": 0, "thumb": ""},  # required by pyrogramEngine
+            source_url=src_url,
+            leech_utils={"screenshots": 0, "thumb": ""},
         )
 
+        # Fire all downloads simultaneously — do NOT await individual calls.
+        # TelegramDownloadHelper.add_download blocks until download is complete,
+        # so we must wrap it in create_task to achieve true concurrency.
         if item["type"] == "tgfile":
-            # msg itself IS the Telegram file message
-            await TelegramDownloadHelper(listener).add_download(
-                msg, f"{path}/", "", "", None
+            create_task(
+                TelegramDownloadHelper(listener).add_download(
+                    msg, f"{path}/", "", "", None
+                )
             )
         else:
             url = item["data"]
             if is_gdrive_link(url):
-                await add_gd_download(url, path, listener, "", url)
+                create_task(add_gd_download(url, path, listener, "", url))
             elif is_mega_link(url):
-                await add_mega_download(url, f"{path}/", listener, "")
+                create_task(add_mega_download(url, f"{path}/", listener, ""))
             else:
-                # http URLs, magnets, direct links → aria2c
-                await add_aria2c_download(url, path, listener, "", "", None, None)
+                create_task(
+                    add_aria2c_download(url, path, listener, "", "", None, None)
+                )
 
-        LOGGER.info(f"[MERGE] Dispatched item: {item['label'][:60]} (uid={msg.id})")
+        LOGGER.info(f"[MERGE] Task started: {item['label'][:60]} (uid={msg.id})")
+
+    LOGGER.info(
+        f"[MERGE] All {total} tasks dispatched in parallel — "
+        f"mode={mode} folder={folder_name}"
+    )
 
 
-# ── Dynamic filter: catch messages only from users in active merge session ─────
+# ── Dynamic filter ─────────────────────────────────────────────────────────────
 
 async def _is_merge_user(_, __, message):
     if not message.from_user:
@@ -380,7 +445,7 @@ async def _is_merge_user(_, __, message):
 merge_user_filter = pyro_create(_is_merge_user)
 
 
-# ── Handler registration (called from bot/__main__.py) ────────────────────────
+# ── Handler registration (called from bot/__main__.py) ─────────────────────────
 
 def register_handlers(app):
     app.add_handler(
