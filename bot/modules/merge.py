@@ -342,6 +342,7 @@ async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str
             merge_video=(not is_zip),   # vv/va/vs → _do_folder_merge
             merge_output_name=(out_name if not is_zip else ""),
             source_url=src_url,         # prevents __parseSource reply_to crash
+            leech_utils={"screenshots": 0, "thumb": ""},  # required by pyrogramEngine
         )
 
         if item["type"] == "tgfile":
