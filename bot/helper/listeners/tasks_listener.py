@@ -11,6 +11,7 @@ from os import walk, path as ospath
 from html import escape
 from aioshutil import move
 from asyncio import create_subprocess_exec, sleep, Event, wait_for, TimeoutError as ATimeoutError
+from asyncio.subprocess import PIPE
 from pyrogram.enums import ChatType
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import create as pyrogram_create_filter
@@ -320,24 +321,11 @@ class MirrorLeechListener:
         if self.join and await aiopath.isdir(dl_path):
             await join_files(dl_path)
 
-        if self.merge_video and not self.extract:
-            merge_dir = dl_path
-            merge_name = name
-            if not await aiopath.isdir(dl_path) and self.sameDir:
-                folder_n = self.sameDir.get("name", "").lstrip("/")
-                if folder_n:
-                    candidate = ospath.join(self.dir, folder_n)
-                    if await aiopath.isdir(candidate):
-                        merge_dir = candidate
-                        merge_name = folder_n
-                        LOGGER.info(f"merge_video: found sameDir subfolder: {merge_dir}")
-            if await aiopath.isdir(merge_dir):
-                merged = await self._do_folder_merge(merge_dir, merge_name, size, gid)
-                if merged is None:
-                    return
-                up_path = merged
-            else:
-                LOGGER.info(f"merge_video: dl_path is a single file, no folder merge needed: {dl_path}")
+        if self.merge_video and not self.extract and await aiopath.isdir(dl_path):
+            merged = await self._do_folder_merge(dl_path, name, size, gid)
+            if merged is None:
+                return
+            up_path = merged
 
         if self.extract:
             pswd = self.extract if isinstance(self.extract, str) else ""
@@ -645,18 +633,20 @@ class MirrorLeechListener:
             await RCTransfer.upload(up_path, size)
 
     def _get_merge_output_path(self):
-        import re as _re
         output_name = self.merge_output_name or f"Merged_{self.uid}.mkv"
-        clean_name = _re.sub(r'(\s+-\w+)+\s*$', '', output_name).strip() or output_name
-        video_exts = (".mkv", ".mp4", ".avi", ".mov", ".flv", ".wmv", ".webm", ".ts", ".m4v")
-        if not any(clean_name.lower().endswith(ext) for ext in video_exts):
-            output_name = clean_name + ".mkv"
-        else:
-            output_name = clean_name
+        if not output_name.lower().endswith((".mkv", ".mp4", ".avi", ".mov")):
+            output_name += ".mkv"
         return ospath.join(self.dir, output_name)
 
     async def _do_folder_merge(self, folder_path, name, size, gid):
-        LOGGER.info(f"Starting folder merge: {folder_path}")
+        # Dispatch based on merge_mode stored in sameDir by the merge module
+        merge_mode = (self.sameDir or {}).get("merge_mode", "vv")
+        if merge_mode == "va":
+            return await self._do_audio_mux(folder_path, name, size, gid)
+        if merge_mode == "vs":
+            return await self._do_subtitle_embed(folder_path, name, size, gid)
+        # Default: vv — concatenate video files (original logic)
+        LOGGER.info(f"Starting folder merge [vv]: {folder_path}")
         video_files = await sync_to_async(get_video_files_sorted, folder_path)
         if not video_files:
             await self.onUploadError(
@@ -680,6 +670,119 @@ class MirrorLeechListener:
             await self.onUploadError("❌ 𝐌𝐞𝐫𝐠𝐞 𝐅𝐚𝐢𝐥𝐞𝐝! 𝐂𝐡𝐞𝐜𝐤 𝐥𝐨𝐠𝐬.")
             return None
         LOGGER.info(f"Merge done: {output_path}")
+        try:
+            await clean_target(folder_path)
+        except Exception:
+            pass
+        return output_path
+
+    async def _do_audio_mux(self, folder_path, name, size, gid):
+        """Video + Audio mode: FFmpeg mux audio track into video."""
+        LOGGER.info(f"Starting audio mux [va]: {folder_path}")
+        VIDEO_EXT = {".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm", ".m4v", ".ts"}
+        AUDIO_EXT = {".mp3", ".m4a", ".aac", ".flac", ".wav", ".ogg", ".opus", ".ac3", ".eac3"}
+
+        video_file = None
+        audio_file = None
+        for root, _, files in await sync_to_async(walk, folder_path):
+            for f in sorted(files):
+                ext = ospath.splitext(f)[1].lower()
+                fp = ospath.join(root, f)
+                if ext in VIDEO_EXT and video_file is None:
+                    video_file = fp
+                elif ext in AUDIO_EXT and audio_file is None:
+                    audio_file = fp
+
+        if not video_file or not audio_file:
+            await self.onUploadError(
+                "❌ 𝐕ɪᴅᴇᴏ+𝐀ᴜᴅɪᴏ ᴍᴜx ɴᴇᴇᴅs ᴏɴᴇ ᴠɪᴅᴇᴏ ᴀɴᴅ ᴏɴᴇ ᴀᴜᴅɪᴏ ғɪʟᴇ!"
+            )
+            return None
+
+        output_path = self._get_merge_output_path()
+        async with download_dict_lock:
+            download_dict[self.uid] = MergeStatus(name, size, gid, self)
+        await update_all_messages()
+        LOGGER.info(
+            f"Audio mux: video={ospath.basename(video_file)} "
+            f"audio={ospath.basename(audio_file)} → {ospath.basename(output_path)}"
+        )
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_file,
+            "-i", audio_file,
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-shortest",
+            output_path,
+        ]
+        self.suproc = await create_subprocess_exec(*cmd, stdout=PIPE, stderr=PIPE)
+        _, stderr = await self.suproc.communicate()
+        if self.suproc == "cancelled" or self.suproc.returncode == -9:
+            return None
+        if self.suproc.returncode != 0:
+            err_msg = stderr.decode(errors="replace")[-300:]
+            await self.onUploadError(f"❌ 𝐀ᴜᴅɪᴏ 𝐌ᴜx 𝐅ᴀɪʟᴇᴅ!\n<code>{err_msg}</code>")
+            return None
+        LOGGER.info(f"Audio mux done: {output_path}")
+        try:
+            await clean_target(folder_path)
+        except Exception:
+            pass
+        return output_path
+
+    async def _do_subtitle_embed(self, folder_path, name, size, gid):
+        """Video + Subtitles mode: FFmpeg embed subtitle stream into video."""
+        LOGGER.info(f"Starting subtitle embed [vs]: {folder_path}")
+        VIDEO_EXT = {".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm", ".m4v", ".ts"}
+        SUB_EXT   = {".srt", ".ass", ".ssa", ".vtt", ".sub"}
+
+        video_file = None
+        sub_file   = None
+        for root, _, files in await sync_to_async(walk, folder_path):
+            for f in sorted(files):
+                ext = ospath.splitext(f)[1].lower()
+                fp = ospath.join(root, f)
+                if ext in VIDEO_EXT and video_file is None:
+                    video_file = fp
+                elif ext in SUB_EXT and sub_file is None:
+                    sub_file = fp
+
+        if not video_file or not sub_file:
+            await self.onUploadError(
+                "❌ 𝐕ɪᴅᴇᴏ+𝐒ᴜʙs ɴᴇᴇᴅs ᴏɴᴇ ᴠɪᴅᴇᴏ ᴀɴᴅ ᴏɴᴇ sᴜʙᴛɪᴛʟᴇ ғɪʟᴇ!"
+            )
+            return None
+
+        output_path = self._get_merge_output_path()
+        async with download_dict_lock:
+            download_dict[self.uid] = MergeStatus(name, size, gid, self)
+        await update_all_messages()
+        LOGGER.info(
+            f"Subtitle embed: video={ospath.basename(video_file)} "
+            f"sub={ospath.basename(sub_file)} → {ospath.basename(output_path)}"
+        )
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_file,
+            "-i", sub_file,
+            "-map", "0",
+            "-map", "1",
+            "-c", "copy",
+            "-c:s", "ass",
+            output_path,
+        ]
+        self.suproc = await create_subprocess_exec(*cmd, stdout=PIPE, stderr=PIPE)
+        _, stderr = await self.suproc.communicate()
+        if self.suproc == "cancelled" or self.suproc.returncode == -9:
+            return None
+        if self.suproc.returncode != 0:
+            err_msg = stderr.decode(errors="replace")[-300:]
+            await self.onUploadError(f"❌ 𝐒ᴜʙᴛɪᴛʟᴇ 𝐄ᴍʙᴇᴅ 𝐅ᴀɪʟᴇᴅ!\n<code>{err_msg}</code>")
+            return None
+        LOGGER.info(f"Subtitle embed done: {output_path}")
         try:
             await clean_target(folder_path)
         except Exception:
