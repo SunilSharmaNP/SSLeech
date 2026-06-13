@@ -328,14 +328,20 @@ async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str
         # path INCLUDES folder_name → files land in the correct sameDir subfolder
         path = f"{DOWNLOAD_DIR}{msg.id}{folder_name}"
 
+        if item["type"] == "tgfile":
+            src_url = getattr(msg, "link", None) or f"tg_merge_{msg.id}"
+        else:
+            src_url = item["data"]
+
         listener = MirrorLeechListener(
             msg,
-            compress=is_zip,       # zip mode → existing 7z logic
+            compress=is_zip,            # zip mode → existing 7z logic
             isLeech=True,
             tag=tag,
             sameDir=shared_sameDir,
             merge_video=(not is_zip),   # vv/va/vs → _do_folder_merge
             merge_output_name=(out_name if not is_zip else ""),
+            source_url=src_url,         # prevents __parseSource reply_to crash
         )
 
         if item["type"] == "tgfile":
