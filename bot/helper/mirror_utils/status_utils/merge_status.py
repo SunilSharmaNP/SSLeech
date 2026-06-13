@@ -58,7 +58,7 @@ class MergeStatus:
             return "-"
 
     def status(self):
-        return MirrorStatus.STATUS_EXTRACTING
+        return MirrorStatus.STATUS_MERGING
 
     def processed_bytes(self):
         return get_readable_file_size(self.processed_raw())
@@ -78,7 +78,7 @@ class MergeStatus:
             self.__listener.suproc.kill()
         else:
             self.__listener.suproc = "cancelled"
-        await self.__listener.onUploadError("𝐌ᴇʀɢɪɴɢ 𝐒ᴛᴏᴘᴘᴇᴅ 𝐁ʏ 𝐔sᴇʀ!")
+        await self.__listener.onUploadError("𝐌𝐞𝐫𝐠𝐢𝐧𝐠 𝐒𝐭𝐨𝐩𝐩𝐞𝐝 𝐁𝐲 𝐔𝐬𝐞𝐫!")
 
     def eng(self):
-        return EngineStatus().STATUS_EXT
+        return EngineStatus().STATUS_SPLIT_MERGE
