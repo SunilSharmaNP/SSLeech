@@ -169,11 +169,11 @@ async def standardize_video(input_path, output_path, target_w, target_h, listene
 async def merge_video_files(input_files, output_path, listener=None):
     """
     Main entry point for merging multiple video files.
-    
-    1. Analyze all inputs with ffprobe.
-    2. If all params are identical → fast concat (no re-encode).
-    3. Otherwise → standardize each to common resolution → fast concat.
-    
+
+    Always uses FFmpeg concat demuxer with stream copy (no re-encoding).
+    Videos are joined at their original framerate and resolution — no quality
+    loss, no encoding delay, regardless of whether resolutions differ.
+
     Returns True on success, False on failure or cancellation.
     """
     if not input_files:
@@ -185,65 +185,8 @@ async def merge_video_files(input_files, output_path, listener=None):
         shutil.copy2(input_files[0], output_path)
         return True
 
-    LOGGER.info(f"Merging {len(input_files)} videos → {output_path}")
-
-    # Step 1: Analyze all files
-    infos = []
-    analyze_ok = True
-    for fp in input_files:
-        info = await get_video_info(fp)
-        if info:
-            infos.append(info)
-        else:
-            LOGGER.warning(f"Could not analyze {fp}, forcing standardize mode")
-            analyze_ok = False
-            break
-
-    # Step 2: Fast concat if compatible
-    if analyze_ok and videos_are_compatible(infos):
-        LOGGER.info("All videos compatible — using fast concat (no re-encode)")
-        ok = await fast_concat(input_files, output_path, listener)
-        if ok:
-            return True
-        LOGGER.warning("Fast concat failed, falling back to standardize mode")
-
-    # Step 3: Standardize + concat
-    LOGGER.info("Standardize mode: re-encoding all videos to common params")
-
-    if infos:
-        res_counter = Counter((i["width"], i["height"]) for i in infos)
-        target_w, target_h = res_counter.most_common(1)[0][0]
-    else:
-        target_w, target_h = 1280, 720
-
-    if target_w == 0 or target_h == 0:
-        target_w, target_h = 1280, 720
-
-    LOGGER.info(f"Target resolution: {target_w}x{target_h}")
-
-    tmp_dir = os.path.dirname(output_path)
-    standardized = []
-    try:
-        for idx, fp in enumerate(input_files):
-            if listener and listener.suproc == "cancelled":
-                return False
-            tmp_out = os.path.join(tmp_dir, f"_mv_std_{idx}_{os.path.basename(fp)}.mkv")
-            LOGGER.info(f"  Standardizing [{idx+1}/{len(input_files)}]: {os.path.basename(fp)}")
-            ok = await standardize_video(fp, tmp_out, target_w, target_h, listener)
-            if not ok:
-                return False
-            standardized.append(tmp_out)
-
-        if listener and listener.suproc == "cancelled":
-            return False
-
-        return await fast_concat(standardized, output_path, listener)
-    finally:
-        for tmp in standardized:
-            try:
-                os.remove(tmp)
-            except Exception:
-                pass
+    LOGGER.info(f"Merging {len(input_files)} videos → {output_path} (concat copy, no re-encode)")
+    return await fast_concat(input_files, output_path, listener)
 
 
 def _file_is_video(fname):
