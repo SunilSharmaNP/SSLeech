@@ -69,13 +69,13 @@ merge_sessions: dict = {}
 
 # Mode meta  {key: (emoji, display_name, short_hint)}
 MODES = {
-    "vv":  ("🎬", _t("Video + Video"),
+    "vv":  ("🎬", _t("Vid + Vid"),
             _t("Send video files/links one by one. They will be concatenated in order.")),
-    "va":  ("🎵", _t("Video + Audio"),
+    "va":  ("🎵", _t("Vid + Aud"),
             _t("Send video first, then audio file (mp3, m4a, flac). Audio will be muxed in.")),
-    "vs":  ("📝", _t("Video + Subtitles"),
+    "vs":  ("📝", _t("Vid + Sub"),
             _t("Send video first, then subtitle file (.srt, .ass). Subs will be embedded.")),
-    "zip": ("📦", _t("Zip/Archive") + " → " + _t("Merge"),
+    "zip": ("📦", _t("Zip") + " → " + _t("Merge"),
             _t("Send ZIP/RAR archives. Episodes will be extracted, selected and merged.")),
 }
 
@@ -105,7 +105,7 @@ def _queue_buttons(uid: int, has_items: bool):
     if has_items:
         btns.ibutton(f"⚡ {_t('Merge Now')}",     f"merge {uid} start")
         btns.ibutton(f"🗑 {_t('Remove Last')}",   f"merge {uid} remove_last")
-    btns.ibutton(f"❌ {_t('Cancel Session')}",    f"merge {uid} cancel")
+    btns.ibutton(f"❌ {_t('Cancel')}",    f"merge {uid} cancel")
     return btns.build_menu(2)
 
 
@@ -254,8 +254,8 @@ async def merge_callback(client, query):
         emoji, mname, _ = MODES[session["mode"]]
 
         btns = ButtonMaker()
-        btns.ibutton(f"⏭ {_t('Skip')} ({_t('Use Auto-Name')})", f"merge {uid} skip_name")
-        btns.ibutton(f"◀ {_t('Back to Queue')}",               f"merge {uid} back_to_collect")
+        btns.ibutton(f"⏭ {_t('Skip')}", f"merge {uid} skip_name")
+        btns.ibutton(f"◀ {_t('Back')}",               f"merge {uid} back_to_collect")
         btns.ibutton(f"❌ {_t('Cancel')}",                     f"merge {uid} cancel")
 
         ask   = await sendMessage(
