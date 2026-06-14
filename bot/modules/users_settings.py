@@ -175,6 +175,13 @@ fname_dict = {
 }
 
 
+async def _usetting_photo(user_id: int) -> str:
+    thumb_path = f"Thumbnails/{user_id}.jpg"
+    if await aiopath.exists(thumb_path):
+        return thumb_path
+    return "IMAGES"
+
+
 async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None):
     user_id = from_user.id
     name = from_user.mention(style="html")
@@ -744,10 +751,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
 async def update_user_settings(
     query, key=None, edit_type=None, edit_mode=None, msg=None, sdirect=False
 ):
-    msg, button = await get_user_settings(
-        msg.from_user if sdirect else query.from_user, key, edit_type, edit_mode
-    )
-    await editMessage(query if sdirect else query.message, msg, button)
+    from_user = msg.from_user if sdirect else query.from_user
+    msg, button = await get_user_settings(from_user, key, edit_type, edit_mode)
+    photo = await _usetting_photo(from_user.id)
+    await editMessage(query if sdirect else query.message, msg, button, photo)
 
 
 async def user_settings(client, message):
@@ -804,7 +811,8 @@ async def user_settings(client, message):
         from_user = message.from_user
         handler_dict[from_user.id] = False
         msg, button = await get_user_settings(from_user)
-        await sendMessage(message, msg, button, "IMAGES")
+        photo = await _usetting_photo(from_user.id)
+        await sendMessage(message, msg, button, photo)
 
 async def set_custom(client, message, pre_event, key, direct=False):
     user_id = message.from_user.id
