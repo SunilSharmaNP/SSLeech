@@ -962,6 +962,10 @@ async def set_commands(client):
                 f"or /{BotCommands.MediaInfoCommand[1]} Generate Mediainfo for Replied Media or DL links",
             ),
             BotCommand(
+                BotCommands.StartMergeCommand[0],
+                f"or /{BotCommands.StartMergeCommand[1]} Open Video Merge Tool (enable in /us first)",
+            ),
+            BotCommand(
                 BotCommands.BotSetCommand[0],
                 f"or /{BotCommands.BotSetCommand[1]} Bot's Personal Settings (Owner or Sudo Only)",
             ),
