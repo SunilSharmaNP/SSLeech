@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Merge Module — /startmerge  |  /sm
+Merge Module — /videomerge  |  /startmerge
 
 Uses the existing MirrorLeechListener + sameDir mechanism so every queued
 download / merge / upload appears in the standard /status progress UI.
