@@ -497,7 +497,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         merge_video = user_dict.get("merge_video", False)
         buttons.ibutton(
             f"{'✅️' if merge_video else ''} 🎞️ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ",
-            f"userset {user_id} merge_video",
+            f"userset {user_id} merge_video_menu",
         )
 
         _ar_display = (
@@ -563,6 +563,33 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             buttons.ibutton("🗑️ 𝐂ʟᴇᴀʀ 𝐅ᴏʀᴍᴀᴛ", f"userset {user_id} dar_fmt")
         buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back leech", "footer")
         buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        button = buttons.build_menu(2)
+    elif key == "merge_video_menu":
+        merge_video = user_dict.get("merge_video", False)
+        status_str  = "✅ 𝐄ɴᴀʙʟᴇᴅ" if merge_video else "❌ 𝐃ɪsᴀʙʟᴇᴅ"
+        merge_cmd   = BotCommands.StartMergeCommand[0]
+        merge_cmd2  = BotCommands.StartMergeCommand[1]
+        text = (
+            f"🎞️ <b><u>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ 𝐒ᴇᴛᴛɪɴɢs</u></b>\n\n"
+            f"➲ <b>𝐒ᴛᴀᴛᴜs :</b> {status_str}\n\n"
+            f"<b>📋 𝐌ᴇʀɢᴇ 𝐓ᴏᴏʟ 𝐂ᴏᴍᴍᴀɴᴅs :</b>\n"
+            f"  ➤ <code>/{merge_cmd}</code>\n"
+            f"    <i>𝐎ʀ ᴀʟᴛᴇʀɴᴀᴛɪᴠᴇ: <code>/{merge_cmd2}</code></i>\n\n"
+            f"<b>ℹ️ 𝐇ᴏᴡ 𝐈ᴛ 𝐖ᴏʀᴋs :</b>\n"
+            f"  • 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ ᴍᴜsᴛ ʙᴇ <b>𝐄ɴᴀʙʟᴇᴅ</b> ᴛᴏ ᴜsᴇ /<code>{merge_cmd}</code>\n"
+            f"  • ᴜsᴇ /<code>{merge_cmd}</code> ᴛᴏ ᴏᴘᴇɴ ᴛʜᴇ ᴍᴇʀɢᴇ ᴛᴏᴏʟ ᴍᴇɴᴜ\n"
+            f"  • ϙᴜᴇᴜᴇ ᴠɪᴅᴇᴏs/ʟɪɴᴋs ᴛʜᴇɴ ᴄʟɪᴄᴋ 🔀 𝐌ᴇʀɢᴇ 𝐍ᴏᴡ\n"
+            f"  • ᴀᴜᴛᴏ-ᴅɪsᴀʙʟᴇs ᴀғᴛᴇʀ ᴇᴀᴄʜ sᴇssɪᴏɴ"
+        )
+        buttons.ibutton(
+            f"{'✔ ' if merge_video else ''}✅ 𝐄ɴᴀʙʟᴇ",
+            f"userset {user_id} mv_enable",
+        )
+        buttons.ibutton(
+            f"{'✔ ' if not merge_video else ''}❌ 𝐃ɪsᴀʙʟᴇ",
+            f"userset {user_id} mv_disable",
+        )
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} mv_back", "footer")
         button = buttons.build_menu(2)
     elif key == "ddl_servers":
         ddl_serv, serv_list = 0, []
@@ -1147,15 +1174,28 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, "leech")
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
-    elif data[2] == "merge_video":
+    elif data[2] == "merge_video_menu":
         handler_dict[user_id] = False
         await query.answer()
-        update_user_ldata(
-            user_id, "merge_video", not user_dict.get("merge_video", False)
-        )
-        await update_user_settings(query, "leech")
+        await update_user_settings(query, "merge_video_menu")
+    elif data[2] == "mv_enable":
+        handler_dict[user_id] = False
+        await query.answer("✅ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ 𝐄ɴᴀʙʟᴇᴅ!", show_alert=True)
+        update_user_ldata(user_id, "merge_video", True)
+        await update_user_settings(query, "merge_video_menu")
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
+    elif data[2] == "mv_disable":
+        handler_dict[user_id] = False
+        await query.answer("❌ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ 𝐃ɪsᴀʙʟᴇᴅ!", show_alert=True)
+        update_user_ldata(user_id, "merge_video", False)
+        await update_user_settings(query, "merge_video_menu")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "mv_back":
+        handler_dict[user_id] = False
+        await query.answer()
+        await update_user_settings(query, "leech")
     elif data[2] == "auto_rename":
         handler_dict[user_id] = False
         await query.answer()
