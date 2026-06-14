@@ -157,9 +157,9 @@ if DATABASE_URL:
             db.settings.deployConfig.replace_one(
                 {"_id": bot_id}, current_config, upsert=True
             )
-        elif config_dict := db.settings.config.find_one({"_id": bot_id}):
-            del config_dict["_id"]
-            for key, value in config_dict.items():
+        if db_bot_config := db.settings.config.find_one({"_id": bot_id}):
+            del db_bot_config["_id"]
+            for key, value in db_bot_config.items():
                 if value is not None and str(value).strip():
                     environ[key] = str(value)
         if pf_dict := db.settings.files.find_one({"_id": bot_id}):
