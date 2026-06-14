@@ -25,13 +25,15 @@ from bot.helper.telegram_helper.message_utils import (
 )
 from bot.helper.ext_utils.bot_utils import (
     new_task, is_url, is_magnet, is_mega_link, is_gdrive_link,
-    is_telegram_link, is_rclone_path,
+    is_telegram_link, is_rclone_path, sync_to_async, get_content_type,
 )
+from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.listeners.tasks_listener import MirrorLeechListener
 from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
 from bot.helper.mirror_utils.download_utils.telegram_download import TelegramDownloadHelper
 from bot.helper.mirror_utils.download_utils.mega_download import add_mega_download
 from bot.helper.mirror_utils.download_utils.gd_download import add_gd_download
+from bot.helper.mirror_utils.download_utils.direct_link_generator import direct_link_generator
 
 
 # ── SSLeech font converter ─────────────────────────────────────────────────────
@@ -360,6 +362,40 @@ async def merge_message_handler(client, message):
         await editMessage(session["menu_msg"], text, markup)
 
 
+# ── DDL link resolver ──────────────────────────────────────────────────────────
+
+async def _resolve_and_download(url: str, path: str, listener):
+    """
+    Mirror mirror_leech.py's DDL-resolution logic.
+    If the URL is an HTML page (HubCloud, GDFlix, etc.), run direct_link_generator
+    first to get the actual download link before handing it to aria2.
+    This prevents aria2 from getting a 403 on the raw site URL, which would
+    corrupt sameDir state and cause the retry to be killed by the delayed cleanup.
+    """
+    resolved = url
+    try:
+        content_type = await get_content_type(url)
+        if content_type is None or re.match(r"text/html|text/plain", content_type):
+            try:
+                result = await sync_to_async(direct_link_generator, url)
+                if isinstance(result, tuple):
+                    resolved, _ = result
+                elif isinstance(result, str):
+                    resolved = result
+                LOGGER.info(f"[MERGE] Resolved DDL: {url[:60]} → {resolved[:60]}")
+            except DirectDownloadLinkException as e:
+                err = str(e)
+                if err.startswith("ERROR:"):
+                    LOGGER.warning(f"[MERGE] DDL error for {url}: {err}")
+                    await listener.onDownloadError(err)
+                    return
+                # Not an error (e.g. password required) — fall through with original URL
+    except Exception as e:
+        LOGGER.warning(f"[MERGE] DDL resolution check failed for {url}: {e}")
+
+    await add_aria2c_download(resolved, path, listener, "", "", None, None)
+
+
 # ── Dispatch all downloads simultaneously ──────────────────────────────────────
 
 async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str):
@@ -438,9 +474,11 @@ async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str
             elif is_mega_link(url):
                 create_task(add_mega_download(url, f"{path}/", listener, ""))
             else:
-                create_task(
-                    add_aria2c_download(url, path, listener, "", "", None, None)
-                )
+                # Use _resolve_and_download so DDL/HubCloud links are resolved
+                # to a direct download URL BEFORE aria2 attempts them.
+                # Passing raw site URLs to aria2 causes 403 errors which corrupt
+                # sameDir state and trigger a cleanup race with the retry.
+                create_task(_resolve_and_download(url, path, listener))
 
         LOGGER.info(f"[MERGE] Dispatched: {item['label'][:60]} (msg_id={msg.id})")
 
