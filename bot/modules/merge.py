@@ -82,11 +82,6 @@ MODES = {
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _user_thumb(uid: int) -> str | None:
-    path = user_data.get(uid, {}).get("thumb", "")
-    return path if path and ospath.exists(path) else None
-
-
 def _queue_text(uid: int, mode: str, queue: list) -> str:
     emoji, mname, hint = MODES[mode]
     cnt   = len(queue)
@@ -184,8 +179,7 @@ async def start_merge(client, message):
         f"  ↳ {_t('Extract archives and merge episodes')}"
     )
 
-    thumb = _user_thumb(uid)
-    menu  = await sendMessage(message, text, btns.build_menu(2), photo=thumb)
+    menu  = await sendMessage(message, text, btns.build_menu(2), photo="IMAGES")
     merge_sessions[uid] = {
         "mode":     None,
         "queue":    [],
@@ -232,8 +226,7 @@ async def merge_callback(client, query):
         session["step"] = "collect"
         text   = _queue_text(uid, mode, session["queue"])
         markup = _queue_buttons(uid, bool(session["queue"]))
-        thumb  = _user_thumb(uid)
-        await editMessage(query.message, text, markup, photo=thumb)
+        await editMessage(query.message, text, markup, photo="IMAGES")
         return
 
     # ── Remove last ────────────────────────────────────────────────────────
@@ -265,7 +258,6 @@ async def merge_callback(client, query):
         btns.ibutton(f"◀ {_t('Back to Queue')}",               f"merge {uid} back_to_collect")
         btns.ibutton(f"❌ {_t('Cancel')}",                     f"merge {uid} cancel")
 
-        thumb = _user_thumb(uid)
         ask   = await sendMessage(
             session["orig_msg"],
             f"<b>{emoji} {_t('Ready to Merge')} — {mname}</b>\n"
@@ -279,7 +271,7 @@ async def merge_callback(client, query):
             f"  ◀ <b>{_t('Back')}</b>  →  {_t('Return to queue')}\n\n"
             f"⏱ <i>{_t('Auto-skips in 60s if no input')}</i>",
             btns.build_menu(2),
-            photo=thumb,
+            photo="IMAGES",
         )
         session["ask_msg"] = ask
         return
