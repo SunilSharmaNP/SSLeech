@@ -720,7 +720,7 @@ class MirrorLeechListener:
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-c:v", "copy",
-            "-c:a", "aac",
+            "-c:a", "copy",
             "-shortest",
             output_path,
         ]
@@ -777,7 +777,7 @@ class MirrorLeechListener:
             "-map", "0",
             "-map", "1",
             "-c", "copy",
-            "-c:s", "ass",
+            "-c:s", "copy",
             output_path,
         ]
         self.suproc = await create_subprocess_exec(*cmd, stdout=PIPE, stderr=PIPE)
@@ -816,6 +816,7 @@ class MirrorLeechListener:
 
         prompt = await sendMessage(
             self.message,
+            f"{self.tag}\n"
             f"<b>📦 𝐙ɪᴘ 𝐌ᴇʀɢᴇ — 𝐄ᴘɪsᴏᴅᴇ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"
             f"<b>🎞 𝐅ᴏᴜɴᴅ {len(video_files)} 𝐕ɪᴅᴇᴏs:</b>\n{ep_lines}\n\n"
