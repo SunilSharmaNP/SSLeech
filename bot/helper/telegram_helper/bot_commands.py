@@ -90,7 +90,7 @@ class _BotCommands:
         self.GDCleanCommand = [f"gdclean{suffix}", f"gc{suffix}"]
         self.BroadcastCommand = [f"broadcast{suffix}", f"bc{suffix}"]
         self.SearchCommand = f"search{suffix}"
-        self.StartMergeCommand = [f"startmerge{suffix}", f"sm{suffix}"]
+        self.StartMergeCommand = [f"videomerge{suffix}", f"startmerge{suffix}"]
 
 
 BotCommands = _BotCommands()
