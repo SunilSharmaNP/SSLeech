@@ -298,6 +298,9 @@ async def split_file(
         # variable-bitrate files had start_time lag behind duration.
         max_parts = min(parts + 10, 999)
 
+        # Track cumulative bytes of all completed parts for overall progress
+        completed_bytes = 0
+
         while (i <= max_parts) and (start_time < duration - 4):
             parted_name = f"{base_name}.part{i:03}{extension}"
             out_path = ospath.join(dirpath, parted_name)
@@ -324,6 +327,7 @@ async def split_file(
                 "-2",
                 "-c",
                 "copy",
+                "-progress", "pipe:1",
                 out_path,
             ]
             if not multi_streams:
@@ -335,15 +339,38 @@ async def split_file(
                 and listener.suproc.returncode == -9
             ):
                 return False
-            listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
+            listener.suproc = await create_subprocess_exec(*cmd, stdout=PIPE, stderr=PIPE)
 
-            # FIX 3: Add timeout per part (1 hour max) so ffmpeg can't hang forever.
-            # Previously `await listener.suproc.wait()` had no timeout at all.
+            # Read ffmpeg -progress output from stdout in real-time so that
+            # split_current_done updates every second instead of only after
+            # each full part completes (which made the bar show 0% for 10+ min).
+            async def _track_split_progress(proc, base_done: int):
+                try:
+                    async for raw in proc.stdout:
+                        line = raw.decode().strip()
+                        k, _, v = line.partition("=")
+                        if k.strip() == "total_size":
+                            try:
+                                current_part_bytes = max(int(v.strip()), 0)
+                                listener.split_current_done = base_done + current_part_bytes
+                                t0 = getattr(listener, "_split_start", None)
+                                if t0 is not None:
+                                    listener.split_elapsed = max(_time() - t0, 0.001)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+            # FIX 3: Timeout per part (1 hour max) + live progress via gather
             try:
-                code = await wait_for(listener.suproc.wait(), timeout=3600)
+                await wait_for(
+                    gather(listener.suproc.wait(), _track_split_progress(listener.suproc, completed_bytes)),
+                    timeout=3600,
+                )
+                code = listener.suproc.returncode
             except AsyncTimeoutError:
                 LOGGER.error(
-                    f"ffmpeg split timed out after 3600s on part {i}. Killing process. Path: {path}"
+                    f"ffmpeg split timed out after 3600s on part {i}. Killing. Path: {path}"
                 )
                 try:
                     listener.suproc.kill()
@@ -402,9 +429,10 @@ async def split_file(
                     i,
                     True,
                 )
-            # Update progress tracking on listener
+            # Part completed — update cumulative byte count for next part's base
+            completed_bytes += out_size
             try:
-                listener.split_current_done = getattr(listener, "split_current_done", 0) + out_size
+                listener.split_current_done = completed_bytes
                 t0 = getattr(listener, "_split_start", None)
                 if t0 is not None:
                     listener.split_elapsed = max(_time() - t0, 0.001)
