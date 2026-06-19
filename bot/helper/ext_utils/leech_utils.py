@@ -7,7 +7,7 @@ from os import path as ospath
 from aiofiles.os import remove as aioremove, path as aiopath, mkdir, makedirs, listdir
 from aioshutil import rmtree as aiormtree
 from contextlib import suppress
-from asyncio import create_subprocess_exec, create_task, gather, Semaphore
+from asyncio import create_subprocess_exec, create_task, gather, Semaphore, wait_for, TimeoutError as AsyncTimeoutError
 from asyncio.subprocess import PIPE
 from telegraph import upload_file
 from langcodes import Language
@@ -274,13 +274,31 @@ async def split_file(
         and "equal_splits" not in user_dict
     ) and not inLoop:
         split_size = ((size + parts - 1) // parts) + 1000
+
+    # FIX 1: Only subtract overhead on first call, NOT on every recursive inLoop call.
+    # Previously this ran on every call including recursive ones, causing split_size
+    # to shrink by an extra 5 MB on each retry — leading to tiny parts and infinite loops.
+    if not inLoop:
+        split_size -= 5000000
+
+    # Guard: never let split_size drop below 50 MB to avoid thousands of tiny parts
+    MIN_SPLIT_SIZE = 50 * 1024 * 1024
+    if split_size < MIN_SPLIT_SIZE:
+        LOGGER.warning(f"split_size dropped below 50 MB ({split_size}), clamping to 50 MB. Path: {path}")
+        split_size = MIN_SPLIT_SIZE
+
     if (await get_document_type(path))[0]:
         if multi_streams:
             multi_streams = await is_multi_streams(path)
         duration = (await get_media_info(path))[0]
         base_name, extension = ospath.splitext(file_)
-        split_size -= 5000000
-        while i <= parts or start_time < duration - 4:
+
+        # FIX 2: Safety cap — never create more than 999 parts, and stop when
+        # start_time covers the file. The old `or` condition kept looping when
+        # variable-bitrate files had start_time lag behind duration.
+        max_parts = min(parts + 10, 999)
+
+        while (i <= max_parts) and (start_time < duration - 4):
             parted_name = f"{base_name}.part{i:03}{extension}"
             out_path = ospath.join(dirpath, parted_name)
             cmd = [
@@ -318,7 +336,25 @@ async def split_file(
             ):
                 return False
             listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
-            code = await listener.suproc.wait()
+
+            # FIX 3: Add timeout per part (1 hour max) so ffmpeg can't hang forever.
+            # Previously `await listener.suproc.wait()` had no timeout at all.
+            try:
+                code = await wait_for(listener.suproc.wait(), timeout=3600)
+            except AsyncTimeoutError:
+                LOGGER.error(
+                    f"ffmpeg split timed out after 3600s on part {i}. Killing process. Path: {path}"
+                )
+                try:
+                    listener.suproc.kill()
+                except Exception:
+                    pass
+                try:
+                    await aioremove(out_path)
+                except Exception:
+                    pass
+                return "errored"
+
             if code == -9:
                 return False
             elif code != 0:
@@ -351,14 +387,16 @@ async def split_file(
             out_size = await aiopath.getsize(out_path)
             if out_size > MAX_SPLIT_SIZE:
                 dif = out_size - MAX_SPLIT_SIZE
-                split_size -= dif + 5000000
+                # FIX 1 (continued): Only reduce split_size here; the recursive call
+                # will NOT subtract 5 MB again because inLoop=True skips that block.
+                new_split_size = max(split_size - dif - 5000000, MIN_SPLIT_SIZE)
                 await aioremove(out_path)
                 return await split_file(
                     path,
                     size,
                     file_,
                     dirpath,
-                    split_size,
+                    new_split_size,
                     listener,
                     start_time,
                     i,
@@ -399,7 +437,16 @@ async def split_file(
             out_path,
             stderr=PIPE,
         )
-        code = await listener.suproc.wait()
+        # FIX 3 (non-video): timeout for large binary splits too
+        try:
+            code = await wait_for(listener.suproc.wait(), timeout=7200)
+        except AsyncTimeoutError:
+            LOGGER.error(f"Binary split timed out after 7200s. Killing. Path: {path}")
+            try:
+                listener.suproc.kill()
+            except Exception:
+                pass
+            return "errored"
         if code == -9:
             return False
         elif code != 0:
