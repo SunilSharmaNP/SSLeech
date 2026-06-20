@@ -37,10 +37,14 @@ class DbManger:
     async def db_load(self):
         if self.__err:
             return
-        # Save bot settings
-        await self.__db.settings.config.update_one(
-            {"_id": bot_id}, {"$set": config_dict}, upsert=True
-        )
+        # Save bot settings ONLY on first-ever startup (no existing document).
+        # On subsequent restarts we must NOT overwrite — doing so would erase any
+        # settings the user changed via /botsettings and stored in MongoDB.
+        existing_config = await self.__db.settings.config.find_one({"_id": bot_id})
+        if existing_config is None:
+            await self.__db.settings.config.update_one(
+                {"_id": bot_id}, {"$set": config_dict}, upsert=True
+            )
         # Save Aria2c options
         if await self.__db.settings.aria2c.find_one({"_id": bot_id}) is None:
             await self.__db.settings.aria2c.update_one(
