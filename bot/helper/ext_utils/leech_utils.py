@@ -7,7 +7,7 @@ from os import path as ospath
 from aiofiles.os import remove as aioremove, path as aiopath, mkdir, makedirs, listdir
 from aioshutil import rmtree as aiormtree
 from contextlib import suppress
-from asyncio import create_subprocess_exec, create_task, gather, Semaphore, wait_for, TimeoutError as AsyncTimeoutError
+from asyncio import create_subprocess_exec, create_task, gather, Semaphore, wait_for, TimeoutError as AsyncTimeoutError, sleep as asyncio_sleep, CancelledError
 from asyncio.subprocess import PIPE
 from telegraph import upload_file
 from langcodes import Language
@@ -298,7 +298,7 @@ async def split_file(
         # variable-bitrate files had start_time lag behind duration.
         max_parts = min(parts + 10, 999)
 
-        # Track cumulative bytes of all completed parts for overall progress
+        # Cumulative bytes of all successfully written parts (for overall progress)
         completed_bytes = 0
 
         while (i <= max_parts) and (start_time < duration - 4):
@@ -327,7 +327,6 @@ async def split_file(
                 "-2",
                 "-c",
                 "copy",
-                "-progress", "pipe:1",
                 out_path,
             ]
             if not multi_streams:
@@ -339,35 +338,33 @@ async def split_file(
                 and listener.suproc.returncode == -9
             ):
                 return False
-            listener.suproc = await create_subprocess_exec(*cmd, stdout=PIPE, stderr=PIPE)
 
-            # Read ffmpeg -progress output from stdout in real-time so that
-            # split_current_done updates every second instead of only after
-            # each full part completes (which made the bar show 0% for 10+ min).
-            async def _track_split_progress(proc, base_done: int):
+            listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
+
+            # Poll the growing output-part file every 2 s so the status bar
+            # shows live bytes-written instead of staying frozen at 0%.
+            # This is simpler and more reliable than parsing ffmpeg -progress output.
+            async def _poll_part_size(part_path: str, base_done: int):
                 try:
-                    async for raw in proc.stdout:
-                        line = raw.decode().strip()
-                        k, _, v = line.partition("=")
-                        if k.strip() == "total_size":
+                    while True:
+                        await asyncio_sleep(2)
+                        if await aiopath.exists(part_path):
                             try:
-                                current_part_bytes = max(int(v.strip()), 0)
-                                listener.split_current_done = base_done + current_part_bytes
+                                part_bytes = await aiopath.getsize(part_path)
+                                listener.split_current_done = base_done + part_bytes
                                 t0 = getattr(listener, "_split_start", None)
                                 if t0 is not None:
                                     listener.split_elapsed = max(_time() - t0, 0.001)
                             except Exception:
                                 pass
-                except Exception:
+                except CancelledError:
                     pass
 
-            # FIX 3: Timeout per part (1 hour max) + live progress via gather
+            poll_task = create_task(_poll_part_size(out_path, completed_bytes))
+
+            # Wait for ffmpeg with a 1-hour timeout per part
             try:
-                await wait_for(
-                    gather(listener.suproc.wait(), _track_split_progress(listener.suproc, completed_bytes)),
-                    timeout=3600,
-                )
-                code = listener.suproc.returncode
+                code = await wait_for(listener.suproc.wait(), timeout=3600)
             except AsyncTimeoutError:
                 LOGGER.error(
                     f"ffmpeg split timed out after 3600s on part {i}. Killing. Path: {path}"
@@ -376,11 +373,22 @@ async def split_file(
                     listener.suproc.kill()
                 except Exception:
                     pass
+                poll_task.cancel()
+                try:
+                    await poll_task
+                except CancelledError:
+                    pass
                 try:
                     await aioremove(out_path)
                 except Exception:
                     pass
                 return "errored"
+            finally:
+                poll_task.cancel()
+                try:
+                    await poll_task
+                except CancelledError:
+                    pass
 
             if code == -9:
                 return False
@@ -414,8 +422,6 @@ async def split_file(
             out_size = await aiopath.getsize(out_path)
             if out_size > MAX_SPLIT_SIZE:
                 dif = out_size - MAX_SPLIT_SIZE
-                # FIX 1 (continued): Only reduce split_size here; the recursive call
-                # will NOT subtract 5 MB again because inLoop=True skips that block.
                 new_split_size = max(split_size - dif - 5000000, MIN_SPLIT_SIZE)
                 await aioremove(out_path)
                 return await split_file(
@@ -429,7 +435,7 @@ async def split_file(
                     i,
                     True,
                 )
-            # Part completed — update cumulative byte count for next part's base
+            # Part done — lock in cumulative progress
             completed_bytes += out_size
             try:
                 listener.split_current_done = completed_bytes
