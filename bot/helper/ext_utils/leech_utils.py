@@ -275,17 +275,7 @@ async def split_file(
     ) and not inLoop:
         split_size = ((size + parts - 1) // parts) + 1000
 
-    # FIX 1: Only subtract overhead on first call, NOT on every recursive inLoop call.
-    # Previously this ran on every call including recursive ones, causing split_size
-    # to shrink by an extra 5 MB on each retry — leading to tiny parts and infinite loops.
-    if not inLoop:
-        split_size -= 5000000
-
-    # Guard: never let split_size drop below 50 MB to avoid thousands of tiny parts
-    MIN_SPLIT_SIZE = 50 * 1024 * 1024
-    if split_size < MIN_SPLIT_SIZE:
-        LOGGER.warning(f"split_size dropped below 50 MB ({split_size}), clamping to 50 MB. Path: {path}")
-        split_size = MIN_SPLIT_SIZE
+    split_size -= 5000000
 
     if (await get_document_type(path))[0]:
         if multi_streams:
@@ -293,17 +283,16 @@ async def split_file(
         duration = (await get_media_info(path))[0]
         base_name, extension = ospath.splitext(file_)
 
-        # FIX 2: Safety cap — never create more than 999 parts, and stop when
-        # start_time covers the file. The old `or` condition kept looping when
-        # variable-bitrate files had start_time lag behind duration.
-        max_parts = min(parts + 10, 999)
-
         # Cumulative bytes of all successfully written parts (for overall progress)
         completed_bytes = 0
 
-        while (i <= max_parts) and (start_time < duration - 4):
+        while i <= parts or start_time < duration - 4:
             parted_name = f"{base_name}.part{i:03}{extension}"
             out_path = ospath.join(dirpath, parted_name)
+            # cmd index map (with -threads at 4-5):
+            #  0:FFMPEG  1:-hide_banner  2:-loglevel  3:error
+            #  4:-threads  5:threads  6:-ss  7:start_time  8:-i  9:path
+            #  10:-fs  11:split_size  12:-map  13:0  14:-map_chapters ...
             cmd = [
                 BinConfig.FFMPEG_NAME,
                 "-hide_banner",
@@ -330,8 +319,11 @@ async def split_file(
                 out_path,
             ]
             if not multi_streams:
-                del cmd[10]
-                del cmd[10]
+                # Remove -map 0 (indices 12 & 13) NOT -fs (indices 10 & 11).
+                # Original WZML-X had no -threads so -map was at index 10.
+                # With -threads added at 4-5, -map shifted to index 12.
+                del cmd[12]
+                del cmd[12]
             if (
                 listener.suproc == "cancelled"
                 or listener.suproc is not None
@@ -426,14 +418,14 @@ async def split_file(
             out_size = await aiopath.getsize(out_path)
             if out_size > MAX_SPLIT_SIZE:
                 dif = out_size - MAX_SPLIT_SIZE
-                new_split_size = max(split_size - dif - 5000000, MIN_SPLIT_SIZE)
+                split_size -= dif + 5000000
                 await aioremove(out_path)
                 return await split_file(
                     path,
                     size,
                     file_,
                     dirpath,
-                    new_split_size,
+                    split_size,
                     listener,
                     start_time,
                     i,
