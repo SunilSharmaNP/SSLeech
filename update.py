@@ -13,13 +13,6 @@ from dotenv import dotenv_values
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
-# ── Load bypass patcher into memory BEFORE git reset can delete the file ──
-try:
-    from bypass_reapply import reapply_bypass as _reapply_bypass
-    _bypass_loaded = True
-except Exception:
-    _bypass_loaded = False
-
 if ospath.exists("log.txt"):
     with open("log.txt", "r+") as f:
         f.truncate(0)
@@ -35,27 +28,15 @@ basicConfig(
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WZML-X wzv3 style config loading:
-#   Step 1 → read config.env into a plain dict  (file-based defaults)
-#   Step 2 → overlay actual os.environ vars     (Heroku config vars WIN)
-#   Step 3 → optionally overlay MongoDB vars    (bot-settings panel wins)
-# This means: Heroku config vars can never be wiped by a git reset of config.env
+# Config loading: config.env → Heroku env vars (win) → optionally MongoDB
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Vars used at startup / update time (same list wzv3 uses)
 _VAR_LIST = [
-    "BOT_TOKEN",
-    "TELEGRAM_API",
-    "TELEGRAM_HASH",
-    "OWNER_ID",
-    "DATABASE_URL",
-    "BASE_URL",
-    "UPSTREAM_REPO",
-    "UPSTREAM_BRANCH",
+    "BOT_TOKEN", "TELEGRAM_API", "TELEGRAM_HASH", "OWNER_ID",
+    "DATABASE_URL", "BASE_URL", "UPSTREAM_REPO", "UPSTREAM_BRANCH",
     "UPGRADE_PACKAGES",
 ]
 
-# Step 1: read config.env (strip whitespace, skip dunder keys)
 config_file: dict = {}
 if ospath.exists("config.env"):
     config_file = {
@@ -64,7 +45,6 @@ if ospath.exists("config.env"):
         if not k.startswith("_")
     }
 
-# Step 2: overlay with env vars (Heroku config vars always win)
 _env_updates = {
     k: (v.strip() if isinstance(v, str) else v)
     for k, v in environ.items()
@@ -74,12 +54,10 @@ if _env_updates:
     log_info("Heroku config vars applied (env vars override config.env for startup keys).")
     config_file.update(_env_updates)
 
-# ── Guard: remove-this-line check ─────────────────────────────────────────────
 if config_file.get("_____REMOVE_THIS_LINE_____"):
     log_error("The README.md file there to be read! Exiting now!")
     exit(1)
 
-# ── BOT_TOKEN ─────────────────────────────────────────────────────────────────
 BOT_TOKEN = config_file.get("BOT_TOKEN", "")
 if not BOT_TOKEN:
     log_error(
@@ -93,19 +71,14 @@ if not BOT_TOKEN:
 
 bot_id = BOT_TOKEN.split(":", 1)[0]
 
-# ── MongoDB: step 3 — overlay bot-settings panel values ───────────────────────
 DATABASE_URL = config_file.get("DATABASE_URL", "").strip()
 if DATABASE_URL:
     try:
         conn = MongoClient(DATABASE_URL, server_api=ServerApi("1"), serverSelectionTimeoutMS=10000)
         db = conn.wzmlx
-
-        # wzv3 pattern: compare deploy snapshot to decide whether to pull from DB
         old_config = db.settings.deployConfig.find_one({"_id": bot_id}, {"_id": 0})
         db_config = db.settings.config.find_one({"_id": bot_id})
-
         if (old_config is None or old_config == config_file) and db_config is not None:
-            # Pull UPSTREAM_REPO / UPSTREAM_BRANCH from bot-settings if user changed them
             if db_config.get("UPSTREAM_REPO"):
                 config_file["UPSTREAM_REPO"] = db_config["UPSTREAM_REPO"]
             if db_config.get("UPSTREAM_BRANCH"):
@@ -117,27 +90,40 @@ if DATABASE_URL:
     except Exception as db_err:
         log_warning(f"MongoDB not available during update (bot will still start): {db_err}")
 
-# ── Update packages ────────────────────────────────────────────────────────────
 UPGRADE_PACKAGES = config_file.get("UPGRADE_PACKAGES", "False")
 if (isinstance(UPGRADE_PACKAGES, str) and UPGRADE_PACKAGES.lower() == "true") or UPGRADE_PACKAGES is True:
     log_info("Upgrading installed packages ...")
     scall("uv pip install --system -U -r requirements.txt --quiet", shell=True)
     log_info("Packages updated successfully.")
 
-# ── Upstream repo update ────────────────────────────────────────────────────────
 UPSTREAM_REPO = config_file.get("UPSTREAM_REPO", "").strip()
 UPSTREAM_BRANCH = config_file.get("UPSTREAM_BRANCH", "").strip() or "master"
 
 if UPSTREAM_REPO:
-    # ── Backup config.env BEFORE git reset overwrites it ──────────────────────
-    _config_env_backup = None
-    if ospath.exists("config.env"):
-        try:
-            with open("config.env", "r", encoding="utf-8") as _cf:
-                _config_env_backup = _cf.read()
-            log_info("config.env backed up before upstream reset.")
-        except Exception as e:
-            log_warning(f"Could not backup config.env: {e}")
+    # ══════════════════════════════════════════════════════════════════════════
+    # BACKUP all patched files into Python memory BEFORE git reset wipes them.
+    # After git reset (which pulls SSLeech's upstream code), we restore these
+    # files so our bug-fixes survive every update cycle — same mechanism as
+    # config.env backup, no fragile regex patching needed.
+    # ══════════════════════════════════════════════════════════════════════════
+
+    _FILES_TO_RESTORE = [
+        # (disk path, description)
+        ("config.env",                              "config.env"),
+        ("bypass_reapply.py",                       "bypass_reapply.py"),
+        ("bot/__init__.py",                         "bot/__init__.py"),
+        ("bot/helper/ext_utils/db_handler.py",      "db_handler.py"),
+    ]
+
+    _backups: dict = {}
+    for _fpath, _fdesc in _FILES_TO_RESTORE:
+        if ospath.exists(_fpath):
+            try:
+                with open(_fpath, "r", encoding="utf-8") as _fh:
+                    _backups[_fpath] = _fh.read()
+                log_info(f"Backed up {_fdesc} before upstream reset.")
+            except Exception as _e:
+                log_warning(f"Could not backup {_fdesc}: {_e}")
 
     if ospath.exists(".git"):
         srun(["rm", "-rf", ".git"])
@@ -156,32 +142,18 @@ if UPSTREAM_REPO:
         shell=True,
     )
 
-    # ── Restore config.env AFTER git reset (prevents credential wipe) ─────────
-    if _config_env_backup is not None:
-        try:
-            with open("config.env", "w", encoding="utf-8") as _cf:
-                _cf.write(_config_env_backup)
-            log_info("config.env restored after upstream reset.")
-        except Exception as e:
-            log_error(f"Could not restore config.env: {e}")
+    # ── Restore all backed-up files ─────────────────────────────────────────
+    for _fpath, _fdesc in _FILES_TO_RESTORE:
+        if _fpath in _backups:
+            try:
+                import os as _os
+                _os.makedirs(_os.path.dirname(_fpath), exist_ok=True) if _os.path.dirname(_fpath) else None
+                with open(_fpath, "w", encoding="utf-8") as _fh:
+                    _fh.write(_backups[_fpath])
+                log_info(f"Restored {_fdesc} after upstream reset.")
+            except Exception as _e:
+                log_error(f"Could not restore {_fdesc}: {_e}")
 
-    # ── Re-apply bypass patches AFTER git reset ───────────────────────────────
-    # bypass_reapply.py was loaded into memory (lines 17-21) before git reset
-    # wiped it from disk.  Calling it now re-patches the freshly-reset files
-    # AND injects a self-call into update.py so patches survive future resets.
-    if _bypass_loaded:
-        try:
-            _reapply_bypass()
-            log_info("Bypass patches applied after upstream reset.")
-        except Exception as _bp_err:
-            log_warning(f"Bypass patch failed (non-fatal): {_bp_err}")
-    else:
-        log_warning(
-            "bypass_reapply.py not found — bot settings may not apply on restart. "
-            "Ensure bypass_reapply.py is present in the repo root."
-        )
-
-    # Strip any embedded token from URL before logging (WZML-X style display)
     repo = UPSTREAM_REPO.split("/")
     _display = f"https://github.com/{repo[-2]}/{repo[-1]}"
 
