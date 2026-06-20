@@ -523,11 +523,16 @@ class MirrorLeechListener:
             m_size = []
             o_files = []
             if not self.compress:
-                checked = False
                 LEECH_SPLIT_SIZE = (
                     user_dict.get("split_size", False)
                     or config_dict["LEECH_SPLIT_SIZE"]
                 )
+                # --- Pre-scan: collect every file that needs splitting ---
+                # We do this BEFORE splitting so we can set split_current_total
+                # once to the combined size of all files. Previously total/done
+                # were reset per-file, making progress jump back to 0% for each
+                # new file and confusing users into thinking the split restarted.
+                files_to_split = []
                 for dirpath, _, files in await sync_to_async(
                     walk, up_dir, topdown=False
                 ):
@@ -535,38 +540,48 @@ class MirrorLeechListener:
                         f_path = ospath.join(dirpath, file_)
                         f_size = await aiopath.getsize(f_path)
                         if f_size > LEECH_SPLIT_SIZE:
-                            if not checked:
-                                checked = True
-                                async with download_dict_lock:
-                                    download_dict[self.uid] = SplitStatus(
-                                        up_name, size, gid, self
-                                    )
-                                LOGGER.info(f"Splitting: {up_name}")
-                            from time import time as _split_time
-                            self.split_current_total = f_size
-                            self.split_current_done = 0
-                            self.split_elapsed = 0
-                            self._split_start = _split_time()
-                            res = await split_file(
-                                f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self
-                            )
-                            if not res:
+                            files_to_split.append((dirpath, file_, f_path, f_size))
+
+                if files_to_split:
+                    from time import time as _split_time
+                    async with download_dict_lock:
+                        download_dict[self.uid] = SplitStatus(
+                            up_name, size, gid, self
+                        )
+                    LOGGER.info(f"Splitting: {up_name}")
+                    # Set grand-total ONCE so progress never resets between files
+                    self.split_current_total = sum(f[3] for f in files_to_split)
+                    self.split_current_done = 0
+                    self.split_elapsed = 0
+                    self._split_start = _split_time()
+                    # split_base_offset = bytes already finished in previous files
+                    # leech_utils reads this to keep progress globally cumulative
+                    self.split_base_offset = 0
+
+                    for dirpath, file_, f_path, f_size in files_to_split:
+                        res = await split_file(
+                            f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self
+                        )
+                        # Advance global offset by what leech_utils actually wrote
+                        self.split_base_offset = self.split_current_done
+
+                        if not res:
+                            return
+                        if res == "errored":
+                            if f_size <= MAX_SPLIT_SIZE:
+                                continue
+                            try:
+                                await aioremove(f_path)
+                            except Exception:
                                 return
-                            if res == "errored":
-                                if f_size <= MAX_SPLIT_SIZE:
-                                    continue
-                                try:
-                                    await aioremove(f_path)
-                                except Exception:
-                                    return
-                            elif not self.seed or self.newDir:
-                                try:
-                                    await aioremove(f_path)
-                                except Exception:
-                                    return
-                            else:
-                                m_size.append(f_size)
-                                o_files.append(file_)
+                        elif not self.seed or self.newDir:
+                            try:
+                                await aioremove(f_path)
+                            except Exception:
+                                return
+                        else:
+                            m_size.append(f_size)
+                            o_files.append(file_)
 
         up_limit = config_dict["QUEUE_UPLOAD"]
         all_limit = config_dict["QUEUE_ALL"]
