@@ -165,6 +165,22 @@ if UPSTREAM_REPO:
         except Exception as e:
             log_error(f"Could not restore config.env: {e}")
 
+    # ── Re-apply bypass patches AFTER git reset ───────────────────────────────
+    # bypass_reapply.py was loaded into memory (lines 17-21) before git reset
+    # wiped it from disk.  Calling it now re-patches the freshly-reset files
+    # AND injects a self-call into update.py so patches survive future resets.
+    if _bypass_loaded:
+        try:
+            _reapply_bypass()
+            log_info("Bypass patches applied after upstream reset.")
+        except Exception as _bp_err:
+            log_warning(f"Bypass patch failed (non-fatal): {_bp_err}")
+    else:
+        log_warning(
+            "bypass_reapply.py not found — bot settings may not apply on restart. "
+            "Ensure bypass_reapply.py is present in the repo root."
+        )
+
     # Strip any embedded token from URL before logging (WZML-X style display)
     repo = UPSTREAM_REPO.split("/")
     _display = f"https://github.com/{repo[-2]}/{repo[-1]}"
