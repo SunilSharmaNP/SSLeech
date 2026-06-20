@@ -343,15 +343,19 @@ async def split_file(
 
             # Poll the growing output-part file every 2 s so the status bar
             # shows live bytes-written instead of staying frozen at 0%.
-            # This is simpler and more reliable than parsing ffmpeg -progress output.
+            # global_offset = bytes finished in all PREVIOUS files (set by tasks_listener)
+            # completed_bytes = bytes finished in previous PARTS of THIS file
+            # part_bytes = bytes written so far in the CURRENT part (live)
+            # Together they give a continuously rising global progress.
             async def _poll_part_size(part_path: str, base_done: int):
+                global_offset = getattr(listener, "split_base_offset", 0)
                 try:
                     while True:
                         await asyncio_sleep(2)
                         if await aiopath.exists(part_path):
                             try:
                                 part_bytes = await aiopath.getsize(part_path)
-                                listener.split_current_done = base_done + part_bytes
+                                listener.split_current_done = global_offset + base_done + part_bytes
                                 t0 = getattr(listener, "_split_start", None)
                                 if t0 is not None:
                                     listener.split_elapsed = max(_time() - t0, 0.001)
@@ -435,10 +439,11 @@ async def split_file(
                     i,
                     True,
                 )
-            # Part done — lock in cumulative progress
+            # Part done — lock in cumulative progress (global_offset + this-file's bytes)
             completed_bytes += out_size
             try:
-                listener.split_current_done = completed_bytes
+                global_offset = getattr(listener, "split_base_offset", 0)
+                listener.split_current_done = global_offset + completed_bytes
                 t0 = getattr(listener, "_split_start", None)
                 if t0 is not None:
                     listener.split_elapsed = max(_time() - t0, 0.001)
