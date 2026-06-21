@@ -69,7 +69,7 @@ from bot import (
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.telegraph_helper import telegraph
-from bot.helper.ext_utils.shortners import short_url
+from bot.helper.ext_utils.shortners import short_url, wrap_verify_page
 
 THREADPOOL = ThreadPoolExecutor(max_workers=min(32, cpu_no + 4))
 MAGNET_REGEX = r"magnet:\?xt=urn:(btih|btmh):[a-zA-Z0-9]*\s*"
@@ -856,10 +856,10 @@ async def checking_access(user_id, button=None):
         if button is None:
             button = ButtonMaker()
         encrypt_url = b64encode(f"{token}&&{user_id}".encode()).decode()
-        button.ubutton(
-            "Generate New Token",
-            short_url(f"https://t.me/{bot_name}?start={encrypt_url}"),
-        )
+        bot_start_link = f"https://t.me/{bot_name}?start={encrypt_url}"
+        shortener_link = short_url(bot_start_link)
+        final_link = wrap_verify_page(shortener_link, user_id)
+        button.ubutton("Generate New Token", final_link)
         return (
             f'<i>Temporary Token has been expired,</i> Kindly generate a New Temp Token to start using bot Again.\n<b>Validity :</b> <code>{get_readable_time(config_dict["TOKEN_TIMEOUT"])}</code>',
             button,
