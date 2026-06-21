@@ -37,14 +37,14 @@ class DbManger:
     async def db_load(self):
         if self.__err:
             return
-        # Save bot settings ONLY on first-ever startup (no existing document).
-        # On subsequent restarts we must NOT overwrite — doing so would erase any
-        # settings the user changed via /botsettings and stored in MongoDB.
-        existing_config = await self.__db.settings.config.find_one({"_id": bot_id})
-        if existing_config is None:
-            await self.__db.settings.config.update_one(
-                {"_id": bot_id}, {"$set": config_dict}, upsert=True
-            )
+        # Always sync config_dict to MongoDB on every startup (WZML-X behaviour).
+        # config_dict is already built from environ, which already loaded any
+        # botsettings values from MongoDB — so doing $set here is safe and never
+        # erases previous botsettings changes.  It also ensures newly-added Heroku
+        # vars are written into MongoDB so the next botsettings load sees them.
+        await self.__db.settings.config.update_one(
+            {"_id": bot_id}, {"$set": config_dict}, upsert=True
+        )
         # Save Aria2c options
         if await self.__db.settings.aria2c.find_one({"_id": bot_id}) is None:
             await self.__db.settings.aria2c.update_one(
@@ -121,11 +121,13 @@ class DbManger:
                 pf_bin = await pf.read()
         else:
             pf_bin = ""
+        # Check original path BEFORE replacing dots (MongoDB keys can't have dots).
+        is_config = path == "config.env"
         path = path.replace(".", "__")
         await self.__db.settings.files.update_one(
             {"_id": bot_id}, {"$set": {path: pf_bin}}, upsert=True
         )
-        if path == "config.env":
+        if is_config:
             await self.update_deploy_config()
         else:
             self.__conn.close
