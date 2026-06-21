@@ -1,164 +1,178 @@
-from logging import (
-    FileHandler,
-    StreamHandler,
-    INFO,
-    basicConfig,
-    error as log_error,
-    info as log_info,
-    warning as log_warning,
-)
-from os import path as ospath, environ, remove
-from subprocess import run as srun, call as scall
-from dotenv import dotenv_values
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
+#!/usr/bin/env python3
+"""
+update.py — wzv3-style clean update for SSLeech on Heroku.
 
-if ospath.exists("log.txt"):
-    with open("log.txt", "r+") as f:
-        f.truncate(0)
+MINIMUM required Heroku config vars (only these 2 are mandatory):
+  BOT_TOKEN     — identifies which MongoDB partition to load
+  DATABASE_URL  — MongoDB connection string
 
-if ospath.exists("rlog.txt"):
-    remove("rlog.txt")
+Everything else (UPSTREAM_REPO, UPSTREAM_BRANCH, TELEGRAM_API, TELEGRAM_HASH,
+OWNER_ID, etc.) is loaded from MongoDB automatically via bot/__init__.py.
+You only need them in Heroku config vars for the VERY FIRST boot.
+After that they persist in MongoDB and can be removed from Heroku.
 
-basicConfig(
-    format="[%(asctime)s] [%(levelname)s] - %(message)s",
-    datefmt="%d-%b-%y %I:%M:%S %p",
-    handlers=[FileHandler("log.txt"), StreamHandler()],
-    level=INFO,
-)
+Design (same as wzv3 branch):
+  1. Read BOT_TOKEN + DATABASE_URL from Heroku env
+  2. Fetch UPSTREAM_REPO / UPSTREAM_BRANCH from MongoDB (so botsettings value works)
+  3. Clean `git reset --hard origin/<branch>`  — no file backup/restore
+  4. pip install requirements
+  NO bypass_reapply.py needed — GitHub code is always the authoritative source.
+"""
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Config loading: config.env → Heroku env vars (win) → optionally MongoDB
-# ══════════════════════════════════════════════════════════════════════════════
+from logging import ERROR, INFO, FileHandler, StreamHandler, basicConfig, getLogger
+from os import environ, path, remove
+from subprocess import call as scall
+from subprocess import run as srun
+from sys import exit
 
-_VAR_LIST = [
-    "BOT_TOKEN", "TELEGRAM_API", "TELEGRAM_HASH", "OWNER_ID",
-    "DATABASE_URL", "BASE_URL", "UPSTREAM_REPO", "UPSTREAM_BRANCH",
-    "UPGRADE_PACKAGES",
-]
+getLogger("pymongo").setLevel(ERROR)
+_LOGGER = getLogger("update")
 
-config_file: dict = {}
-if ospath.exists("config.env"):
-    config_file = {
-        k: (v.strip() if isinstance(v, str) else v)
-        for k, v in dotenv_values("config.env").items()
-        if not k.startswith("_")
-    }
 
-_env_updates = {
-    k: (v.strip() if isinstance(v, str) else v)
-    for k, v in environ.items()
-    if k in _VAR_LIST
-}
-if _env_updates:
-    log_info("Heroku config vars applied (env vars override config.env for startup keys).")
-    config_file.update(_env_updates)
-
-if config_file.get("_____REMOVE_THIS_LINE_____"):
-    log_error("The README.md file there to be read! Exiting now!")
-    exit(1)
-
-BOT_TOKEN = config_file.get("BOT_TOKEN", "")
-if not BOT_TOKEN:
-    log_error(
-        "BOT_TOKEN variable is missing!\n"
-        "  Possible causes:\n"
-        "  1. BOT_TOKEN not set in Heroku config vars OR config.env\n"
-        "  2. config.env has empty BOT_TOKEN after git reset (set as Heroku config var)\n"
-        "Exiting now."
+def _setup_logging():
+    for f in ("log.txt", "rlog.txt"):
+        if path.exists(f):
+            with open(f, "w"):
+                pass
+    basicConfig(
+        format="[%(asctime)s] [%(levelname)s] - %(message)s",
+        datefmt="%d-%b-%y %I:%M:%S %p",
+        handlers=[FileHandler("log.txt"), StreamHandler()],
+        level=INFO,
     )
-    exit(1)
 
-bot_id = BOT_TOKEN.split(":", 1)[0]
 
-DATABASE_URL = config_file.get("DATABASE_URL", "").strip()
-if DATABASE_URL:
+def _get_essential(key):
+    """Read a mandatory var from Heroku env; also check config.env as fallback."""
+    val = environ.get(key, "").strip()
+    if val:
+        return val
+    # Fallback: try reading config.env directly (may exist from previous run)
+    if path.exists("config.env"):
+        for line in open("config.env"):
+            line = line.strip()
+            if line.startswith(f"{key}="):
+                return line[len(key) + 1 :].strip().strip('"').strip("'")
+    return ""
+
+
+def _fetch_upstream_from_db(database_url, bot_id):
+    """
+    Connect to MongoDB (synchronous pymongo) and return
+    (UPSTREAM_REPO, UPSTREAM_BRANCH) stored via botsettings.
+    Returns ("", "") on any error.
+    """
     try:
-        conn = MongoClient(DATABASE_URL, server_api=ServerApi("1"), serverSelectionTimeoutMS=10000)
-        db = conn.wzmlx
-        old_config = db.settings.deployConfig.find_one({"_id": bot_id}, {"_id": 0})
-        db_config = db.settings.config.find_one({"_id": bot_id})
-        if (old_config is None or old_config == config_file) and db_config is not None:
-            if db_config.get("UPSTREAM_REPO"):
-                config_file["UPSTREAM_REPO"] = db_config["UPSTREAM_REPO"]
-            if db_config.get("UPSTREAM_BRANCH"):
-                config_file["UPSTREAM_BRANCH"] = db_config["UPSTREAM_BRANCH"]
-            if db_config.get("UPGRADE_PACKAGES") is not None:
-                config_file["UPGRADE_PACKAGES"] = str(db_config["UPGRADE_PACKAGES"])
+        from pymongo import MongoClient
+
+        conn = MongoClient(database_url, serverSelectionTimeoutMS=8000)
+        doc = conn.wzmlx.settings.config.find_one({"_id": bot_id})
         conn.close()
-        log_info("MongoDB: startup config loaded.")
-    except Exception as db_err:
-        log_warning(f"MongoDB not available during update (bot will still start): {db_err}")
+        if doc:
+            repo = str(doc.get("UPSTREAM_REPO") or "").strip()
+            branch = str(doc.get("UPSTREAM_BRANCH") or "").strip()
+            return repo, branch
+    except Exception as e:
+        _LOGGER.warning(f"MongoDB: could not fetch upstream config — {e}")
+    return "", ""
 
-UPGRADE_PACKAGES = config_file.get("UPGRADE_PACKAGES", "False")
-if (isinstance(UPGRADE_PACKAGES, str) and UPGRADE_PACKAGES.lower() == "true") or UPGRADE_PACKAGES is True:
-    log_info("Upgrading installed packages ...")
-    scall("uv pip install --system -U -r requirements.txt --quiet", shell=True)
-    log_info("Packages updated successfully.")
 
-UPSTREAM_REPO = config_file.get("UPSTREAM_REPO", "").strip()
-UPSTREAM_BRANCH = config_file.get("UPSTREAM_BRANCH", "").strip() or "master"
+def _run_update(upstream_repo, upstream_branch):
+    """
+    wzv3-style clean git reset — no backup, no restore, no bypass file.
+    GitHub repo is always the authoritative source for code.
+    """
+    if not upstream_repo:
+        _LOGGER.info("No UPSTREAM_REPO set — skipping git update.")
+        return
 
-if UPSTREAM_REPO:
-    # ══════════════════════════════════════════════════════════════════════════
-    # BACKUP all patched files into Python memory BEFORE git reset wipes them.
-    # After git reset (which pulls SSLeech's upstream code), we restore these
-    # files so our bug-fixes survive every update cycle — same mechanism as
-    # config.env backup, no fragile regex patching needed.
-    # ══════════════════════════════════════════════════════════════════════════
+    if path.exists(".git"):
+        srun(["rm", "-rf", ".git"], capture_output=True)
 
-    _FILES_TO_RESTORE = [
-        # (disk path, description)
-        ("config.env",                              "config.env"),
-        ("bypass_reapply.py",                       "bypass_reapply.py"),
-        ("bot/__init__.py",                         "bot/__init__.py"),
-        ("bot/helper/ext_utils/db_handler.py",      "db_handler.py"),
+    cmds = [
+        ["git", "init", "-q"],
+        # Auto-configure git identity so `git commit` in botsettings push works
+        ["git", "config", "--global", "user.email", "bot@heroku.local"],
+        ["git", "config", "--global", "user.name", "SSLeechBot"],
+        ["git", "add", "."],
+        ["git", "commit", "-sm", "pre-update", "-q"],
+        ["git", "remote", "add", "origin", upstream_repo],
+        ["git", "fetch", "origin", upstream_branch, "-q"],
+        ["git", "reset", "--hard", f"origin/{upstream_branch}", "-q"],
     ]
 
-    _backups: dict = {}
-    for _fpath, _fdesc in _FILES_TO_RESTORE:
-        if ospath.exists(_fpath):
-            try:
-                with open(_fpath, "r", encoding="utf-8") as _fh:
-                    _backups[_fpath] = _fh.read()
-                log_info(f"Backed up {_fdesc} before upstream reset.")
-            except Exception as _e:
-                log_warning(f"Could not backup {_fdesc}: {_e}")
+    result = None
+    for cmd in cmds:
+        result = srun(cmd, capture_output=True)
+        if result.returncode != 0:
+            _LOGGER.error(
+                f"git command failed: {' '.join(cmd)}\n"
+                f"stderr: {result.stderr.decode().strip()}"
+            )
+            break
 
-    if ospath.exists(".git"):
-        srun(["rm", "-rf", ".git"])
-
-    update = srun(
-        [
-            f"git init -q"
-            f" && git config --global user.email bot@ssleech.com"
-            f" && git config --global user.name ssleech-bot"
-            f" && git add ."
-            f" && git commit -sm update -q"
-            f" && git remote add origin {UPSTREAM_REPO}"
-            f" && git fetch origin -q"
-            f" && git reset --hard origin/{UPSTREAM_BRANCH} -q"
-        ],
-        shell=True,
-    )
-
-    # ── Restore all backed-up files ─────────────────────────────────────────
-    for _fpath, _fdesc in _FILES_TO_RESTORE:
-        if _fpath in _backups:
-            try:
-                import os as _os
-                _os.makedirs(_os.path.dirname(_fpath), exist_ok=True) if _os.path.dirname(_fpath) else None
-                with open(_fpath, "w", encoding="utf-8") as _fh:
-                    _fh.write(_backups[_fpath])
-                log_info(f"Restored {_fdesc} after upstream reset.")
-            except Exception as _e:
-                log_error(f"Could not restore {_fdesc}: {_e}")
-
-    repo = UPSTREAM_REPO.split("/")
-    _display = f"https://github.com/{repo[-2]}/{repo[-1]}"
-
-    if update.returncode == 0:
-        log_info("Successfully updated with latest commits !!")
+    if result and result.returncode == 0:
+        _LOGGER.info("Successfully updated with latest commits !!")
+        display = "/".join(upstream_repo.split("/")[-2:]).replace(".git", "")
+        _LOGGER.info(
+            f"UPSTREAM_REPO: {display} | UPSTREAM_BRANCH: {upstream_branch}"
+        )
     else:
-        log_error("Something went Wrong ! Recheck your details or Ask Support !")
-    log_info(f"UPSTREAM_REPO: {_display} | UPSTREAM_BRANCH: {UPSTREAM_BRANCH}")
+        _LOGGER.error(
+            "Update failed! Check UPSTREAM_REPO/UPSTREAM_BRANCH in botsettings "
+            "or Heroku config vars."
+        )
+
+
+def _update_packages():
+    _LOGGER.info("Upgrading installed packages ...")
+    ret = scall("pip install -U -r requirements.txt -q --no-warn-script-location", shell=True)
+    if ret == 0:
+        _LOGGER.info("Packages updated successfully.")
+    else:
+        _LOGGER.warning("Package upgrade had warnings — continuing anyway.")
+
+
+def main():
+    _setup_logging()
+
+    # ── Step 1: Read mandatory Heroku config vars ─────────────────────────────
+    bot_token = _get_essential("BOT_TOKEN")
+    if not bot_token:
+        _LOGGER.error(
+            "BOT_TOKEN is missing!\n"
+            "  BOT_TOKEN must be set in Heroku config vars (Settings → Config Vars).\n"
+            "  It cannot be removed — it is needed to identify which bot to run."
+        )
+        exit(1)
+    _LOGGER.info("Heroku config vars applied (env vars override config.env for startup keys).")
+
+    database_url = _get_essential("DATABASE_URL")
+    bot_id = bot_token.split(":", 1)[0]
+
+    # ── Step 2: Load UPSTREAM_REPO / BRANCH from MongoDB (botsettings) ───────
+    # This is the wzv3 key insight: config set via /botsettings is honoured
+    # here too, so you can manage UPSTREAM_REPO entirely from Telegram.
+    upstream_repo = _get_essential("UPSTREAM_REPO")
+    upstream_branch = _get_essential("UPSTREAM_BRANCH")
+
+    if database_url and (not upstream_repo or not upstream_branch):
+        db_repo, db_branch = _fetch_upstream_from_db(database_url, bot_id)
+        if db_repo and not upstream_repo:
+            upstream_repo = db_repo
+            _LOGGER.info("MongoDB: UPSTREAM_REPO loaded from botsettings.")
+        if db_branch and not upstream_branch:
+            upstream_branch = db_branch
+        _LOGGER.info("MongoDB: startup config loaded.")
+
+    upstream_branch = upstream_branch or "merge"
+
+    # ── Step 3: Update packages ───────────────────────────────────────────────
+    _update_packages()
+
+    # ── Step 4: Clean git reset from upstream (wzv3-style, no backup files) ──
+    _run_update(upstream_repo, upstream_branch)
+
+
+if __name__ == "__main__":
+    main()
