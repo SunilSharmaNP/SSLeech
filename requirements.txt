@@ -38,3 +38,4 @@ xattr
 yt-dlp[default,curl-cffi]
 pytz
 tzlocal
+cryptography>=41.0.0
