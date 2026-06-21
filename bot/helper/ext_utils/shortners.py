@@ -1,6 +1,8 @@
 from base64 import b64encode
+from hashlib import sha256
+from os import urandom, environ
 from random import choice, random, randrange
-from time import sleep
+from time import sleep, time
 from urllib.parse import quote
 
 from cloudscraper import create_scraper
@@ -77,3 +79,50 @@ def short_url(longurl, attempt=0):
         sleep(1)
         attempt += 1
         return short_url(longurl, attempt)
+
+
+def wrap_verify_page(shortener_url: str, user_id: int) -> str:
+    """
+    Wrap a shortener URL inside the anti-bypass human verification page.
+
+    Flow:
+      User → Verify Page (Cloudflare Turnstile) → shortener_url → bot start link
+
+    The shortener_url is AES-256-GCM encrypted so automated tools
+    cannot extract it from the verification page URL.
+
+    Returns the plain shortener_url unchanged if VERIFY_PAGE_URL or
+    VERIFY_SECRET_KEY env vars are not configured.
+    """
+    from bot import config_dict
+    verify_page = config_dict.get("VERIFY_PAGE_URL", "").rstrip("/")
+    secret = config_dict.get("VERIFY_SECRET_KEY", "")
+
+    if not verify_page or not secret:
+        return shortener_url
+
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from base64 import urlsafe_b64encode
+
+        key = sha256(secret.encode()).digest()
+        plaintext = f"{shortener_url}|{int(time())}|{user_id}".encode()
+        nonce = urandom(12)
+        aesgcm = AESGCM(key)
+        ciphertext_with_tag = aesgcm.encrypt(nonce, plaintext, None)
+        encrypted = (
+            urlsafe_b64encode(nonce + ciphertext_with_tag)
+            .decode()
+            .rstrip("=")
+        )
+        return f"{verify_page}/?d={encrypted}"
+    except ImportError:
+        LOGGER.warning(
+            "wrap_verify_page: 'cryptography' package not installed. "
+            "Install it via: pip install cryptography. "
+            "Falling back to direct shortener URL."
+        )
+        return shortener_url
+    except Exception as e:
+        LOGGER.error(f"wrap_verify_page error: {e}")
+        return shortener_url
