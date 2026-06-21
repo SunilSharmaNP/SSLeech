@@ -160,7 +160,12 @@ if DATABASE_URL:
         if db_bot_config := db.settings.config.find_one({"_id": bot_id}):
             del db_bot_config["_id"]
             for key, value in db_bot_config.items():
-                if value is not None and str(value).strip():
+                # Load ALL non-None values — including empty strings and False/0.
+                # The old `str(value).strip()` guard was wrong: it silently dropped
+                # empty-string resets and "0" values saved via botsettings, letting
+                # the original Heroku var win on every restart and making botsettings
+                # changes appear not to stick.
+                if value is not None:
                     environ[key] = str(value)
         if pf_dict := db.settings.files.find_one({"_id": bot_id}):
             del pf_dict["_id"]
