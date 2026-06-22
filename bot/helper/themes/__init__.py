@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 from os import listdir
 from importlib import import_module
 from random import choice as rchoice
@@ -11,21 +12,20 @@ for theme in listdir("bot/helper/themes"):
     if theme.startswith("wzml_") and theme.endswith(".py"):
         AVL_THEMES[theme[5:-3]] = import_module(f"bot.helper.themes.{theme[:-3]}")
 
+_EMOJI_SORTED = sorted(CUSTOM_EMOJI_MAP.items(), key=lambda x: len(x[0]), reverse=True)
+_EMOJI_PATTERN = re.compile("|".join(re.escape(e) for e, _ in _EMOJI_SORTED))
+
 
 def apply_custom_emojis(text: str) -> str:
-    """
-    Replace plain emojis with Telegram animated custom emoji HTML tags.
-
-    Only applies when the text contains HTML markup (message bodies).
-    Button labels (plain text, no HTML) are returned unchanged — Telegram
-    does not support <emoji> tags in inline button text.
-    """
     if not text or "<" not in text:
         return text
-    for emoji, eid in CUSTOM_EMOJI_MAP.items():
-        if emoji in text:
-            text = text.replace(emoji, f'<emoji id="{eid}">{emoji}</emoji>')
-    return text
+
+    def _replace(match: re.Match) -> str:
+        emoji = match.group(0)
+        eid = CUSTOM_EMOJI_MAP[emoji]
+        return f'<tg-emoji document_id="{eid}">{emoji}</tg-emoji>'
+
+    return _EMOJI_PATTERN.sub(_replace, text)
 
 
 def BotTheme(var_name, **format_vars):
