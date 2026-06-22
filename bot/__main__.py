@@ -24,6 +24,7 @@ from bot import (
     BinConfig,
     bot,
     user,
+    IS_PREMIUM_USER,
     bot_name,
     config_dict,
     user_data,
@@ -220,37 +221,30 @@ async def ping(_, message):
 
 
 async def emojitest(_, message):
-    """Diagnostic: verify premium custom emoji working after fix."""
+    """Diagnostic: verify premium custom emoji + user session status."""
     from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
     from bot.helper.themes import apply_custom_emojis
 
     test_id = CUSTOM_EMOJI_MAP.get("📥", "5443127283898405358")
 
-    # Test A — tg-emoji tag sent directly via sendMessage (ParseMode.HTML)
-    test1 = f'<b>Test A</b> — Direct &lt;tg-emoji&gt; tag:\n<tg-emoji document_id="{test_id}">📥</tg-emoji> animated aaya?'
+    # Session status
+    if IS_PREMIUM_USER and user:
+        session_status = f"✅ <b>User Session:</b> @{user.me.username} (Premium) — messages user se bheje jayenge"
+    elif user:
+        session_status = "⚠️ <b>User Session:</b> Active but NOT Premium — animated emoji nahi aayega"
+    else:
+        session_status = "❌ <b>User Session:</b> Set nahi — <code>USER_SESSION_STRING</code> add karo .env mein"
 
-    # Test B — E class (now uses tg-emoji format)
-    test2 = f'<b>Test B</b> — E class:\n{E.download} animated aaya?'
-
-    # Test C — apply_custom_emojis on plain text (no "<" in text — was broken before fix)
-    plain_text = "📥 Elapsed : 2m 30s"
-    test3_converted = apply_custom_emojis(plain_text)
-    test3 = f"<b>Test C</b> — apply_custom_emojis on plain text:\n{test3_converted} animated aaya?"
-
-    # Test D — BotTheme path (already goes through apply_custom_emojis)
-    test4_raw = "<b>Test D</b> — BotTheme style text:\n┠ <b>📥 Elapsed :</b> 2m 30s"
-    test4 = apply_custom_emojis(test4_raw)
-
-    raw_html = f"<b>Test C raw HTML:</b>\n<code>{test3_converted[:150]}</code>"
+    test1 = f'<b>Test A</b> — Direct tag:\n<tg-emoji document_id="{test_id}">📥</tg-emoji> animated?'
+    test2 = f'<b>Test B</b> — E class:\n{E.download} animated?'
+    test3 = apply_custom_emojis("📥 Elapsed : 2m 30s")
 
     result = (
+        f"<b>━━━ Session Status ━━━</b>\n{session_status}\n\n"
         f"{test1}\n\n"
         f"{test2}\n\n"
-        f"{test3}\n\n"
-        f"{test4}\n\n"
-        f"{raw_html}\n\n"
-        f"<b>Sab animated → fix kaam kar raha hai ✅\n"
-        f"Agar nahi → Pyrofork version &lt;tg-emoji&gt; support nahi karta</b>"
+        f"<b>Test C</b> — Plain text:\n{test3} animated?\n\n"
+        f"<b>Note:</b> Animated emoji sirf tab aata hai jab message <u>premium user account</u> se bheja jaye."
     )
     await sendMessage(message, result)
 
