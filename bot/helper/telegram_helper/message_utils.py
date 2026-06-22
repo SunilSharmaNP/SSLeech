@@ -35,8 +35,6 @@ from bot import (
     status_reply_dict_lock,
     Interval,
     bot,
-    user,
-    IS_PREMIUM_USER,
     download_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import (
@@ -56,25 +54,10 @@ from bot.helper.themes import apply_custom_emojis
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
         text = apply_custom_emojis(text)
-        # Use premium user client for animated emojis; fallback to bot on PeerIdInvalid
-        _use_user = IS_PREMIUM_USER and user
         if photo:
             try:
                 if photo == "IMAGES":
                     photo = rchoice(config_dict["IMAGES"])
-                if _use_user:
-                    try:
-                        return await user.send_photo(
-                            chat_id=message.chat.id,
-                            photo=photo,
-                            caption=text,
-                            reply_to_message_id=message.id,
-                            reply_markup=buttons,
-                            disable_notification=True,
-                            parse_mode=ParseMode.HTML,
-                        )
-                    except PeerIdInvalid:
-                        pass  # user client doesn't know this peer yet — fall through to bot
                 return await message.reply_photo(
                     photo=photo,
                     reply_to_message_id=message.id,
@@ -95,19 +78,6 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise
             except Exception as e:
                 LOGGER.error(format_exc())
-        if _use_user:
-            try:
-                return await user.send_message(
-                    chat_id=message.chat.id,
-                    text=text,
-                    reply_to_message_id=message.id,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                )
-            except PeerIdInvalid:
-                pass  # user client doesn't know this peer yet — fall through to bot
         return await message.reply(
             text=text,
             quote=True,
@@ -140,23 +110,10 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
 async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     try:
         text = apply_custom_emojis(text)
-        _use_user = IS_PREMIUM_USER and user
         if photo:
             try:
                 if photo == "IMAGES":
                     photo = rchoice(config_dict["IMAGES"])
-                if _use_user:
-                    try:
-                        return await user.send_photo(
-                            chat_id=chat_id,
-                            photo=photo,
-                            caption=text,
-                            reply_markup=buttons,
-                            disable_notification=True,
-                            parse_mode=ParseMode.HTML,
-                        )
-                    except PeerIdInvalid:
-                        pass
                 return await bot.send_photo(
                     chat_id=chat_id,
                     photo=photo,
@@ -174,18 +131,6 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
-        if _use_user:
-            try:
-                return await user.send_message(
-                    chat_id=chat_id,
-                    text=text,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                )
-            except PeerIdInvalid:
-                pass
         return await bot.send_message(
             chat_id=chat_id,
             text=text,
@@ -230,36 +175,20 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
         if chat is None:
             LOGGER.warning(f"sendMultiMessage: skipping invalid/inaccessible channel {channel_id}")
             continue
-        _use_user = IS_PREMIUM_USER and user
         try:
             if photo:
                 try:
                     if photo == "IMAGES":
                         photo = rchoice(config_dict["IMAGES"])
-                    sent = None
-                    if _use_user:
-                        try:
-                            sent = await user.send_photo(
-                                chat_id=chat.id,
-                                photo=photo,
-                                caption=text,
-                                reply_markup=buttons,
-                                reply_to_message_id=topic_id,
-                                disable_notification=True,
-                                parse_mode=ParseMode.HTML,
-                            )
-                        except PeerIdInvalid:
-                            pass
-                    if sent is None:
-                        sent = await bot.send_photo(
-                            chat_id=chat.id,
-                            photo=photo,
-                            caption=text,
-                            reply_markup=buttons,
-                            reply_to_message_id=topic_id,
-                            disable_notification=True,
-                            parse_mode=ParseMode.HTML,
-                        )
+                    sent = await bot.send_photo(
+                        chat_id=chat.id,
+                        photo=photo,
+                        caption=text,
+                        reply_markup=buttons,
+                        reply_to_message_id=topic_id,
+                        disable_notification=True,
+                        parse_mode=ParseMode.HTML,
+                    )
                     msg_dict[f"{chat.id}:{topic_id}"] = sent
                 except IndexError:
                     pass
@@ -271,30 +200,15 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 except Exception as e:
                     LOGGER.error(str(e))
                 continue
-            sent = None
-            if _use_user:
-                try:
-                    sent = await user.send_message(
-                        chat_id=chat.id,
-                        text=text,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_to_message_id=topic_id,
-                        reply_markup=buttons,
-                        parse_mode=ParseMode.HTML,
-                    )
-                except PeerIdInvalid:
-                    pass
-            if sent is None:
-                sent = await bot.send_message(
-                    chat_id=chat.id,
-                    text=text,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_to_message_id=topic_id,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                )
+            sent = await bot.send_message(
+                chat_id=chat.id,
+                text=text,
+                disable_web_page_preview=True,
+                disable_notification=True,
+                reply_to_message_id=topic_id,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+            )
             msg_dict[f"{chat.id}:{topic_id}"] = sent
         except FloodWait as f:
             LOGGER.warning(str(f))
@@ -308,13 +222,6 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
 async def editMessage(message, text, buttons=None, photo=None):
     try:
         text = apply_custom_emojis(text)
-        # Use user client to edit only if: premium user active AND message was sent by user account
-        _use_user = (
-            IS_PREMIUM_USER and user
-            and message.from_user
-            and user.me
-            and message.from_user.id == user.me.id
-        )
         if message.media:
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
@@ -324,22 +231,12 @@ async def editMessage(message, text, buttons=None, photo=None):
             return await message.edit_caption(
                 caption=text, reply_markup=buttons, parse_mode=ParseMode.HTML
             )
-        if _use_user:
-            await user.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message.id,
-                text=text,
-                disable_web_page_preview=True,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-            )
-        else:
-            await message.edit(
-                text=text,
-                disable_web_page_preview=True,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-            )
+        await message.edit(
+            text=text,
+            disable_web_page_preview=True,
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML,
+        )
     except FloodWait as f:
         LOGGER.warning(str(f))
         await sleep(f.value * 1.2)
