@@ -67,7 +67,7 @@ class _Emoji:
         if entry is None:
             return name
         eid, fallback = entry
-        return f'<emoji id="{eid}">{fallback}</emoji>'
+        return f'<tg-emoji document_id="{eid}">{fallback}</tg-emoji>'
 
     def get(self, name: str, plain: bool = False) -> str:
         """Return plain fallback emoji (for button labels) or full HTML tag."""
@@ -75,7 +75,7 @@ class _Emoji:
         if entry is None:
             return name
         eid, fallback = entry
-        return fallback if plain else f'<emoji id="{eid}">{fallback}</emoji>'
+        return fallback if plain else f'<tg-emoji document_id="{eid}">{fallback}</tg-emoji>'
 
 
 E = _Emoji()
