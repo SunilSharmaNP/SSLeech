@@ -35,6 +35,8 @@ from bot import (
     status_reply_dict_lock,
     Interval,
     bot,
+    user,
+    IS_PREMIUM_USER,
     download_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import (
@@ -51,13 +53,48 @@ from bot.helper.ext_utils.exceptions import TgLinkException
 from bot.helper.themes import apply_custom_emojis
 
 
+async def _resolve_user_chat(chat_id, chat_username=None):
+    """Try to resolve a chat for the user client.
+    Returns a chat identifier usable by user client, or None if unreachable.
+    Prefers username (no cache needed) over numeric ID."""
+    if not (IS_PREMIUM_USER and user):
+        return None
+    # Username doesn't need peer cache — try it first
+    if chat_username:
+        return chat_username
+    # Numeric ID: try resolving via get_chat to warm up the cache
+    try:
+        await user.get_chat(chat_id)
+        return chat_id
+    except Exception:
+        return None
+
+
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
         text = apply_custom_emojis(text)
+        chat = message.chat
+        # Resolve chat for user client: prefer username, fallback to numeric ID
+        user_chat = await _resolve_user_chat(
+            chat.id, getattr(chat, "username", None)
+        )
         if photo:
             try:
                 if photo == "IMAGES":
                     photo = rchoice(config_dict["IMAGES"])
+                if user_chat:
+                    try:
+                        return await user.send_photo(
+                            chat_id=user_chat,
+                            photo=photo,
+                            caption=text,
+                            reply_to_message_id=message.id,
+                            reply_markup=buttons,
+                            disable_notification=True,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    except (PeerIdInvalid, ChannelInvalid):
+                        pass  # fall through to bot
                 return await message.reply_photo(
                     photo=photo,
                     reply_to_message_id=message.id,
@@ -78,6 +115,19 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise
             except Exception as e:
                 LOGGER.error(format_exc())
+        if user_chat:
+            try:
+                return await user.send_message(
+                    chat_id=user_chat,
+                    text=text,
+                    reply_to_message_id=message.id,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                )
+            except (PeerIdInvalid, ChannelInvalid):
+                pass  # fall through to bot
         return await message.reply(
             text=text,
             quote=True,
@@ -110,10 +160,25 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
 async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     try:
         text = apply_custom_emojis(text)
+        # For sendCustomMsg, chat_id may be a username (@...) or numeric ID
+        chat_username = chat_id if isinstance(chat_id, str) and chat_id.startswith("@") else None
+        user_chat = await _resolve_user_chat(chat_id, chat_username)
         if photo:
             try:
                 if photo == "IMAGES":
                     photo = rchoice(config_dict["IMAGES"])
+                if user_chat:
+                    try:
+                        return await user.send_photo(
+                            chat_id=user_chat,
+                            photo=photo,
+                            caption=text,
+                            reply_markup=buttons,
+                            disable_notification=True,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    except (PeerIdInvalid, ChannelInvalid):
+                        pass
                 return await bot.send_photo(
                     chat_id=chat_id,
                     photo=photo,
@@ -131,6 +196,18 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
+        if user_chat:
+            try:
+                return await user.send_message(
+                    chat_id=user_chat,
+                    text=text,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                )
+            except (PeerIdInvalid, ChannelInvalid):
+                pass
         return await bot.send_message(
             chat_id=chat_id,
             text=text,
@@ -175,20 +252,38 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
         if chat is None:
             LOGGER.warning(f"sendMultiMessage: skipping invalid/inaccessible channel {channel_id}")
             continue
+        user_chat = await _resolve_user_chat(
+            chat.id, getattr(chat, "username", None)
+        )
         try:
             if photo:
                 try:
                     if photo == "IMAGES":
                         photo = rchoice(config_dict["IMAGES"])
-                    sent = await bot.send_photo(
-                        chat_id=chat.id,
-                        photo=photo,
-                        caption=text,
-                        reply_markup=buttons,
-                        reply_to_message_id=topic_id,
-                        disable_notification=True,
-                        parse_mode=ParseMode.HTML,
-                    )
+                    sent = None
+                    if user_chat:
+                        try:
+                            sent = await user.send_photo(
+                                chat_id=user_chat,
+                                photo=photo,
+                                caption=text,
+                                reply_markup=buttons,
+                                reply_to_message_id=topic_id,
+                                disable_notification=True,
+                                parse_mode=ParseMode.HTML,
+                            )
+                        except (PeerIdInvalid, ChannelInvalid):
+                            pass
+                    if sent is None:
+                        sent = await bot.send_photo(
+                            chat_id=chat.id,
+                            photo=photo,
+                            caption=text,
+                            reply_markup=buttons,
+                            reply_to_message_id=topic_id,
+                            disable_notification=True,
+                            parse_mode=ParseMode.HTML,
+                        )
                     msg_dict[f"{chat.id}:{topic_id}"] = sent
                 except IndexError:
                     pass
@@ -200,15 +295,30 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 except Exception as e:
                     LOGGER.error(str(e))
                 continue
-            sent = await bot.send_message(
-                chat_id=chat.id,
-                text=text,
-                disable_web_page_preview=True,
-                disable_notification=True,
-                reply_to_message_id=topic_id,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-            )
+            sent = None
+            if user_chat:
+                try:
+                    sent = await user.send_message(
+                        chat_id=user_chat,
+                        text=text,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_to_message_id=topic_id,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML,
+                    )
+                except (PeerIdInvalid, ChannelInvalid):
+                    pass
+            if sent is None:
+                sent = await bot.send_message(
+                    chat_id=chat.id,
+                    text=text,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_to_message_id=topic_id,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                )
             msg_dict[f"{chat.id}:{topic_id}"] = sent
         except FloodWait as f:
             LOGGER.warning(str(f))
