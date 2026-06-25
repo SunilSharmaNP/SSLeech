@@ -73,28 +73,10 @@ async def _resolve_user_chat(chat_id, chat_username=None):
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
         text = apply_custom_emojis(text)
-        chat = message.chat
-        # Resolve chat for user client: prefer username, fallback to numeric ID
-        user_chat = await _resolve_user_chat(
-            chat.id, getattr(chat, "username", None)
-        )
         if photo:
             try:
                 if photo == "IMAGES":
                     photo = rchoice(config_dict["IMAGES"])
-                if user_chat:
-                    try:
-                        return await user.send_photo(
-                            chat_id=user_chat,
-                            photo=photo,
-                            caption=text,
-                            reply_to_message_id=message.id,
-                            reply_markup=buttons,
-                            disable_notification=True,
-                            parse_mode=ParseMode.HTML,
-                        )
-                    except (PeerIdInvalid, ChannelInvalid):
-                        pass  # fall through to bot
                 return await message.reply_photo(
                     photo=photo,
                     reply_to_message_id=message.id,
@@ -115,19 +97,6 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise
             except Exception as e:
                 LOGGER.error(format_exc())
-        if user_chat:
-            try:
-                return await user.send_message(
-                    chat_id=user_chat,
-                    text=text,
-                    reply_to_message_id=message.id,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                )
-            except (PeerIdInvalid, ChannelInvalid):
-                pass  # fall through to bot
         return await message.reply(
             text=text,
             quote=True,
