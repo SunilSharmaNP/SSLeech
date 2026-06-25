@@ -15,17 +15,30 @@ for theme in listdir("bot/helper/themes"):
 _EMOJI_SORTED = sorted(CUSTOM_EMOJI_MAP.items(), key=lambda x: len(x[0]), reverse=True)
 _EMOJI_PATTERN = re.compile("|".join(re.escape(e) for e, _ in _EMOJI_SORTED))
 
+# Match <emoji id="...">...</emoji> tags (Pyrofork's actual HTML tag for custom emoji)
+_EMOJI_TAG = re.compile(r'<emoji\s+id="[^"]*">.*?</emoji>', re.DOTALL)
+
 
 def apply_custom_emojis(text: str) -> str:
-    if not text or "<" not in text:
+    """Replace plain emoji chars with Pyrofork <emoji id="..."> tags.
+    Skips emojis already wrapped to prevent double-wrapping."""
+    if not text:
         return text
 
     def _replace(match: re.Match) -> str:
         emoji = match.group(0)
         eid = CUSTOM_EMOJI_MAP[emoji]
-        return f'<tg-emoji document_id="{eid}">{emoji}</tg-emoji>'
+        return f'<emoji id="{eid}">{emoji}</emoji>'
 
-    return _EMOJI_PATTERN.sub(_replace, text)
+    # Split on already-tagged regions so we don't double-wrap
+    parts = _EMOJI_TAG.split(text)
+    tags = _EMOJI_TAG.findall(text)
+    result = []
+    for i, part in enumerate(parts):
+        result.append(_EMOJI_PATTERN.sub(_replace, part))
+        if i < len(tags):
+            result.append(tags[i])
+    return "".join(result)
 
 
 def BotTheme(var_name, **format_vars):
