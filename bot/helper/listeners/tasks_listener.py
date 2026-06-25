@@ -1261,7 +1261,7 @@ class MirrorLeechListener:
             f"<b>{E.stop} 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
             f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{error}</i>\n"
             f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
             f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
@@ -1305,7 +1305,7 @@ class MirrorLeechListener:
             f"<b>{E.warning} 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
             f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{error}</i>\n"
             f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
             f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
