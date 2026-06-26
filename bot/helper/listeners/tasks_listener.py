@@ -98,7 +98,6 @@ from bot.helper.telegram_helper.message_utils import (
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.themes import BotTheme
-from bot.helper.ext_utils.emojis import E
 
 
 class MirrorLeechListener:
@@ -300,7 +299,7 @@ class MirrorLeechListener:
                 gid = download.gid()
         LOGGER.info(f"Download Completed: {name}")
         if multi_links:
-            await self.onUploadError(f"{E.done} 𝐏𝐚𝐫𝐭 𝐑𝐞𝐚𝐝𝐲 — 𝐰𝐚𝐢𝐭𝐢𝐧𝐠 𝐟𝐨𝐫 𝐫𝐞𝐦𝐚𝐢𝐧𝐢𝐧𝐠 𝐩𝐚𝐫𝐭𝐬 𝐭𝐨 𝐜𝐨𝐦𝐩𝐥𝐞𝐭𝐞…")
+            await self.onUploadError("✅ 𝐏𝐚𝐫𝐭 𝐑𝐞𝐚𝐝𝐲 — 𝐰𝐚𝐢𝐭𝐢𝐧𝐠 𝐟𝐨𝐫 𝐫𝐞𝐦𝐚𝐢𝐧𝐢𝐧𝐠 𝐩𝐚𝐫𝐭𝐬 𝐭𝐨 𝐜𝐨𝐦𝐩𝐥𝐞𝐭𝐞…")
             return
         if (
             name == "None"
@@ -524,16 +523,11 @@ class MirrorLeechListener:
             m_size = []
             o_files = []
             if not self.compress:
+                checked = False
                 LEECH_SPLIT_SIZE = (
                     user_dict.get("split_size", False)
                     or config_dict["LEECH_SPLIT_SIZE"]
                 )
-                # --- Pre-scan: collect every file that needs splitting ---
-                # We do this BEFORE splitting so we can set split_current_total
-                # once to the combined size of all files. Previously total/done
-                # were reset per-file, making progress jump back to 0% for each
-                # new file and confusing users into thinking the split restarted.
-                files_to_split = []
                 for dirpath, _, files in await sync_to_async(
                     walk, up_dir, topdown=False
                 ):
@@ -541,48 +535,38 @@ class MirrorLeechListener:
                         f_path = ospath.join(dirpath, file_)
                         f_size = await aiopath.getsize(f_path)
                         if f_size > LEECH_SPLIT_SIZE:
-                            files_to_split.append((dirpath, file_, f_path, f_size))
-
-                if files_to_split:
-                    from time import time as _split_time
-                    async with download_dict_lock:
-                        download_dict[self.uid] = SplitStatus(
-                            up_name, size, gid, self
-                        )
-                    LOGGER.info(f"Splitting: {up_name}")
-                    # Set grand-total ONCE so progress never resets between files
-                    self.split_current_total = sum(f[3] for f in files_to_split)
-                    self.split_current_done = 0
-                    self.split_elapsed = 0
-                    self._split_start = _split_time()
-                    # split_base_offset = bytes already finished in previous files
-                    # leech_utils reads this to keep progress globally cumulative
-                    self.split_base_offset = 0
-
-                    for dirpath, file_, f_path, f_size in files_to_split:
-                        res = await split_file(
-                            f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self
-                        )
-                        # Advance global offset by what leech_utils actually wrote
-                        self.split_base_offset = self.split_current_done
-
-                        if not res:
-                            return
-                        if res == "errored":
-                            if f_size <= MAX_SPLIT_SIZE:
-                                continue
-                            try:
-                                await aioremove(f_path)
-                            except Exception:
+                            if not checked:
+                                checked = True
+                                async with download_dict_lock:
+                                    download_dict[self.uid] = SplitStatus(
+                                        up_name, size, gid, self
+                                    )
+                                LOGGER.info(f"Splitting: {up_name}")
+                            from time import time as _split_time
+                            self.split_current_total = f_size
+                            self.split_current_done = 0
+                            self.split_elapsed = 0
+                            self._split_start = _split_time()
+                            res = await split_file(
+                                f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self
+                            )
+                            if not res:
                                 return
-                        elif not self.seed or self.newDir:
-                            try:
-                                await aioremove(f_path)
-                            except Exception:
-                                return
-                        else:
-                            m_size.append(f_size)
-                            o_files.append(file_)
+                            if res == "errored":
+                                if f_size <= MAX_SPLIT_SIZE:
+                                    continue
+                                try:
+                                    await aioremove(f_path)
+                                except Exception:
+                                    return
+                            elif not self.seed or self.newDir:
+                                try:
+                                    await aioremove(f_path)
+                                except Exception:
+                                    return
+                            else:
+                                m_size.append(f_size)
+                                o_files.append(file_)
 
         up_limit = config_dict["QUEUE_UPLOAD"]
         all_limit = config_dict["QUEUE_ALL"]
@@ -672,7 +656,7 @@ class MirrorLeechListener:
         video_files = await sync_to_async(get_video_files_sorted, folder_path)
         if not video_files:
             await self.onUploadError(
-                f"{E.error} 𝐍𝐨 𝐯𝐢𝐝𝐞𝐨 𝐟𝐢𝐥𝐞𝐬 𝐟𝐨𝐮𝐧𝐝 𝐢𝐧 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐞𝐝 𝐟𝐨𝐥𝐝𝐞𝐫!"
+                "❌ 𝐍𝐨 𝐯𝐢𝐝𝐞𝐨 𝐟𝐢𝐥𝐞𝐬 𝐟𝐨𝐮𝐧𝐝 𝐢𝐧 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐞𝐝 𝐟𝐨𝐥𝐝𝐞𝐫!"
             )
             return None
         if len(video_files) == 1:
@@ -689,7 +673,7 @@ class MirrorLeechListener:
         if self.suproc == "cancelled":
             return None
         if not success:
-            await self.onUploadError(f"{E.error} 𝐌𝐞𝐫𝐠𝐞 𝐅𝐚𝐢𝐥𝐞𝐝! 𝐂𝐡𝐞𝐜𝐤 𝐥𝐨𝐠𝐬.")
+            await self.onUploadError("❌ 𝐌𝐞𝐫𝐠𝐞 𝐅𝐚𝐢𝐥𝐞𝐝! 𝐂𝐡𝐞𝐜𝐤 𝐥𝐨𝐠𝐬.")
             return None
         LOGGER.info(f"Merge done: {output_path}")
         try:
@@ -717,7 +701,7 @@ class MirrorLeechListener:
 
         if not video_file or not audio_file:
             await self.onUploadError(
-                f"{E.error} 𝐕ɪᴅᴇᴏ+𝐀ᴜᴅɪᴏ ᴍᴜx ɴᴇᴇᴅs ᴏɴᴇ ᴠɪᴅᴇᴏ ᴀɴᴅ ᴏɴᴇ ᴀᴜᴅɪᴏ ғɪʟᴇ!"
+                "❌ 𝐕ɪᴅᴇᴏ+𝐀ᴜᴅɪᴏ ᴍᴜx ɴᴇᴇᴅs ᴏɴᴇ ᴠɪᴅᴇᴏ ᴀɴᴅ ᴏɴᴇ ᴀᴜᴅɪᴏ ғɪʟᴇ!"
             )
             return None
 
@@ -746,7 +730,7 @@ class MirrorLeechListener:
             return None
         if self.suproc.returncode != 0:
             err_msg = stderr.decode(errors="replace")[-300:]
-            await self.onUploadError(f"{E.error} 𝐀ᴜᴅɪᴏ 𝐌ᴜx 𝐅ᴀɪʟᴇᴅ!\n<code>{err_msg}</code>")
+            await self.onUploadError(f"❌ 𝐀ᴜᴅɪᴏ 𝐌ᴜx 𝐅ᴀɪʟᴇᴅ!\n<code>{err_msg}</code>")
             return None
         LOGGER.info(f"Audio mux done: {output_path}")
         try:
@@ -774,7 +758,7 @@ class MirrorLeechListener:
 
         if not video_file or not sub_file:
             await self.onUploadError(
-                f"{E.error} 𝐕ɪᴅᴇᴏ+𝐒ᴜʙs ɴᴇᴇᴅs ᴏɴᴇ ᴠɪᴅᴇᴏ ᴀɴᴅ ᴏɴᴇ sᴜʙᴛɪᴛʟᴇ ғɪʟᴇ!"
+                "❌ 𝐕ɪᴅᴇᴏ+𝐒ᴜʙs ɴᴇᴇᴅs ᴏɴᴇ ᴠɪᴅᴇᴏ ᴀɴᴅ ᴏɴᴇ sᴜʙᴛɪᴛʟᴇ ғɪʟᴇ!"
             )
             return None
 
@@ -802,7 +786,7 @@ class MirrorLeechListener:
             return None
         if self.suproc.returncode != 0:
             err_msg = stderr.decode(errors="replace")[-300:]
-            await self.onUploadError(f"{E.error} 𝐒ᴜʙᴛɪᴛʟᴇ 𝐄ᴍʙᴇᴅ 𝐅ᴀɪʟᴇᴅ!\n<code>{err_msg}</code>")
+            await self.onUploadError(f"❌ 𝐒ᴜʙᴛɪᴛʟᴇ 𝐄ᴍʙᴇᴅ 𝐅ᴀɪʟᴇᴅ!\n<code>{err_msg}</code>")
             return None
         LOGGER.info(f"Subtitle embed done: {output_path}")
         try:
@@ -815,7 +799,7 @@ class MirrorLeechListener:
         LOGGER.info(f"Starting ZIP merge from: {extracted_dir}")
         video_files = await sync_to_async(get_video_files_sorted, extracted_dir)
         if not video_files:
-            await self.onUploadError(f"{E.error} 𝐍ᴏ 𝐕ɪᴅᴇᴏs 𝐅ᴏᴜɴᴅ 𝐀ꜰᴛᴇʀ 𝐄xᴛʀᴀᴄᴛɪᴏɴ!")
+            await self.onUploadError("❌ 𝐍ᴏ 𝐕ɪᴅᴇᴏs 𝐅ᴏᴜɴᴅ 𝐀ꜰᴛᴇʀ 𝐄xᴛʀᴀᴄᴛɪᴏɴ!")
             return None
         if len(video_files) == 1:
             LOGGER.info("Only one video after extract, skipping merge.")
@@ -826,22 +810,22 @@ class MirrorLeechListener:
             for i, ep in enumerate(video_files, 1)
         )
         btns = ButtonMaker()
-        btns.ibutton(f"{E.get('download', plain=True)} 𝐀ʟʟ 𝐄ᴘɪsᴏᴅᴇs", f"zipep {self.uid} all")
-        btns.ibutton(f"{E.get('cancel', plain=True)} 𝐂ᴀɴᴄᴇʟ 𝐌ᴇʀɢᴇ", f"zipep {self.uid} cancel")
+        btns.ibutton(f"📥 𝐀ʟʟ 𝐄ᴘɪsᴏᴅᴇs", f"zipep {self.uid} all")
+        btns.ibutton(f"❌ 𝐂ᴀɴᴄᴇʟ 𝐌ᴇʀɢᴇ", f"zipep {self.uid} cancel")
         markup = btns.build_menu(2)
 
         prompt = await sendMessage(
             self.message,
             f"{self.tag}\n"
-            f"<b>{E.zip} 𝐙ɪᴘ 𝐌ᴇʀɢᴇ — 𝐄ᴘɪsᴏᴅᴇ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b>\n"
+            f"<b>📦 𝐙ɪᴘ 𝐌ᴇʀɢᴇ — 𝐄ᴘɪsᴏᴅᴇ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"<b>{E.video} 𝐅ᴏᴜɴᴅ {len(video_files)} 𝐕ɪᴅᴇᴏs:</b>\n{ep_lines}\n\n"
-            f"<b>{E.note} 𝐒ᴇʟᴇᴄᴛɪᴏɴ 𝐅ᴏʀᴍᴀᴛ:</b>\n"
+            f"<b>🎞 𝐅ᴏᴜɴᴅ {len(video_files)} 𝐕ɪᴅᴇᴏs:</b>\n{ep_lines}\n\n"
+            f"<b>📝 𝐒ᴇʟᴇᴄᴛɪᴏɴ 𝐅ᴏʀᴍᴀᴛ:</b>\n"
             f"  • 𝐀ʟʟ    → <code>all</code>\n"
             f"  • 𝐑ᴀɴɢᴇ  → <code>1-5</code>\n"
             f"  • 𝐏ɪᴄᴋ   → <code>1,3,7</code>\n"
             f"  • 𝐒ɪɴɢʟᴇ → <code>4</code>\n\n"
-            f"{E.clock} <i>𝐓ʏᴘᴇ ʏᴏᴜʀ sᴇʟᴇᴄᴛɪᴏɴ ᴏʀ ᴜsᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ — 𝐓ɪᴍᴇᴏᴜᴛ: 120s</i>",
+            f"⏳ <i>𝐓ʏᴘᴇ ʏᴏᴜʀ sᴇʟᴇᴄᴛɪᴏɴ ᴏʀ ᴜsᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ — 𝐓ɪᴍᴇᴏᴜᴛ: 120s</i>",
             markup,
         )
 
@@ -914,13 +898,13 @@ class MirrorLeechListener:
 
             raw_text = result_holder.get("text", "all")
             if raw_text == "cancel":
-                await self.onUploadError(f"{E.cancel} 𝐌ᴇʀɢᴇ 𝐂ᴀɴᴄᴇʟʟᴇᴅ 𝐁ʏ 𝐔sᴇʀ!")
+                await self.onUploadError("🚫 𝐌ᴇʀɢᴇ 𝐂ᴀɴᴄᴇʟʟᴇᴅ 𝐁ʏ 𝐔sᴇʀ!")
                 return None
             selected_indices = parse_episode_selection(raw_text, len(video_files))
             if selected_indices is None:
                 await sendMessage(
                     self.message,
-                    f"{E.warning} <b>𝐈ɴᴠᴀʟɪᴅ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b> — 𝐌ᴇʀɢɪɴɢ ᴀʟʟ ᴇᴘɪsᴏᴅᴇs.",
+                    "⚠️ <b>𝐈ɴᴠᴀʟɪᴅ 𝐒ᴇʟᴇᴄᴛɪᴏɴ</b> — 𝐌ᴇʀɢɪɴɢ ᴀʟʟ ᴇᴘɪsᴏᴅᴇs.",
                 )
                 selected_indices = list(range(len(video_files)))
 
@@ -934,7 +918,7 @@ class MirrorLeechListener:
         if self.suproc == "cancelled":
             return None
         if not success:
-            await self.onUploadError(f"{E.error} 𝐌ᴇʀɢᴇ 𝐅ᴀɪʟᴇᴅ! 𝐂ʜᴇᴄᴋ 𝐋ᴏɢs.")
+            await self.onUploadError("❌ 𝐌ᴇʀɢᴇ 𝐅ᴀɪʟᴇᴅ! 𝐂ʜᴇᴄᴋ 𝐋ᴏɢs.")
             return None
         LOGGER.info(f"ZIP merge done: {output_path}")
         try:
@@ -1258,10 +1242,10 @@ class MirrorLeechListener:
                 self.sameDir["tasks"].remove(self.uid)
                 self.sameDir["total"] -= 1
         msg = (
-            f"<b>{E.stop} 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"<b>⛔ 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
             f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{error}</i>\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
             f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
             f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
@@ -1302,10 +1286,10 @@ class MirrorLeechListener:
                 del download_dict[self.uid]
             count = len(download_dict)
         msg = (
-            f"<b>{E.warning} 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"<b>⚠️ 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
             f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{error}</i>\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
             f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
             f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
