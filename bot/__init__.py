@@ -160,12 +160,7 @@ if DATABASE_URL:
         if db_bot_config := db.settings.config.find_one({"_id": bot_id}):
             del db_bot_config["_id"]
             for key, value in db_bot_config.items():
-                # Load ALL non-None values — including empty strings and False/0.
-                # The old `str(value).strip()` guard was wrong: it silently dropped
-                # empty-string resets and "0" values saved via botsettings, letting
-                # the original Heroku var win on every restart and making botsettings
-                # changes appear not to stick.
-                if value is not None:
+                if value is not None and str(value).strip():
                     environ[key] = str(value)
         if pf_dict := db.settings.files.find_one({"_id": bot_id}):
             del pf_dict["_id"]
@@ -648,14 +643,6 @@ SHOW_EXTRA_CMDS = SHOW_EXTRA_CMDS.lower() == "true"
 TOKEN_TIMEOUT = environ.get("TOKEN_TIMEOUT", "")
 TOKEN_TIMEOUT = int(TOKEN_TIMEOUT) if TOKEN_TIMEOUT.isdigit() else ""
 
-VERIFY_PAGE_URL = environ.get("VERIFY_PAGE_URL", "")
-if len(VERIFY_PAGE_URL) == 0:
-    VERIFY_PAGE_URL = ""
-
-VERIFY_SECRET_KEY = environ.get("VERIFY_SECRET_KEY", "")
-if len(VERIFY_SECRET_KEY) == 0:
-    VERIFY_SECRET_KEY = ""
-
 LOGIN_PASS = environ.get("LOGIN_PASS", "")
 if len(LOGIN_PASS) == 0:
     LOGIN_PASS = None
@@ -830,8 +817,6 @@ config_dict = {
     "USE_SERVICE_ACCOUNTS": USE_SERVICE_ACCOUNTS,
     "WEB_PINCODE": WEB_PINCODE,
     "YT_DLP_OPTIONS": YT_DLP_OPTIONS,
-    "VERIFY_PAGE_URL": VERIFY_PAGE_URL,
-    "VERIFY_SECRET_KEY": VERIFY_SECRET_KEY,
 }
 
 if GDRIVE_ID:
