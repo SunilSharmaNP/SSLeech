@@ -227,19 +227,22 @@ async def emojitest(_, message):
 
     test_id = CUSTOM_EMOJI_MAP.get("📥", "5443127283898405358")
 
-    test1 = f'<tg-emoji document_id="{test_id}">📥</tg-emoji> <b>Test A</b> — Direct HTML tag'
+    # Correct Pyrofork tag: <emoji id="...">
+    test1 = f'<emoji id="{test_id}">📥</emoji> <b>Test A</b> — Direct Pyrofork tag'
     test2 = f'{E.download} <b>Test B</b> — E class'
     test3 = apply_custom_emojis("📥 📤 🔥 ✨ 💎")
 
+    sender_info = f"@{user.me.username} (Premium)" if (IS_PREMIUM_USER and user) else "Bot (no premium)"
+
     result = (
-        f"<b>━━━ Custom Emoji Test ━━━</b>\n\n"
+        f"<b>━━━ Custom Emoji Test ━━━</b>\n"
+        f"<b>Sender:</b> {sender_info}\n\n"
         f"{test1}\n"
         f"{test2}\n"
-        f"<b>Test C</b> — apply_custom_emojis:\n{test3}\n\n"
+        f"<b>Test C — Multiple:</b>\n{test3}\n\n"
         f"<b>Agar animated nahi dikh raha:</b>\n"
-        f"• Official Telegram app mein check karo\n"
-        f"• Nicegram / third-party apps animated custom emoji support nahi karte\n"
-        f"• Aapko Telegram Premium chahiye animated dekhne ke liye"
+        f"• Official Telegram app mein test karo (Nicegram nahi)\n"
+        f"• Viewer ka Telegram Premium hona chahiye"
     )
     await sendMessage(message, result)
 
