@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 Premium Custom Emoji helper for hardcoded bot messages (outside themes).
-Uses Pyrofork's <emoji id="..."> HTML tag format.
+
+IDs sourced from bot/helper/themes/custom_emojis.py (your verified IDs).
+Use E.xxx in f-strings for HTML messages. For button text use E.get('name', plain=True).
 
 Usage:
     from bot.helper.ext_utils.emojis import E
@@ -12,6 +14,7 @@ Usage:
 
 class _Emoji:
     _MAP = {
+        # ── From your custom_emojis.py (verified real IDs) ───────────────
         "magnet":    ("5377535110289576661", "🧲"),
         "sparkle":   ("5325547803936572038", "✨"),
         "party":     ("5235711785482341993", "🎉"),
@@ -34,6 +37,8 @@ class _Emoji:
         "chart":     ("5429518319243775957", "📉"),
         "timer":     ("5382194935057372936", "⏱"),
         "bag":       ("5294167145079395967", "🛍"),
+
+        # ── Common bot status (best available IDs) ────────────────────────
         "done":      ("5368324170671202286", "✅"),
         "error":     ("5447644880824181073", "❌"),
         "warning":   ("5467406605516091496", "⚠️"),
@@ -62,7 +67,6 @@ class _Emoji:
         if entry is None:
             return name
         eid, fallback = entry
-        # Pyrofork HTML tag: <emoji id="...">
         return f'<emoji id="{eid}">{fallback}</emoji>'
 
     def get(self, name: str, plain: bool = False) -> str:
