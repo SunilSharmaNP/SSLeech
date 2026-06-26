@@ -24,7 +24,6 @@ from bot import (
     BinConfig,
     bot,
     user,
-    IS_PREMIUM_USER,
     bot_name,
     config_dict,
     user_data,
@@ -48,7 +47,6 @@ from .helper.ext_utils.bot_utils import (
     get_stats,
 )
 from .helper.ext_utils.db_handler import DbManger
-from .helper.ext_utils.emojis import E
 from .helper.telegram_helper.bot_commands import BotCommands
 from .helper.telegram_helper.message_utils import (
     sendMessage,
@@ -168,17 +166,17 @@ async def login(_, message):
 @new_task
 async def restart(client, message):
     buttons = ButtonMaker()
-    buttons.ibutton(f"{E.get('done', plain=True)} Yes, Restart!", "botrestart confirm")
-    buttons.ibutton(f"{E.get('error', plain=True)} No, Cancel", "botrestart cancel")
+    buttons.ibutton("✅ Yes, Restart!", "botrestart confirm")
+    buttons.ibutton("❌ No, Cancel", "botrestart cancel")
     await sendMessage(
         message,
-        f"<i>{E.warning} Are you sure you want to restart the bot?\n\nAll active tasks will be interrupted.</i>",
+        "<i>⚠️ Are you sure you want to restart the bot?\n\nAll active tasks will be interrupted.</i>",
         buttons.build_menu(2),
     )
 
 
 async def _do_restart(message):
-    restart_message = await sendMessage(message, f"<i>{E.restart} Restarting bot, please wait...</i>")
+    restart_message = await sendMessage(message, "<i>🔄 Restarting bot, please wait...</i>")
     if scheduler.running:
         scheduler.shutdown(wait=False)
     await delete_all_messages()
@@ -208,7 +206,7 @@ async def confirm_restart(_, query):
         await _do_restart(reply_to)
     else:
         await deleteMessage(message)
-        await sendMessage(reply_to, f"{E.done} <i>Restart cancelled.</i>")
+        await sendMessage(reply_to, "✅ <i>Restart cancelled.</i>")
 
 
 async def ping(_, message):
@@ -218,33 +216,6 @@ async def ping(_, message):
     await editMessage(
         reply, BotTheme("PING_VALUE", value=int((end_time - start_time) * 1000))
     )
-
-
-async def emojitest(_, message):
-    """Diagnostic: verify premium custom emoji rendering."""
-    from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
-    from bot.helper.themes import apply_custom_emojis
-
-    test_id = CUSTOM_EMOJI_MAP.get("📥", "5443127283898405358")
-
-    # Correct Pyrofork tag: <emoji id="...">
-    test1 = f'<emoji id="{test_id}">📥</emoji> <b>Test A</b> — Direct Pyrofork tag'
-    test2 = f'{E.download} <b>Test B</b> — E class'
-    test3 = apply_custom_emojis("📥 📤 🔥 ✨ 💎")
-
-    sender_info = f"@{user.me.username} (Premium)" if (IS_PREMIUM_USER and user) else "Bot (no premium)"
-
-    result = (
-        f"<b>━━━ Custom Emoji Test ━━━</b>\n"
-        f"<b>Sender:</b> {sender_info}\n\n"
-        f"{test1}\n"
-        f"{test2}\n"
-        f"<b>Test C — Multiple:</b>\n{test3}\n\n"
-        f"<b>Agar animated nahi dikh raha:</b>\n"
-        f"• Official Telegram app mein test karo (Nicegram nahi)\n"
-        f"• Viewer ka Telegram Premium hona chahiye"
-    )
-    await sendMessage(message, result)
 
 
 async def log(_, message):
@@ -345,9 +316,9 @@ async def restart_notification():
                     if cid == chat_id
                     else BotTheme("RESTARTED")
                 )
-                msg += f"\n\n{E.warning} <b><i>Incomplete Tasks!</i></b>"
+                msg += "\n\n⌬ <b><i>Incomplete Tasks!</i></b>"
                 for tag, links in data.items():
-                    msg += f"\n{E.user} <b>User:</b> {tag}\n┖ <b>Tasks:</b>"
+                    msg += f"\n➲ <b>User:</b> {tag}\n┖ <b>Tasks:</b>"
                     for index, link in enumerate(links, start=1):
                         msg_link, source = next(iter(link.items()))
                         msg += f" {index}. <a href='{source}'>S</a> ->  <a href='{msg_link}'>L</a> |"
@@ -463,12 +434,6 @@ async def main():
             filters=command(BotCommands.PingCommand)
             & CustomFilters.authorized
             & ~CustomFilters.blacklisted,
-        )
-    )
-    bot.add_handler(
-        MessageHandler(
-            emojitest,
-            filters=command("emojitest") & CustomFilters.sudo,
         )
     )
     bot.add_handler(
