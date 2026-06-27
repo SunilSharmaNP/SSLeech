@@ -17,7 +17,7 @@ _EMOJI_PATTERN = re.compile("|".join(re.escape(e) for e, _ in _EMOJI_SORTED))
 
 
 def apply_custom_emojis(text: str) -> str:
-    if not text or "<" not in text:
+    if not text:
         return text
 
     def _replace(match: re.Match) -> str:
