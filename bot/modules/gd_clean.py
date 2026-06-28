@@ -41,9 +41,9 @@ async def driveclean(_, message):
             clean_msg, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ 𝐈ᴅ ᴄᴏᴜʟᴅ ɴᴏᴛ ʙᴇ ғᴏᴜɴᴅ ɪɴ ᴛʜᴇ ᴘʀᴏᴠɪᴅᴇᴅ ʟɪɴᴋ"
         )
     buttons = ButtonMaker()
-    buttons.ibutton("𝐌ᴏᴠᴇ ᴛᴏ 𝐁ɪɴ", f"gdclean clear {drive_id} trash")
-    buttons.ibutton("𝐏ᴇʀᴍᴀɴᴇɴᴛ 𝐂ʟᴇᴀɴ", f"gdclean clear {drive_id}")
-    buttons.ibutton("𝐒ᴛᴏᴘ 𝐆ᴅʀɪᴠᴇ 𝐂ʟᴇᴀɴ", "gdclean stop", "footer")
+    buttons.ibutton("🗑️ 𝐌ᴏᴠᴇ ᴛᴏ 𝐁ɪɴ", f"gdclean clear {drive_id} trash")
+    buttons.ibutton("🧹 𝐏ᴇʀᴍᴀɴᴇɴᴛ 𝐂ʟᴇᴀɴ", f"gdclean clear {drive_id}")
+    buttons.ibutton("🛑 𝐒ᴛᴏᴘ 𝐆ᴅʀɪᴠᴇ 𝐂ʟᴇᴀɴ", "gdclean stop", "footer")
     await editMessage(
         clean_msg,
         f"""⌬ <b><i>𝐆ᴅʀɪᴠᴇ 𝐂ʟᴇᴀɴ/𝐓ʀᴀsʜ :</i></b>
