@@ -15,7 +15,7 @@ class WZMLStyle:
     OWN_TOKEN_GENERATE = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
     USED_TOKEN = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ᴀʟʀᴇᴀᴅʏ ᴜsᴇᴅ!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ɴᴇᴡ ᴏɴᴇ.</i>"""
     LOGGED_PASSWORD = """<b>𝐁ᴏᴛ 𝐀ʟʀᴇᴀᴅʏ 𝐋ᴏɢɢᴇᴅ 𝐈ɴ ᴠɪᴀ 𝐏ᴀssᴡᴏʀᴅ</b>\n\n<i>𝐍ᴏ ɴᴇᴇᴅ ᴛᴏ 𝐀ᴄᴄᴇᴘᴛ 𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴs.</i>"""
-    ACTIVATE_BUTTON = "𝐀ᴄᴛɪᴠᴀᴛᴇ 𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ"
+    ACTIVATE_BUTTON = "✨ 𝐀ᴄᴛɪᴠᴀᴛᴇ 𝐓ᴏᴋᴇɴ"
     TOKEN_MSG = """<b><u>𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐋ᴏɢɪɴ 𝐓ᴏᴋᴇɴ!</u></b>
 <b>𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴ:</b> <code>{token}</code>
 <b>𝐕ᴀʟɪᴅɪᴛʏ:</b> {validity}"""
@@ -34,11 +34,11 @@ class WZMLStyle:
     WEB_PASTE_BT = "📨 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (SB)"
 
     # async def bot_help(client, message): ---> __main__.py
-    BASIC_BT = "𝐁ᴀsɪᴄ"
-    USER_BT = "𝐔sᴇʀs"
-    MICS_BT = "𝐌ɪᴄs"
-    O_S_BT = "𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
-    CLOSE_BT = "𝐂ʟᴏsᴇ"
+    BASIC_BT = "📋 𝐁ᴀsɪᴄ"
+    USER_BT = "👤 𝐔sᴇʀs"
+    MICS_BT = "⚙️ 𝐌ɪᴄs"
+    O_S_BT = "👑 𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
+    CLOSE_BT = "❌ 𝐂ʟᴏsᴇ"
     HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
 
     # async def stats(client, message):
