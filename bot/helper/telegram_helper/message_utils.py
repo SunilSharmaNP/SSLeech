@@ -549,8 +549,8 @@ async def open_category_btns(message):
             )
             if _tick:
                 _tick, cat_name = False, _name
-    buttons.ibutton("Cancel", f"scat {user_id} {msg_id} scancel", "footer")
-    buttons.ibutton(f"Done (60)", f"scat {user_id} {msg_id} sdone", "footer")
+    buttons.ibutton("❌ Cancel", f"scat {user_id} {msg_id} scancel", "footer")
+    buttons.ibutton(f"✅ Done (60)", f"scat {user_id} {msg_id} sdone", "footer")
     prompt = await sendMessage(
         message,
         f"<b>Select the category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
@@ -584,9 +584,9 @@ async def open_dump_btns(message):
             )
             if _tick:
                 _tick, cat_name = False, _name
-    buttons.ibutton("Upload in All", f"dcat {user_id} {msg_id} All", "header")
-    buttons.ibutton("Cancel", f"dcat {user_id} {msg_id} dcancel", "footer")
-    buttons.ibutton(f"Done (60)", f"dcat {user_id} {msg_id} ddone", "footer")
+    buttons.ibutton("📤 Upload in All", f"dcat {user_id} {msg_id} All", "header")
+    buttons.ibutton("❌ Cancel", f"dcat {user_id} {msg_id} dcancel", "footer")
+    buttons.ibutton(f"✅ Done (60)", f"dcat {user_id} {msg_id} ddone", "footer")
     prompt = await sendMessage(
         message,
         f"<b>Select the Dump category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
@@ -629,7 +629,7 @@ async def forcesub(message, ids, button=None):
             button = ButtonMaker()
         _msg = "You haven't joined our channel yet!"
         for key, value in join_button.items():
-            button.ubutton(f"Join {key}", value, "footer")
+            button.ubutton(f"📢 Join {key}", value, "footer")
     return _msg, button
 
 
@@ -652,6 +652,6 @@ async def check_botpm(message, button=None):
             button = ButtonMaker()
         _msg = "<i>You didn't START the bot in PM (Private)</i>"
         button.ubutton(
-            "Start Bot Now", f"https://t.me/{bot_name}?start=start", "header"
+            "🚀 Start Bot Now", f"https://t.me/{bot_name}?start=start", "header"
         )
         return _msg, button
