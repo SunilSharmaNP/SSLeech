@@ -2,6 +2,7 @@
 import asyncio
 import uvloop
 from socket import setdefaulttimeout
+from shutil import which as shwhich
 
 # wzv3 style: install uvloop FIRST, then create and set a single event loop
 # This event loop is reused everywhere (bot client, APScheduler) — safe on Python 3.14
@@ -22,6 +23,19 @@ class BinConfig:
     QBIT_NAME    = "stormtorrent"   # actual: qbittorrent-nox
     FFMPEG_NAME  = "mediaforge"     # actual: ffmpeg
     RCLONE_NAME  = "ghostdrive"     # actual: rclone
+
+def _resolve_bin(preferred: str, *fallbacks: str) -> str:
+    """Return the first binary found in PATH, else the preferred name."""
+    for name in (preferred, *fallbacks):
+        if shwhich(name):
+            return name
+    return preferred   # keep original so error messages are clear
+
+# Resolve actual binary names on this system (Docker image may use standard names)
+BinConfig.ARIA2_NAME  = _resolve_bin(BinConfig.ARIA2_NAME,  "aria2c")
+BinConfig.QBIT_NAME   = _resolve_bin(BinConfig.QBIT_NAME,   "qbittorrent-nox", "qbittorrent")
+BinConfig.FFMPEG_NAME = _resolve_bin(BinConfig.FFMPEG_NAME, "ffmpeg")
+BinConfig.RCLONE_NAME = _resolve_bin(BinConfig.RCLONE_NAME, "rclone")
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -903,10 +917,31 @@ srun(["cp", ".netrc", "/root/.netrc"])
 # aria2c is always started — it handles direct HTTP downloads too, not just torrents.
 # qBittorrent is only started when DISABLE_TORRENTS=False.
 srun(["chmod", "+x", "setpkgs.sh"])
-srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
+
+_aria2c_found = bool(shwhich(BinConfig.ARIA2_NAME))
+if _aria2c_found:
+    srun(f"./setpkgs.sh {BinConfig.ARIA2_NAME}", shell=True)
+else:
+    log_warning(
+        f"aria2c binary '{BinConfig.ARIA2_NAME}' not found in PATH — "
+        "direct HTTP downloads via aria2 will be unavailable."
+    )
 
 if not DISABLE_TORRENTS:
-    srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"], check=False)
+    _qbit_found = bool(shwhich(BinConfig.QBIT_NAME))
+    if _qbit_found:
+        try:
+            srun([BinConfig.QBIT_NAME, "-d", f"--profile={getcwd()}"], check=False)
+        except FileNotFoundError:
+            log_warning(
+                f"qBittorrent binary '{BinConfig.QBIT_NAME}' not found — "
+                "torrent downloads will be unavailable. Set DISABLE_TORRENTS=True to suppress this warning."
+            )
+    else:
+        log_warning(
+            f"qBittorrent binary '{BinConfig.QBIT_NAME}' not found — "
+            "torrent downloads will be unavailable. Set DISABLE_TORRENTS=True to suppress this warning."
+        )
     if ospath.exists("accounts.zip"):
         if ospath.exists("accounts"):
             srun(["rm", "-rf", "accounts"])
