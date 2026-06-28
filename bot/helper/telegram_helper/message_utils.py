@@ -83,7 +83,9 @@ async def _build_custom_emoji_entities(client, text):
         return text, None
     try:
         # Step 1: Parse HTML → plain text + raw MTProto entities
-        parsed = await PyroHTML(client).parse(text)
+        # Handle both sync and async versions of PyroHTML.parse()
+        _parse_result = PyroHTML(client).parse(text)
+        parsed = await _parse_result if hasattr(_parse_result, "__await__") else _parse_result
         plain = parsed["message"]
         raw_ents = parsed.get("entities") or []
 
@@ -279,7 +281,6 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 except Exception as e:
                     LOGGER.error(str(e))
                 continue
-            LOGGER.info("DEBUG CP 2")
             _text, _entities = await _build_custom_emoji_entities(bot, text)
             _pm = ParseMode.DISABLED if _entities is not None else None
             sent = await bot.send_message(
