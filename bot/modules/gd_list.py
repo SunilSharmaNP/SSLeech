@@ -24,14 +24,14 @@ from bot.helper.themes import BotTheme
 
 async def list_buttons(user_id, isRecursive=True):
     buttons = ButtonMaker()
-    buttons.ibutton("𝐎ɴʟʏ 𝐅ᴏʟᴅᴇʀs", f"list_types {user_id} folders {isRecursive}")
-    buttons.ibutton("𝐎ɴʟʏ 𝐅ɪʟᴇs", f"list_types {user_id} files {isRecursive}")
-    buttons.ibutton("𝐁ᴏᴛʜ", f"list_types {user_id} both {isRecursive}")
+    buttons.ibutton("📁 𝐎ɴʟʏ 𝐅ᴏʟᴅᴇʀs", f"list_types {user_id} folders {isRecursive}")
+    buttons.ibutton("📄 𝐎ɴʟʏ 𝐅ɪʟᴇs", f"list_types {user_id} files {isRecursive}")
+    buttons.ibutton("📋 𝐁ᴏᴛʜ", f"list_types {user_id} both {isRecursive}")
     buttons.ibutton(
         f"{'✅️' if isRecursive else ''} 𝐑ᴇᴄᴜʀsɪᴠᴇ",
         f"list_types {user_id} rec {isRecursive}",
     )
-    buttons.ibutton("𝐂ᴀɴᴄᴇʟ", f"list_types {user_id} cancel")
+    buttons.ibutton("❌ 𝐂ᴀɴᴄᴇʟ", f"list_types {user_id} cancel")
     return buttons.build_menu(2)
 
 
