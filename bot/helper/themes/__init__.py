@@ -46,5 +46,4 @@ def BotTheme(var_name, **format_vars):
     if text is None:
         text = getattr(wzml_minimal.WZMLStyle(), var_name)
 
-    text = apply_custom_emojis(text)
     return text.format_map(format_vars)
