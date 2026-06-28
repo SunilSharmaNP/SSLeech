@@ -39,3 +39,8 @@ yt-dlp[default,curl-cffi]
 pytz
 tzlocal
 cryptography>=41.0.0
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+langcodes
