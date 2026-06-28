@@ -139,7 +139,7 @@ async def confirm_category(client, query):
                 f'{"✅️" if cat_name == _name else ""} {_name}',
                 f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
-    buttons.ibutton("𝐂ᴀɴᴄᴇʟ", f"scat {user_id} {msg_id} scancel", "footer")
+    buttons.ibutton("❌ 𝐂ᴀɴᴄᴇʟ", f"scat {user_id} {msg_id} scancel", "footer")
     buttons.ibutton(
         f"𝐃ᴏɴᴇ ({get_readable_time(60 - (time() - bot_cache[msg_id][4]))})",
         f"scat {user_id} {msg_id} sdone",
@@ -179,8 +179,8 @@ async def confirm_dump(client, query):
                 f'{"✅️" if upall or cat_name == _name else ""} {_name}',
                 f"dcat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
-    buttons.ibutton("𝐔ᴘʟᴏᴀᴅ ɪɴ 𝐀ʟʟ", f"dcat {user_id} {msg_id} All", "header")
-    buttons.ibutton("𝐂ᴀɴᴄᴇʟ", f"dcat {user_id} {msg_id} dcancel", "footer")
+    buttons.ibutton("📤 𝐔ᴘʟᴏᴀᴅ ɪɴ 𝐀ʟʟ", f"dcat {user_id} {msg_id} All", "header")
+    buttons.ibutton("❌ 𝐂ᴀɴᴄᴇʟ", f"dcat {user_id} {msg_id} dcancel", "footer")
     buttons.ibutton(
         f"𝐃ᴏɴᴇ ({get_readable_time(60 - (time() - bot_cache[msg_id][3]))})",
         f"dcat {user_id} {msg_id} ddone",
