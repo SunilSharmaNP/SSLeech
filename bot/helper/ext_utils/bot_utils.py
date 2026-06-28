@@ -151,14 +151,14 @@ def bt_selection_buttons(id_):
     buttons = ButtonMaker()
     BASE_URL = config_dict["BASE_URL"]
     if config_dict["WEB_PINCODE"]:
-        buttons.ubutton("Select Files", f"{BASE_URL}/app/files/{id_}")
-        buttons.ibutton("Pincode", f"btsel pin {gid} {pincode}")
+        buttons.ubutton("📂 Select Files", f"{BASE_URL}/app/files/{id_}")
+        buttons.ibutton("🔑 Pincode", f"btsel pin {gid} {pincode}")
     else:
         buttons.ubutton(
-            "Select Files", f"{BASE_URL}/app/files/{id_}?pin_code={pincode}"
+            "📂 Select Files", f"{BASE_URL}/app/files/{id_}?pin_code={pincode}"
         )
-    buttons.ibutton("Cancel", f"btsel rm {gid} {id_}")
-    buttons.ibutton("Done Selecting", f"btsel done {gid} {id_}")
+    buttons.ibutton("❌ Cancel", f"btsel rm {gid} {id_}")
+    buttons.ibutton("✅ Done Selecting", f"btsel done {gid} {id_}")
     return buttons.build_menu(2)
 
 
@@ -636,13 +636,13 @@ async def compare_versions(v1, v2):
 async def get_stats(event, key="home"):
     user_id = event.from_user.id
     btns = ButtonMaker()
-    btns.ibutton("Back", f"wzmlx {user_id} stats home")
+    btns.ibutton("🔙 Back", f"wzmlx {user_id} stats home")
     if key == "home":
         btns = ButtonMaker()
-        btns.ibutton("Bot Stats", f"wzmlx {user_id} stats stbot")
-        btns.ibutton("OS Stats", f"wzmlx {user_id} stats stsys")
-        btns.ibutton("Repo Stats", f"wzmlx {user_id} stats strepo")
-        btns.ibutton("Bot Limits", f"wzmlx {user_id} stats botlimits")
+        btns.ibutton("🤖 Bot Stats", f"wzmlx {user_id} stats stbot")
+        btns.ibutton("🖥️ OS Stats", f"wzmlx {user_id} stats stsys")
+        btns.ibutton("📊 Repo Stats", f"wzmlx {user_id} stats strepo")
+        btns.ibutton("⚡ Bot Limits", f"wzmlx {user_id} stats botlimits")
         msg = "⌬ <b><i>Bot & OS Statistics!</i></b>"
     elif key == "stbot":
         total, used, free, disk = disk_usage("/")
@@ -760,7 +760,7 @@ async def get_stats(event, key="home"):
             UT=("∞" if (val := config_dict["USER_MAX_TASKS"]) == "" else val),
             BT=("∞" if (val := config_dict["BOT_MAX_TASKS"]) == "" else val),
         )
-    btns.ibutton("Close", f"wzmlx {user_id} close")
+    btns.ibutton("❌ Close", f"wzmlx {user_id} close")
     return msg, btns.build_menu(2)
 
 
@@ -859,7 +859,7 @@ async def checking_access(user_id, button=None):
         bot_start_link = f"https://t.me/{bot_name}?start={encrypt_url}"
         shortener_link = short_url(bot_start_link)
         final_link = wrap_verify_page(shortener_link, user_id)
-        button.ubutton("Generate New Token", final_link)
+        button.ubutton("✨ Generate New Token", final_link)
         return (
             f'<i>Temporary Token has been expired,</i> Kindly generate a New Temp Token to start using bot Again.\n<b>Validity :</b> <code>{get_readable_time(config_dict["TOKEN_TIMEOUT"])}</code>',
             button,
