@@ -220,29 +220,16 @@ async def ping(_, message):
 
 
 async def emojitest(_, message):
-    """Diagnostic: test which custom emoji format works in this Pyrofork build."""
+    """Diagnostic: test premium custom emoji via MessageEntity injection."""
     from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
-    from bot.helper.themes import apply_custom_emojis
 
-    # Pick one verified emoji ID (📥 — confirmed real ID from your custom_emojis.py)
     test_id = CUSTOM_EMOJI_MAP.get("📥", "5443127283898405358")
-
-    test1 = f'<b>Test A</b> — tg-emoji tag:\n<tg-emoji document_id="{test_id}">📥</tg-emoji> aaya animated?'
-    test2 = f'<b>Test B</b> — emoji id tag:\n<emoji id="{test_id}">📥</emoji> aaya animated?'
-    test3_raw = "<b>Test C</b> — BotTheme auto:\n┠ <b>📥 Elapsed :</b> 2m 30s"
-    test3 = apply_custom_emojis(test3_raw)
-
-    raw_html = (
-        f"<b>Raw HTML being sent:</b>\n<code>{test3[:200]}</code>"
-    )
-
     result = (
-        f"{test1}\n\n"
-        f"{test2}\n\n"
-        f"{test3}\n\n"
-        f"{raw_html}\n\n"
-        f"<b>Agar koi bhi animated dikh raha hai → us format ko use karo\n"
-        f"Agar teen mein se koi bhi animated nahi → emoji IDs galat hain ya Pyrofork support nahi karta</b>"
+        f"<b>Premium Emoji Test</b>\n\n"
+        f"📥 📤 🚀 ✅ ❌ 🔥 💎 ⭐ ✨\n\n"
+        f"<b>📥 ID:</b> <code>{test_id}</code>\n"
+        f"<b>Agar upar emojis animated hain → system kaam kar raha hai ✅\n"
+        f"Agar regular emojis hain → emoji IDs galat hain ❌</b>"
     )
     await sendMessage(message, result)
 
