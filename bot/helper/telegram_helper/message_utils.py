@@ -248,17 +248,26 @@ async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
     try:
         r = await _invoke(ents)
     except DocumentInvalid:
-        # Binary-search to find and cache the bad document_id(s), then retry.
+        # Find and cache bad document_id(s), then retry without them.
         LOGGER.warning("DOCUMENT_INVALID on emoji send — scanning for bad IDs")
         bad = set()
         for ent in ents:
             if type(ent).__name__ == "MessageEntityCustomEmoji":
+                # IMPORTANT: test entity MUST use offset=0, length=1.
+                # The test message is just _EMOJI_PLACEHOLDER (1 char at pos 0).
+                # Using the original offset (from the full message) causes
+                # offset-out-of-range and falsely marks every ID as bad.
+                test_ent = pyro_raw.types.MessageEntityCustomEmoji(
+                    offset=0,
+                    length=1,
+                    document_id=ent.document_id,
+                )
                 try:
                     await _c.invoke(
                         pyro_raw.functions.messages.SendMessage(
                             peer=peer,
                             message=_EMOJI_PLACEHOLDER,
-                            entities=[ent],
+                            entities=[test_ent],
                             random_id=_c.rnd_id(),
                             no_webpage=True,
                         )
@@ -270,7 +279,12 @@ async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
             _BAD_EMOJI_IDS.update(bad)
             _rebuild_sorted_map()
         clean = [e for e in ents if getattr(e, "document_id", None) not in bad]
-        r = await _invoke(clean)
+        try:
+            r = await _invoke(clean)
+        except DocumentInvalid:
+            # All remaining entities are still bad — send as plain text.
+            LOGGER.warning("All emoji entities invalid, sending as plain text")
+            r = await _invoke([])
 
     msg_id = _extract_msg_id(r)
     if msg_id:
