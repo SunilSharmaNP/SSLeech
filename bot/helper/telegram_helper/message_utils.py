@@ -151,33 +151,54 @@ def _extract_msg_id(r):
     return None
 
 
+def _pick_emoji_client(fallback_client, chat_id):
+    """Return the best client for sending custom emojis.
+    - Group/channel (chat_id < 0): prefer premium user session (supports premium emoji IDs)
+    - Private/DM (chat_id > 0): must use the original client (bot for its own DMs)
+    """
+    try:
+        cid = int(str(chat_id).strip())
+    except (TypeError, ValueError):
+        return fallback_client
+    if cid >= 0:
+        return fallback_client
+    try:
+        from bot import user as _user, IS_PREMIUM_USER
+        if IS_PREMIUM_USER and _user:
+            return _user
+    except Exception:
+        pass
+    return fallback_client
+
+
 async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
     """Send a message via raw MTProto with custom emoji support.
-    Uses client.invoke() to bypass pyrofork's broken CUSTOM_EMOJI entity path.
+    For group/channel chats uses the premium user session so emoji IDs resolve.
     Returns a high-level Message object on success, None on failure."""
     from pyrogram import raw as pyro_raw
-    plain, raw_ents = await _parse_html_to_raw(client, text)
+    _c = _pick_emoji_client(client, chat_id)
+    plain, raw_ents = await _parse_html_to_raw(_c, text)
     raw_ents = _inject_emoji_entities(plain, raw_ents)
-    peer = await client.resolve_peer(chat_id)
+    peer = await _c.resolve_peer(chat_id)
     reply_to = (
         pyro_raw.types.InputReplyToMessage(reply_to_msg_id=reply_to_msg_id)
         if reply_to_msg_id else None
     )
-    r = await client.invoke(
+    r = await _c.invoke(
         pyro_raw.functions.messages.SendMessage(
             peer=peer,
             message=plain,
             entities=raw_ents if raw_ents else None,
             reply_to=reply_to,
             reply_markup=_buttons_to_raw(buttons),
-            random_id=client.rnd_id(),
+            random_id=_c.rnd_id(),
             no_webpage=True,
         )
     )
     msg_id = _extract_msg_id(r)
     if msg_id:
         try:
-            return await client.get_messages(chat_id, message_ids=msg_id)
+            return await _c.get_messages(chat_id, message_ids=msg_id)
         except Exception:
             pass
     return None
@@ -186,10 +207,11 @@ async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
 async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
     """Edit a message via raw MTProto with custom emoji support."""
     from pyrogram import raw as pyro_raw
-    plain, raw_ents = await _parse_html_to_raw(client, text)
+    _c = _pick_emoji_client(client, chat_id)
+    plain, raw_ents = await _parse_html_to_raw(_c, text)
     raw_ents = _inject_emoji_entities(plain, raw_ents)
-    peer = await client.resolve_peer(chat_id)
-    await client.invoke(
+    peer = await _c.resolve_peer(chat_id)
+    await _c.invoke(
         pyro_raw.functions.messages.EditMessage(
             peer=peer,
             id=msg_id,
