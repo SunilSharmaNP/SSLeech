@@ -122,8 +122,9 @@ _FULL_MAP = {
     "🌟": "5267500801240092311",
 }
 
-# When USE_CUSTOM_EMOJI is not set (default), this is an empty dict.
-# _build_custom_emoji_entities() already short-circuits on empty map:
-#   if not CUSTOM_EMOJI_MAP: return text, None
-# So no emoji entities are injected → no DOCUMENT_INVALID error.
-CUSTOM_EMOJI_MAP = _FULL_MAP if _USE_CUSTOM_EMOJI else {}
+# CUSTOM_EMOJI_MAP is always enabled.
+# The raw MTProto send approach (raw.functions.messages.SendMessage) correctly
+# handles custom emoji entities for bots — unlike the high-level pyrofork API
+# which causes DOCUMENT_INVALID when custom emoji entities are passed.
+# Set USE_CUSTOM_EMOJI=false in config.env to disable animated emojis entirely.
+CUSTOM_EMOJI_MAP = {} if not _USE_CUSTOM_EMOJI and _os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "false" else _FULL_MAP
