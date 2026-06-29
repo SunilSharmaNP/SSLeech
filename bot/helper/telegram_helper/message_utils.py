@@ -75,62 +75,130 @@ _RAW_ENTITY_TYPE_MAP = {
 }
 
 
-async def _build_custom_emoji_entities(client, text):
-    """Parse HTML text and inject custom emoji MessageEntity objects.
-    Converts raw MTProto entities → high-level MessageEntity (has __dict__)
-    so Pyrofork's send_message(entities=...) works correctly.
-    Returns (plain_text, entities) or (text, None) as fallback."""
-    if not CUSTOM_EMOJI_MAP:
-        return text, None
+async def _parse_html_to_raw(client, text):
+    """Parse HTML text → (plain_text, list_of_raw_MTProto_entities)."""
     try:
-        # Step 1: Parse HTML → plain text + raw MTProto entities
-        # Handle both sync and async versions of PyroHTML.parse()
-        _parse_result = PyroHTML(client).parse(text)
-        parsed = await _parse_result if hasattr(_parse_result, "__await__") else _parse_result
-        plain = parsed["message"]
-        raw_ents = parsed.get("entities") or []
-
-        # Step 2: Convert raw MTProto entities → high-level MessageEntity
-        # (raw types use __slots__, can't set _client; high-level types have __dict__)
-        hl_entities = []
-        for raw_ent in raw_ents:
-            ent_type = _RAW_ENTITY_TYPE_MAP.get(type(raw_ent).__name__)
-            if ent_type is None:
-                continue
-            kwargs = {
-                "type": ent_type,
-                "offset": raw_ent.offset,
-                "length": raw_ent.length,
-            }
-            if hasattr(raw_ent, "url") and raw_ent.url:
-                kwargs["url"] = raw_ent.url
-            if hasattr(raw_ent, "language") and raw_ent.language:
-                kwargs["language"] = raw_ent.language
-            hl_entities.append(MessageEntity(**kwargs))
-
-        # Step 3: Add custom emoji entities (already high-level)
-        for emoji_char, doc_id in CUSTOM_EMOJI_MAP.items():
-            pos = 0
-            while True:
-                idx = plain.find(emoji_char, pos)
-                if idx == -1:
-                    break
-                utf16_off = len(plain[:idx].encode("utf-16-le")) // 2
-                utf16_len = len(emoji_char.encode("utf-16-le")) // 2
-                hl_entities.append(
-                    MessageEntity(
-                        type=MessageEntityType.CUSTOM_EMOJI,
-                        offset=utf16_off,
-                        length=utf16_len,
-                        custom_emoji_id=int(doc_id),
-                    )
-                )
-                pos = idx + len(emoji_char)
-
-        return plain, hl_entities if hl_entities else None
+        _pr = PyroHTML(client).parse(text)
+        parsed = await _pr if hasattr(_pr, "__await__") else _pr
+        return parsed["message"], list(parsed.get("entities") or [])
     except Exception as e:
-        LOGGER.warning(f"Custom emoji build failed: {e}")
-        return text, None
+        LOGGER.warning(f"HTML parse failed: {e}")
+        import re
+        return re.sub(r"<[^>]+>", "", text), []
+
+
+def _inject_emoji_entities(plain, raw_ents):
+    """Append raw.types.MessageEntityCustomEmoji for each emoji in CUSTOM_EMOJI_MAP."""
+    from pyrogram import raw as pyro_raw
+    for emoji_char, doc_id in CUSTOM_EMOJI_MAP.items():
+        pos = 0
+        while True:
+            idx = plain.find(emoji_char, pos)
+            if idx == -1:
+                break
+            utf16_off = len(plain[:idx].encode("utf-16-le")) // 2
+            utf16_len = len(emoji_char.encode("utf-16-le")) // 2
+            raw_ents.append(pyro_raw.types.MessageEntityCustomEmoji(
+                offset=utf16_off,
+                length=utf16_len,
+                document_id=int(doc_id),
+            ))
+            pos = idx + len(emoji_char)
+    return raw_ents
+
+
+def _buttons_to_raw(buttons):
+    """Convert Pyrogram InlineKeyboardMarkup → raw.types.ReplyInlineMarkup."""
+    from pyrogram import raw as pyro_raw
+    from pyrogram.types import InlineKeyboardMarkup
+    if not buttons or not isinstance(buttons, InlineKeyboardMarkup):
+        return None
+    rows = []
+    for row in buttons.inline_keyboard:
+        raw_btns = []
+        for btn in row:
+            if btn.callback_data is not None:
+                data = btn.callback_data.encode() if isinstance(btn.callback_data, str) else btn.callback_data
+                raw_btns.append(pyro_raw.types.KeyboardButtonCallback(
+                    text=btn.text, data=data, requires_password=False,
+                ))
+            elif btn.url:
+                raw_btns.append(pyro_raw.types.KeyboardButtonUrl(
+                    text=btn.text, url=btn.url,
+                ))
+            elif btn.switch_inline_query is not None:
+                raw_btns.append(pyro_raw.types.KeyboardButtonSwitchInline(
+                    text=btn.text, query=btn.switch_inline_query, same_peer=False,
+                ))
+        if raw_btns:
+            rows.append(pyro_raw.types.KeyboardButtonRow(buttons=raw_btns))
+    return pyro_raw.types.ReplyInlineMarkup(rows=rows) if rows else None
+
+
+def _extract_msg_id(r):
+    """Extract message_id from raw Updates/UpdateShortSentMessage response."""
+    from pyrogram import raw as pyro_raw
+    if hasattr(r, "id") and not hasattr(r, "updates"):
+        return r.id
+    if hasattr(r, "updates"):
+        for upd in r.updates:
+            if isinstance(upd, (
+                pyro_raw.types.UpdateNewMessage,
+                pyro_raw.types.UpdateNewChannelMessage,
+                pyro_raw.types.UpdateNewScheduledMessage,
+            )):
+                return upd.message.id
+    return None
+
+
+async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
+    """Send a message via raw MTProto with custom emoji support.
+    Uses client.invoke() to bypass pyrofork's broken CUSTOM_EMOJI entity path.
+    Returns a high-level Message object on success, None on failure."""
+    from pyrogram import raw as pyro_raw
+    plain, raw_ents = await _parse_html_to_raw(client, text)
+    raw_ents = _inject_emoji_entities(plain, raw_ents)
+    peer = await client.resolve_peer(chat_id)
+    reply_to = (
+        pyro_raw.types.InputReplyToMessage(reply_to_msg_id=reply_to_msg_id)
+        if reply_to_msg_id else None
+    )
+    r = await client.invoke(
+        pyro_raw.functions.messages.SendMessage(
+            peer=peer,
+            message=plain,
+            entities=raw_ents if raw_ents else None,
+            reply_to=reply_to,
+            reply_markup=_buttons_to_raw(buttons),
+            random_id=client.rnd_id(),
+            no_webpage=True,
+        )
+    )
+    msg_id = _extract_msg_id(r)
+    if msg_id:
+        try:
+            return await client.get_messages(chat_id, message_ids=msg_id)
+        except Exception:
+            pass
+    return None
+
+
+async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
+    """Edit a message via raw MTProto with custom emoji support."""
+    from pyrogram import raw as pyro_raw
+    plain, raw_ents = await _parse_html_to_raw(client, text)
+    raw_ents = _inject_emoji_entities(plain, raw_ents)
+    peer = await client.resolve_peer(chat_id)
+    await client.invoke(
+        pyro_raw.functions.messages.EditMessage(
+            peer=peer,
+            id=msg_id,
+            message=plain,
+            entities=raw_ents if raw_ents else None,
+            reply_markup=_buttons_to_raw(buttons),
+            no_webpage=True,
+        )
+    )
 
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
@@ -158,10 +226,19 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise  # let outer except ReplyMarkupInvalid retry without buttons
             except Exception as e:
                 LOGGER.error(format_exc())
-        _text, _entities = await _build_custom_emoji_entities(message._client, text)
-        _pm = ParseMode.DISABLED if _entities is not None else None
+        if CUSTOM_EMOJI_MAP:
+            try:
+                return await _raw_send(
+                    message._client,
+                    message.chat.id,
+                    text,
+                    reply_to_msg_id=message.id,
+                    buttons=buttons,
+                )
+            except Exception as e:
+                LOGGER.warning(f"Raw emoji send failed ({e}), falling back to plain HTML")
         return await message.reply(
-            text=_text,
+            text=text,
             quote=True,
             disable_web_page_preview=True,
             disable_notification=True,
@@ -173,8 +250,6 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 and not rply.caption
                 else None
             ),
-            entities=_entities,
-            parse_mode=_pm,
             **kwargs,
         )
     except FloodWait as f:
@@ -185,19 +260,6 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, None, photo)
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
-    except DocumentInvalid:
-        LOGGER.warning("DocumentInvalid: custom emoji not supported by this bot, retrying with plain HTML")
-        try:
-            return await message.reply(
-                text=text,
-                quote=True,
-                disable_web_page_preview=True,
-                disable_notification=True,
-                reply_markup=buttons,
-            )
-        except Exception:
-            LOGGER.error(format_exc())
-            return str("DocumentInvalid: custom emoji failed and plain retry also failed")
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -225,16 +287,17 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
-        _text, _entities = await _build_custom_emoji_entities(bot, text)
-        _pm = ParseMode.DISABLED if _entities is not None else None
+        if CUSTOM_EMOJI_MAP:
+            try:
+                return await _raw_send(bot, chat_id, text, buttons=buttons)
+            except Exception as e:
+                LOGGER.warning(f"Raw emoji send failed ({e}), falling back to plain HTML")
         return await bot.send_message(
             chat_id=chat_id,
-            text=_text,
+            text=text,
             disable_web_page_preview=True,
             disable_notification=True,
             reply_markup=buttons,
-            entities=_entities,
-            parse_mode=_pm,
         )
     except FloodWait as f:
         LOGGER.warning(str(f))
@@ -242,19 +305,6 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await sendCustomMsg(chat_id, text, buttons, photo)
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
-    except DocumentInvalid:
-        LOGGER.warning("DocumentInvalid: custom emoji not supported by this bot, retrying with plain HTML")
-        try:
-            return await bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                disable_web_page_preview=True,
-                disable_notification=True,
-                reply_markup=buttons,
-            )
-        except Exception:
-            LOGGER.error(format_exc())
-            return str("DocumentInvalid: custom emoji failed and plain retry also failed")
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -308,17 +358,24 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 except Exception as e:
                     LOGGER.error(str(e))
                 continue
-            _text, _entities = await _build_custom_emoji_entities(bot, text)
-            _pm = ParseMode.DISABLED if _entities is not None else None
+            if CUSTOM_EMOJI_MAP:
+                try:
+                    sent = await _raw_send(
+                        bot, chat.id, text,
+                        reply_to_msg_id=topic_id,
+                        buttons=buttons,
+                    )
+                    msg_dict[f"{chat.id}:{topic_id}"] = sent
+                    continue
+                except Exception as e:
+                    LOGGER.warning(f"Raw emoji send failed for {chat.id} ({e}), falling back")
             sent = await bot.send_message(
                 chat_id=chat.id,
-                text=_text,
+                text=text,
                 disable_web_page_preview=True,
                 disable_notification=True,
                 reply_to_message_id=topic_id,
                 reply_markup=buttons,
-                entities=_entities,
-                parse_mode=_pm,
             )
             msg_dict[f"{chat.id}:{topic_id}"] = sent
         except FloodWait as f:
@@ -339,14 +396,21 @@ async def editMessage(message, text, buttons=None, photo=None):
                     InputMediaPhoto(photo, text), reply_markup=buttons
                 )
             return await message.edit_caption(caption=text, reply_markup=buttons)
-        _text, _entities = await _build_custom_emoji_entities(message._client, text)
-        _pm = ParseMode.DISABLED if _entities is not None else None
+        if CUSTOM_EMOJI_MAP:
+            try:
+                return await _raw_edit(
+                    message._client,
+                    message.chat.id,
+                    message.id,
+                    text,
+                    buttons=buttons,
+                )
+            except Exception as e:
+                LOGGER.warning(f"Raw emoji edit failed ({e}), falling back to plain HTML")
         await message.edit(
-            text=_text,
+            text=text,
             disable_web_page_preview=True,
             reply_markup=buttons,
-            entities=_entities,
-            parse_mode=_pm,
         )
     except FloodWait as f:
         LOGGER.warning(str(f))
