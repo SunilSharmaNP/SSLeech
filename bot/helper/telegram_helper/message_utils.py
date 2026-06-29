@@ -23,6 +23,7 @@ from pyrogram.errors import (
     PhotoInvalidDimensions,
     WebpageCurlFailed,
     MediaEmpty,
+    DocumentInvalid,
 )
 
 from bot import (
@@ -184,6 +185,19 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, None, photo)
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
+    except DocumentInvalid:
+        LOGGER.warning("DocumentInvalid: custom emoji not supported by this bot, retrying with plain HTML")
+        try:
+            return await message.reply(
+                text=text,
+                quote=True,
+                disable_web_page_preview=True,
+                disable_notification=True,
+                reply_markup=buttons,
+            )
+        except Exception:
+            LOGGER.error(format_exc())
+            return str("DocumentInvalid: custom emoji failed and plain retry also failed")
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -228,6 +242,19 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await sendCustomMsg(chat_id, text, buttons, photo)
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
+    except DocumentInvalid:
+        LOGGER.warning("DocumentInvalid: custom emoji not supported by this bot, retrying with plain HTML")
+        try:
+            return await bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                disable_web_page_preview=True,
+                disable_notification=True,
+                reply_markup=buttons,
+            )
+        except Exception:
+            LOGGER.error(format_exc())
+            return str("DocumentInvalid: custom emoji failed and plain retry also failed")
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
