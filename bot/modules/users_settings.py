@@ -51,6 +51,16 @@ from bot.helper.ext_utils.bot_utils import (
 from bot.helper.mirror_utils.upload_utils.ddlserver.gofile import Gofile
 from bot.helper.themes import BotTheme
 
+
+def _get_lang_name(lang_code: str) -> str:
+    if not lang_code:
+        return "N/A"
+    try:
+        return Language.get(lang_code).display_name()
+    except Exception:
+        return lang_code
+
+
 handler_dict = {}
 desp_dict = {
     "rcc": [
@@ -202,11 +212,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             NAME=name,
             ID=user_id,
             USERNAME=f"@{from_user.username}",
-            LANG=(
-                Language.get(lc).display_name()
-                if (lc := from_user.language_code)
-                else "N/A"
-            ),
+            LANG=_get_lang_name(from_user.language_code),
             DC=from_user.dc_id,
         )
 
