@@ -187,18 +187,24 @@ def _extract_msg_id(r):
 
 
 def _pick_emoji_client(fallback_client, chat_id):
-    """Return the best client for sending custom emojis.
-    Prefer user session over bot token. User sessions (even non-premium) can
-    send custom emoji via raw MTProto. IS_PREMIUM_USER is checked first but
-    we fall through to any active user session as a secondary try.
+    """Return the best client for SENDING custom emojis.
+
+    Rules:
+    • Private chats (chat_id > 0) — always use fallback_client (bot).
+      Using the user session here would make @Premiumdfvip message itself
+      → message lands in Saved Messages, or PEER_ID_INVALID if the peer
+      is someone the user session has never talked to.
+    • Groups / channels (chat_id < 0) — prefer user session so Telegram
+      renders the animated premium emoji (bots cannot send custom emoji).
     """
+    if isinstance(chat_id, int) and chat_id > 0:
+        return fallback_client
     try:
         from bot import user as _user, IS_PREMIUM_USER
         if _user and IS_PREMIUM_USER:
             return _user
     except Exception:
         pass
-    # Secondary: try user session even if IS_PREMIUM_USER is False
     try:
         from bot import user as _user
         if _user:
@@ -296,9 +302,18 @@ async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
 
 
 async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
-    """Edit a message via raw MTProto with custom emoji support."""
+    """Edit a message via raw MTProto with custom emoji support.
+
+    IMPORTANT: uses `client` directly — NOT _pick_emoji_client.
+    Only the client that originally sent the message can edit it.
+    • If user session sent it  → client = user session → emoji preserved ✅
+    • If bot sent it          → client = bot          → no animated emoji
+                                                         but edit succeeds ✅
+    Switching to user session here would cause MessageAuthorRequired errors
+    when trying to edit a bot-owned message.
+    """
     from pyrogram import raw as pyro_raw
-    _c = _pick_emoji_client(client, chat_id)
+    _c = client
     plain, ents = _build_emoji_message(text)
     peer = await _c.resolve_peer(chat_id)
     await _c.invoke(
