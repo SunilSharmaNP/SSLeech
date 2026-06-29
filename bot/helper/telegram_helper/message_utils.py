@@ -187,18 +187,24 @@ def _extract_msg_id(r):
 
 
 def _pick_emoji_client(fallback_client, chat_id):
-    """Return the best client for sending custom emojis.
-    Prefer user session over bot token. User sessions (even non-premium) can
-    send custom emoji via raw MTProto. IS_PREMIUM_USER is checked first but
-    we fall through to any active user session as a secondary try.
+    """Return the best client for SENDING custom emojis.
+
+    Rules:
+    • Private chats (chat_id > 0) — always use fallback_client (bot).
+      Using the user session here would make @Premiumdfvip message itself
+      → message lands in Saved Messages, or PEER_ID_INVALID if the peer
+      is someone the user session has never talked to.
+    • Groups / channels (chat_id < 0) — prefer user session so Telegram
+      renders the animated premium emoji (bots cannot send custom emoji).
     """
+    if isinstance(chat_id, int) and chat_id > 0:
+        return fallback_client
     try:
         from bot import user as _user, IS_PREMIUM_USER
         if _user and IS_PREMIUM_USER:
             return _user
     except Exception:
         pass
-    # Secondary: try user session even if IS_PREMIUM_USER is False
     try:
         from bot import user as _user
         if _user:
@@ -296,9 +302,18 @@ async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
 
 
 async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
-    """Edit a message via raw MTProto with custom emoji support."""
+    """Edit a message via raw MTProto with custom emoji support.
+
+    IMPORTANT: uses `client` directly — NOT _pick_emoji_client.
+    Only the client that originally sent the message can edit it.
+    • If user session sent it  → client = user session → emoji preserved ✅
+    • If bot sent it          → client = bot          → no animated emoji
+                                                         but edit succeeds ✅
+    Switching to user session here would cause MessageAuthorRequired errors
+    when trying to edit a bot-owned message.
+    """
     from pyrogram import raw as pyro_raw
-    _c = _pick_emoji_client(client, chat_id)
+    _c = client
     plain, ents = _build_emoji_message(text)
     peer = await _c.resolve_peer(chat_id)
     await _c.invoke(
@@ -315,23 +330,7 @@ async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
-        if photo:
-            try:
-                if photo == "IMAGES":
-                    photo = rchoice(config_dict["IMAGES"])
-                return await message.reply_photo(
-                    photo=photo,
-                    reply_to_message_id=message.id,
-                    caption=text,
-                    reply_markup=buttons,
-                    disable_notification=True,
-                    **kwargs,
-                )
-            except IndexError:
-                pass
-            except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
-                des_dir = await download_image_url(photo)
-                await sendMessage(message, text, buttons, de# In group chats with emoji map active, skip the decorative "IMAGES"
+        # In group chats with emoji map active, skip the decorative "IMAGES"
         # background so the user session can send a text message with animated
         # emoji entities.  Real file thumbnails (photo != "IMAGES") still go
         # through the normal photo path even in groups.
@@ -545,7 +544,26 @@ async def editMessage(message, text, buttons=None, photo=None):
                         buttons=buttons,
                     )
                 except Exception as e:
-                    LOGGER.warning(f"Raw emoji caption edit failed ({e}), fallback"))
+                    LOGGER.warning(f"Raw emoji caption edit failed ({e}), fallback")
+            return await message.edit_caption(caption=text, reply_markup=buttons)
+        if CUSTOM_EMOJI_MAP:
+            try:
+                return await _raw_edit(
+                    message._client,
+                    message.chat.id,
+                    message.id,
+                    text,
+                    buttons=buttons,
+                )
+            except Exception as e:
+                LOGGER.warning(f"Raw emoji edit failed ({e}), falling back to plain HTML")
+        await message.edit(
+            text=text,
+            disable_web_page_preview=True,
+            reply_markup=buttons,
+        )
+    except FloodWait as f:
+        LOGGER.warning(str(f))
         await sleep(f.value * 1.2)
         return await editMessage(message, text, buttons, photo)
     except (MessageNotModified, MessageEmpty):
