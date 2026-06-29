@@ -1,12 +1,26 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
 #  TELEGRAM PREMIUM CUSTOM EMOJI CONFIG
+#
+#  Custom emoji entities can only be sent by Telegram Premium accounts or
+#  specially authorized bots. Sending them from a regular bot causes:
+#      [400 DOCUMENT_INVALID] - The document is invalid
+#
+#  HOW TO ENABLE:
+#    Set  USE_CUSTOM_EMOJI=true  in your config.env / Heroku config vars
+#    ONLY if your bot account is a verified premium/bot-emoji capable account.
+#    Leave it unset (default) for normal bots — plain Unicode emojis are used.
+#
 #  Format: "emoji_char": "document_id"
 #  All emojis listed here are auto-replaced with animated premium versions
 #  by message_utils._build_custom_emoji_entities() on every sendMessage call.
 # ─────────────────────────────────────────────────────────────────────────────
 
-CUSTOM_EMOJI_MAP = {
+import os as _os
+
+_USE_CUSTOM_EMOJI = _os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "true"
+
+_FULL_MAP = {
     # ── Original verified IDs ─────────────────────────────────────────────────
     "🧲": "5377535110289576661",
     "✨": "5325547803936572038",
@@ -107,3 +121,9 @@ CUSTOM_EMOJI_MAP = {
     "💙": "5471952986970267163",
     "🌟": "5267500801240092311",
 }
+
+# When USE_CUSTOM_EMOJI is not set (default), this is an empty dict.
+# _build_custom_emoji_entities() already short-circuits on empty map:
+#   if not CUSTOM_EMOJI_MAP: return text, None
+# So no emoji entities are injected → no DOCUMENT_INVALID error.
+CUSTOM_EMOJI_MAP = _FULL_MAP if _USE_CUSTOM_EMOJI else {}
