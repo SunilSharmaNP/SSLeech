@@ -8,9 +8,9 @@ from re import match as re_match
 from cryptography.fernet import InvalidToken
 
 from pyrogram import Client
-from pyrogram.enums import ParseMode, MessageEntityType
-from pyrogram.types import InputMediaPhoto, MessageEntity
-from pyrogram.parser.html import HTML as PyroHTML
+from pyrogram.enums import ParseMode
+from pyrogram.types import InputMediaPhoto
+
 from pyrogram.errors import (
     ReplyMarkupInvalid,
     FloodWait,
@@ -54,132 +54,92 @@ from bot.helper.ext_utils.exceptions import TgLinkException
 from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
 
 
-_RAW_ENTITY_TYPE_MAP = {
-    "MessageEntityBold": MessageEntityType.BOLD,
-    "MessageEntityItalic": MessageEntityType.ITALIC,
-    "MessageEntityCode": MessageEntityType.CODE,
-    "MessageEntityPre": MessageEntityType.PRE,
-    "MessageEntityStrikethrough": MessageEntityType.STRIKETHROUGH,
-    "MessageEntityUnderline": MessageEntityType.UNDERLINE,
-    "MessageEntitySpoiler": MessageEntityType.SPOILER,
-    "MessageEntityBlockquote": MessageEntityType.BLOCKQUOTE,
-    "MessageEntityTextUrl": MessageEntityType.TEXT_LINK,
-    "MessageEntityMentionName": MessageEntityType.TEXT_MENTION,
-    "MessageEntityMention": MessageEntityType.MENTION,
-    "MessageEntityHashtag": MessageEntityType.HASHTAG,
-    "MessageEntityBotCommand": MessageEntityType.BOT_COMMAND,
-    "MessageEntityUrl": MessageEntityType.URL,
-    "MessageEntityEmail": MessageEntityType.EMAIL,
-    "MessageEntityPhone": MessageEntityType.PHONE_NUMBER,
-    "MessageEntityCashtag": MessageEntityType.CASHTAG,
-}
+
+import re as _re
+
+# ── Self-healing bad document-ID cache ────────────────────────────────────────
+# Any document_id that causes DOCUMENT_INVALID is stored here so subsequent
+# sends skip it automatically.
+_BAD_EMOJI_IDS: set = set()
+
+# Placeholder: ⭐ U+2B50 — BMP character, always exactly 1 UTF-16 unit.
+# Custom emoji entities require length=1; using this placeholder guarantees
+# that regardless of which emoji char it replaces (even surrogate pairs).
+_EMOJI_PLACEHOLDER = "\u2b50"
+
+# Sorted longest-first so multi-char sequences (⚠️ = U+26A0+U+FE0F) match
+# before their base char (⚠ = U+26A0).  Built once at import time.
+_SORTED_EMOJI_MAP: list = []
 
 
-async def _parse_html_to_raw(client, text):
-    """Parse HTML text → (plain_text, list_of_raw_MTProto_entities)."""
-    try:
-        _pr = PyroHTML(client).parse(text)
-        parsed = await _pr if hasattr(_pr, "__await__") else _pr
-        return parsed["message"], list(parsed.get("entities") or [])
-    except Exception as e:
-        LOGGER.warning(f"HTML parse failed: {e}")
-        import re
-        return re.sub(r"<[^>]+>", "", text), []
+def _rebuild_sorted_map():
+    global _SORTED_EMOJI_MAP
+    _SORTED_EMOJI_MAP = sorted(
+        [(k, int(v)) for k, v in CUSTOM_EMOJI_MAP.items()
+         if int(v) not in _BAD_EMOJI_IDS],
+        key=lambda kv: len(kv[0]), reverse=True,
+    )
 
 
-def _inject_emoji_entities(plain, raw_ents):
-    """Replace custom emoji chars with ⭐ placeholder and inject MTProto entities.
+_rebuild_sorted_map()
 
-    Returns (new_plain, updated_raw_ents).
 
-    WHY PLACEHOLDER:
-      Telegram requires MessageEntityCustomEmoji to have length=1 (one UTF-16 unit).
-      Emoji like 🔄 (U+1F504) are surrogate pairs → 2 UTF-16 units → DOCUMENT_INVALID.
-      Using ⭐ (U+2B50, BMP) as placeholder guarantees length=1 always — exactly
-      what the reference implementation does.
+# ── Simple HTML stripper ───────────────────────────────────────────────────────
+_HTML_TAG_RE = _re.compile(r"<[^>]+>")
+_HTML_ENT_RE = _re.compile(r"&(lt|gt|amp|quot|#39|apos);")
+_HTML_ENT_MAP = {"lt": "<", "gt": ">", "amp": "&", "quot": '"',
+                 "#39": "'", "apos": "'"}
 
-    OFFSET REMAPPING:
-      When a multi-unit emoji is replaced by a 1-unit placeholder, all subsequent
-      UTF-16 offsets shift. Existing entities (bold, italic, links, …) are remapped
-      so formatting is preserved. Existing CustomEmoji entities are dropped to
-      avoid duplicates.
+
+def _strip_html(text: str) -> str:
+    """Strip all HTML tags and unescape HTML entities."""
+    text = _HTML_TAG_RE.sub("", text)
+    text = _HTML_ENT_RE.sub(lambda m: _HTML_ENT_MAP.get(m.group(1), m.group(0)), text)
+    return text
+
+
+def _build_emoji_message(text: str):
+    """
+    Strip HTML from *text*, replace every CUSTOM_EMOJI_MAP char with the ⭐
+    placeholder, and return (plain_text, [MessageEntityCustomEmoji, ...]).
+
+    This exactly mirrors the reference implementation:
+      - plain text contains only BMP placeholder chars where emoji were
+      - each entity has offset=<char index>, length=1, document_id=<int>
+      - no PyroHTML / high-level Pyrogram types are involved
+
+    Known-bad IDs (in _BAD_EMOJI_IDS) are skipped — their chars stay as-is.
     """
     from pyrogram import raw as pyro_raw
 
-    PLACEHOLDER = "\u2b50"  # ⭐ U+2B50 — BMP, always 1 UTF-16 unit
-
-    # Sort longest-first so multi-char sequences (e.g. ⚠️) match before their
-    # sub-sequences (e.g. ⚠).
-    sorted_map = sorted(CUSTOM_EMOJI_MAP.items(), key=lambda kv: len(kv[0]), reverse=True)
-
-    # ── Pass 1: build new text, track old→new UTF-16 offset mapping ───────────
-    new_chars = []
-    new_emoji_ents = []
-
-    i = 0               # char index in `plain`
-    old_u16 = 0         # running UTF-16 offset in original text
-    new_u16 = 0         # running UTF-16 offset in new text
-
-    # old_u16 → new_u16 for every starting position we encounter
-    remap = {}
+    plain = _strip_html(text)
+    result_chars: list[str] = []
+    entities: list = []
+    i = 0
+    u16_pos = 0          # UTF-16 offset in output text
 
     while i < len(plain):
-        remap[old_u16] = new_u16
-
         matched = False
-        for emoji_char, doc_id in sorted_map:
+        for emoji_char, doc_id in _SORTED_EMOJI_MAP:
             elen = len(emoji_char)
             if plain[i:i + elen] == emoji_char:
-                emoji_u16 = len(emoji_char.encode("utf-16-le")) // 2
-                new_emoji_ents.append(pyro_raw.types.MessageEntityCustomEmoji(
-                    offset=new_u16,
+                entities.append(pyro_raw.types.MessageEntityCustomEmoji(
+                    offset=u16_pos,
                     length=1,
-                    document_id=int(doc_id),
+                    document_id=doc_id,
                 ))
-                new_chars.append(PLACEHOLDER)
-                old_u16 += emoji_u16
-                new_u16 += 1
+                result_chars.append(_EMOJI_PLACEHOLDER)
+                u16_pos += 1          # placeholder is always 1 UTF-16 unit
                 i += elen
                 matched = True
                 break
-
         if not matched:
             ch = plain[i]
-            ch_u16 = len(ch.encode("utf-16-le")) // 2
-            new_chars.append(ch)
-            old_u16 += ch_u16
-            new_u16 += ch_u16
+            result_chars.append(ch)
+            u16_pos += len(ch.encode("utf-16-le")) // 2
             i += 1
 
-    # sentinel so remap covers the end position
-    remap[old_u16] = new_u16
-    new_plain = "".join(new_chars)
-
-    # ── Pass 2: remap offsets of existing formatting entities ─────────────────
-    updated_ents = []
-    for ent in raw_ents:
-        # Drop any pre-existing CustomEmoji entities (avoid duplicates from
-        # PyroHTML parsing <tg-emoji> tags).
-        if type(ent).__name__ == "MessageEntityCustomEmoji":
-            continue
-        if hasattr(ent, "offset"):
-            old_off = ent.offset
-            # Find the closest mapped position (handles offsets inside a char).
-            new_off = remap.get(old_off)
-            if new_off is None:
-                # Interpolate: scan backward for nearest known key
-                k = old_off
-                while k > 0 and k not in remap:
-                    k -= 1
-                new_off = remap.get(k, old_off)
-            try:
-                ent.offset = new_off
-            except Exception:
-                pass
-        updated_ents.append(ent)
-
-    updated_ents.extend(new_emoji_ents)
-    return new_plain, updated_ents
+    return "".join(result_chars), entities
 
 
 def _buttons_to_raw(buttons):
@@ -249,31 +209,69 @@ def _pick_emoji_client(fallback_client, chat_id):
 
 
 async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
-    """Send a message via raw MTProto with custom emoji support.
-    Always uses the premium user session (if available) so emoji IDs resolve.
-    Returns a high-level Message object on success, None on failure."""
+    """Send a message via raw MTProto with custom emoji entities.
+
+    Uses _build_emoji_message() which:
+      - strips HTML (no PyroHTML / no mixed entity types)
+      - replaces emoji chars with ⭐ placeholder (BMP, length=1 always)
+      - builds pure raw.types.MessageEntityCustomEmoji objects
+
+    This is exactly the reference implementation's approach and avoids the
+    DOCUMENT_INVALID errors caused by length=2 (surrogate-pair emoji) or
+    by mixing high-level Pyrogram entity types with raw MTProto calls.
+
+    On DOCUMENT_INVALID: offending IDs are cached in _BAD_EMOJI_IDS and the
+    send is retried without them — self-healing for invalid sticker pack IDs.
+    """
     from pyrogram import raw as pyro_raw
     _c = _pick_emoji_client(client, chat_id)
-    plain, raw_ents = await _parse_html_to_raw(_c, text)
-    # _inject_emoji_entities now returns (new_plain, new_ents) — plain text is
-    # modified (emoji chars replaced with ⭐ placeholder, length=1 always).
-    plain, raw_ents = _inject_emoji_entities(plain, raw_ents)
+    plain, ents = _build_emoji_message(text)
     peer = await _c.resolve_peer(chat_id)
     reply_to = (
         pyro_raw.types.InputReplyToMessage(reply_to_msg_id=reply_to_msg_id)
         if reply_to_msg_id else None
     )
-    r = await _c.invoke(
-        pyro_raw.functions.messages.SendMessage(
-            peer=peer,
-            message=plain,
-            entities=raw_ents if raw_ents else None,
-            reply_to=reply_to,
-            reply_markup=_buttons_to_raw(buttons),
-            random_id=_c.rnd_id(),
-            no_webpage=True,
+
+    async def _invoke(entities):
+        return await _c.invoke(
+            pyro_raw.functions.messages.SendMessage(
+                peer=peer,
+                message=plain,
+                entities=entities if entities else None,
+                reply_to=reply_to,
+                reply_markup=_buttons_to_raw(buttons),
+                random_id=_c.rnd_id(),
+                no_webpage=True,
+            )
         )
-    )
+
+    try:
+        r = await _invoke(ents)
+    except DocumentInvalid:
+        # Binary-search to find and cache the bad document_id(s), then retry.
+        LOGGER.warning("DOCUMENT_INVALID on emoji send — scanning for bad IDs")
+        bad = set()
+        for ent in ents:
+            if type(ent).__name__ == "MessageEntityCustomEmoji":
+                try:
+                    await _c.invoke(
+                        pyro_raw.functions.messages.SendMessage(
+                            peer=peer,
+                            message=_EMOJI_PLACEHOLDER,
+                            entities=[ent],
+                            random_id=_c.rnd_id(),
+                            no_webpage=True,
+                        )
+                    )
+                except DocumentInvalid:
+                    bad.add(ent.document_id)
+                    LOGGER.warning(f"Bad emoji doc_id cached: {ent.document_id}")
+        if bad:
+            _BAD_EMOJI_IDS.update(bad)
+            _rebuild_sorted_map()
+        clean = [e for e in ents if getattr(e, "document_id", None) not in bad]
+        r = await _invoke(clean)
+
     msg_id = _extract_msg_id(r)
     if msg_id:
         try:
@@ -287,16 +285,14 @@ async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
     """Edit a message via raw MTProto with custom emoji support."""
     from pyrogram import raw as pyro_raw
     _c = _pick_emoji_client(client, chat_id)
-    plain, raw_ents = await _parse_html_to_raw(_c, text)
-    # _inject_emoji_entities returns (new_plain, new_ents)
-    plain, raw_ents = _inject_emoji_entities(plain, raw_ents)
+    plain, ents = _build_emoji_message(text)
     peer = await _c.resolve_peer(chat_id)
     await _c.invoke(
         pyro_raw.functions.messages.EditMessage(
             peer=peer,
             id=msg_id,
             message=plain,
-            entities=raw_ents if raw_ents else None,
+            entities=ents if ents else None,
             reply_markup=_buttons_to_raw(buttons),
             no_webpage=True,
         )
