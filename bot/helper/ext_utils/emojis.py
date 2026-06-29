@@ -2,14 +2,29 @@
 """
 Premium Custom Emoji helper for hardcoded bot messages (outside themes).
 
-IDs sourced from bot/helper/themes/custom_emojis.py (your verified IDs).
-Use E.xxx in f-strings for HTML messages. For button text use E.get('name', plain=True).
+HOW IT WORKS
+────────────
+By default, E.xxx returns the plain Unicode fallback emoji so the bot never
+triggers a DOCUMENT_INVALID error (which crashes usersetting, restart, and
+every other command that uses E.*).
+
+Custom <emoji> HTML tags are ONLY emitted when BOTH conditions are true:
+  1. USE_CUSTOM_EMOJI = True  (set this after bot init if the bot is a
+                               verified Telegram premium/bot-emoji capable account)
+  2. The per-call plain=False (default)
+
+To enable animated emojis for the bot account:
+    from bot.helper.ext_utils.emojis import E
+    E.enable()          # call once after confirming bot can send custom emojis
+    E.disable()         # revert to plain fallback at any time
 
 Usage:
     from bot.helper.ext_utils.emojis import E
     await sendMessage(msg, f"{E.fire} Upload Complete!")
     btns.ibutton(f"{E.get('download', plain=True)} Download", cb)
 """
+
+import os
 
 
 class _Emoji:
@@ -92,6 +107,26 @@ class _Emoji:
         "wand":      ("5325547803936572038", "🪄"),
     }
 
+    # Read env var at import time so no circular imports are needed.
+    # Set USE_CUSTOM_EMOJI=true in config.env ONLY if your bot account is a
+    # verified premium/bot-emoji capable account — otherwise leave it unset.
+    _use_custom: bool = os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "true"
+
+    # ── Runtime toggle ────────────────────────────────────────────────────────
+    def enable(self) -> None:
+        """Enable <emoji> tags (only call after confirming bot supports them)."""
+        object.__setattr__(self, "_use_custom", True)
+
+    def disable(self) -> None:
+        """Revert to plain Unicode fallback emojis."""
+        object.__setattr__(self, "_use_custom", False)
+
+    # ── Core helpers ──────────────────────────────────────────────────────────
+    def _render(self, eid: str, fallback: str) -> str:
+        if self._use_custom:
+            return f'<emoji id="{eid}">{fallback}</emoji>'
+        return fallback
+
     def __getattr__(self, name: str) -> str:
         if name.startswith("_"):
             raise AttributeError(name)
@@ -99,15 +134,20 @@ class _Emoji:
         if entry is None:
             return name
         eid, fallback = entry
-        return f'<emoji id="{eid}">{fallback}</emoji>'
+        return self._render(eid, fallback)
 
     def get(self, name: str, plain: bool = False) -> str:
-        """Return plain fallback emoji (for button labels) or full HTML tag."""
+        """
+        Return emoji for use in a message or button label.
+
+        plain=True  → always return the Unicode fallback (safe for button text)
+        plain=False → return <emoji> tag if custom emojis are enabled, else fallback
+        """
         entry = self._MAP.get(name)
         if entry is None:
             return name
         eid, fallback = entry
-        return fallback if plain else f'<emoji id="{eid}">{fallback}</emoji>'
+        return fallback if plain else self._render(eid, fallback)
 
 
 E = _Emoji()
