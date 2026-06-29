@@ -153,15 +153,10 @@ def _extract_msg_id(r):
 
 def _pick_emoji_client(fallback_client, chat_id):
     """Return the best client for sending custom emojis.
-    - Group/channel (chat_id < 0): prefer premium user session (supports premium emoji IDs)
-    - Private/DM (chat_id > 0): must use the original client (bot for its own DMs)
+    Always prefer the premium user session when available — only premium
+    accounts can send MessageEntityCustomEmoji via raw MTProto.
+    Regular bot tokens always get DOCUMENT_INVALID regardless of chat type.
     """
-    try:
-        cid = int(str(chat_id).strip())
-    except (TypeError, ValueError):
-        return fallback_client
-    if cid >= 0:
-        return fallback_client
     try:
         from bot import user as _user, IS_PREMIUM_USER
         if IS_PREMIUM_USER and _user:
