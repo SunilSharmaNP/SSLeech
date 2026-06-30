@@ -58,6 +58,9 @@ import re as _re
 # Built once at import time and used by _inject_html_emoji().
 _SORTED_EMOJI_MAP: list = []
 
+# Matches existing <emoji ...>...</emoji> blocks so we skip them.
+_EMOJI_TAG_RE = _re.compile(r'(<emoji\b[^>]*>.*?</emoji>)', _re.DOTALL)
+
 
 def _rebuild_sorted_map():
     global _SORTED_EMOJI_MAP
@@ -75,18 +78,37 @@ def _inject_html_emoji(text: str) -> str:
     """Replace plain emoji chars in *text* with <emoji id=DOC_ID>char</emoji>.
 
     pyrotgfork 2.2.23 parses these tags natively in HTML parse mode and
-    renders them as animated premium emoji.  Falls back to the original text
-    when CUSTOM_EMOJI_MAP is empty or the library version doesn't support it.
+    renders them as animated premium emoji.
+
+    Smart double-processing protection: if the text already contains
+    <emoji> tags (e.g. from wzml_minimal.py templates), only the plain-text
+    segments between those tags are processed — existing tags are left intact.
     """
     if not CUSTOM_EMOJI_MAP or not text:
         return text
-    for emoji_char, doc_id in _SORTED_EMOJI_MAP:
-        if emoji_char in text:
-            text = text.replace(
-                emoji_char,
-                f'<emoji id="{doc_id}">{emoji_char}</emoji>',
-            )
-    return text
+
+    def _replace_in_plain(segment: str) -> str:
+        for emoji_char, doc_id in _SORTED_EMOJI_MAP:
+            if emoji_char in segment:
+                segment = segment.replace(
+                    emoji_char,
+                    f'<emoji id={doc_id}>{emoji_char}</emoji>',
+                )
+        return segment
+
+    if '<emoji' not in text:
+        # Fast path — no existing tags, replace directly.
+        return _replace_in_plain(text)
+
+    # Split on existing <emoji>...</emoji> blocks; alternate: plain, tag, plain, tag …
+    parts = _EMOJI_TAG_RE.split(text)
+    result = []
+    for part in parts:
+        if part.startswith('<emoji') and part.endswith('</emoji>'):
+            result.append(part)          # already a tag — leave untouched
+        else:
+            result.append(_replace_in_plain(part))
+    return ''.join(result)
 
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
