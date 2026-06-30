@@ -94,42 +94,55 @@ async def stats(client, message):
 
 @new_task
 async def start(client, message):
-    buttons = ButtonMaker()
-    buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL"))
-    buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"))
-    reply_markup = buttons.build_menu(2)
-    if len(message.command) > 1 and message.command[1] == "wzmlx":
-        await deleteMessage(message)
-    elif len(message.command) > 1 and config_dict["TOKEN_TIMEOUT"]:
-        userid = message.from_user.id
-        encrypted_url = message.command[1]
-        input_token, pre_uid = (b64decode(encrypted_url.encode()).decode()).split("&&")
-        if int(pre_uid) != userid:
-            return await sendMessage(message, BotTheme("OWN_TOKEN_GENERATE"))
-        data = user_data.get(userid, {})
-        if "token" not in data or data["token"] != input_token:
-            return await sendMessage(message, BotTheme("USED_TOKEN"))
-        elif (
-            config_dict["LOGIN_PASS"] is not None
-            and data["token"] == config_dict["LOGIN_PASS"]
-        ):
-            return await sendMessage(message, BotTheme("LOGGED_PASSWORD"))
-        buttons.ibutton(BotTheme("ACTIVATE_BUTTON"), f"pass {input_token}", "header")
+    try:
+        buttons = ButtonMaker()
+        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL"))
+        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"))
         reply_markup = buttons.build_menu(2)
-        msg = BotTheme(
-            "TOKEN_MSG",
-            token=input_token,
-            validity=get_readable_time(int(config_dict["TOKEN_TIMEOUT"])),
-        )
-        return await sendMessage(message, msg, reply_markup)
-    elif await CustomFilters.authorized(client, message):
-        start_string = BotTheme("ST_MSG", help_command=f"/{BotCommands.HelpCommand}")
-        await sendMessage(message, start_string, reply_markup, photo="IMAGES")
-    elif config_dict["BOT_PM"]:
-        await sendMessage(message, BotTheme("ST_BOTPM"), reply_markup, photo="IMAGES")
-    else:
-        await sendMessage(message, BotTheme("ST_UNAUTH"), reply_markup, photo="IMAGES")
-    await DbManger().update_pm_users(message.from_user.id)
+        if len(message.command) > 1 and message.command[1] == "wzmlx":
+            await deleteMessage(message)
+        elif len(message.command) > 1 and config_dict["TOKEN_TIMEOUT"]:
+            userid = message.from_user.id
+            encrypted_url = message.command[1]
+            try:
+                input_token, pre_uid = (b64decode(encrypted_url.encode()).decode()).split("&&")
+            except Exception:
+                return await sendMessage(message, "❌ Invalid token link.")
+            if int(pre_uid) != userid:
+                return await sendMessage(message, BotTheme("OWN_TOKEN_GENERATE"))
+            data = user_data.get(userid, {})
+            if "token" not in data or data["token"] != input_token:
+                return await sendMessage(message, BotTheme("USED_TOKEN"))
+            elif (
+                config_dict["LOGIN_PASS"] is not None
+                and data["token"] == config_dict["LOGIN_PASS"]
+            ):
+                return await sendMessage(message, BotTheme("LOGGED_PASSWORD"))
+            buttons.ibutton(BotTheme("ACTIVATE_BUTTON"), f"pass {input_token}", "header")
+            reply_markup = buttons.build_menu(2)
+            msg = BotTheme(
+                "TOKEN_MSG",
+                token=input_token,
+                validity=get_readable_time(int(config_dict["TOKEN_TIMEOUT"])),
+            )
+            return await sendMessage(message, msg, reply_markup)
+        elif await CustomFilters.authorized(client, message):
+            start_string = BotTheme("ST_MSG", help_command=f"/{BotCommands.HelpCommand}")
+            await sendMessage(message, start_string, reply_markup, photo="IMAGES")
+        elif config_dict["BOT_PM"]:
+            await sendMessage(message, BotTheme("ST_BOTPM"), reply_markup, photo="IMAGES")
+        else:
+            await sendMessage(message, BotTheme("ST_UNAUTH"), reply_markup, photo="IMAGES")
+        try:
+            await DbManger().update_pm_users(message.from_user.id)
+        except Exception as db_err:
+            LOGGER.warning(f"[start] update_pm_users failed: {db_err}")
+    except Exception as e:
+        LOGGER.error(f"[start] DM handler crashed: {e}", exc_info=True)
+        try:
+            await sendMessage(message, f"⚠️ Error: <code>{e}</code>")
+        except Exception:
+            pass
 
 
 async def token_callback(_, query):
