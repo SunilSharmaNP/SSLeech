@@ -461,15 +461,18 @@ async def update_all_messages(force=False):
         return
     async with status_reply_dict_lock:
         for chat_id in list(status_reply_dict.keys()):
-            if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id][0].text:
+            stored = status_reply_dict.get(chat_id)
+            if not stored or isinstance(stored[0], str):
+                continue
+            if msg != stored[0].text:
                 rmsg = await editMessage(
-                    status_reply_dict[chat_id][0], msg, buttons, "IMAGES"
+                    stored[0], msg, buttons, "IMAGES"
                 )
                 if isinstance(rmsg, str) and rmsg.startswith("Telegram says: [400"):
                     del status_reply_dict[chat_id]
                     continue
-                status_reply_dict[chat_id][0].text = msg
-                status_reply_dict[chat_id][1] = time()
+                stored[0].text = msg
+                stored[1] = time()
 
 
 async def sendStatusMessage(msg):
@@ -483,16 +486,20 @@ async def sendStatusMessage(msg):
             message = status_reply_dict[chat_id][0]
             await deleteMessage(message)
             del status_reply_dict[chat_id]
-        if message := await sendMessage(msg, progress, buttons, photo="IMAGES"):
+        message = await sendMessage(msg, progress, buttons, photo="IMAGES")
+        if isinstance(message, str):
+            LOGGER.error(f"sendStatusMessage: sendMessage returned error — {message}")
+            return
+        if message:
             if hasattr(message, "caption"):
                 message.caption = progress
             else:
                 message.text = progress
-        status_reply_dict[chat_id] = [message, time()]
-        if not Interval:
-            Interval.append(
-                setInterval(config_dict["STATUS_UPDATE_INTERVAL"], update_all_messages)
-            )
+            status_reply_dict[chat_id] = [message, time()]
+            if not Interval:
+                Interval.append(
+                    setInterval(config_dict["STATUS_UPDATE_INTERVAL"], update_all_messages)
+                )
 
 
 async def open_category_btns(message):
