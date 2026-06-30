@@ -23,7 +23,6 @@ from pyrogram.errors import (
     PhotoInvalidDimensions,
     WebpageCurlFailed,
     MediaEmpty,
-    DocumentInvalid,
 )
 
 from bot import (
@@ -53,292 +52,47 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.exceptions import TgLinkException
 from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
 
-
-
 import re as _re
 
-# ── Self-healing bad document-ID cache ────────────────────────────────────────
-# Any document_id that causes DOCUMENT_INVALID is stored here so subsequent
-# sends skip it automatically.
-_BAD_EMOJI_IDS: set = set()
-
-# Placeholder: ⭐ U+2B50 — BMP character, always exactly 1 UTF-16 unit.
-# Custom emoji entities require length=1; using this placeholder guarantees
-# that regardless of which emoji char it replaces (even surrogate pairs).
-_EMOJI_PLACEHOLDER = "\u2b50"
-
-# Sorted longest-first so multi-char sequences (⚠️ = U+26A0+U+FE0F) match
-# before their base char (⚠ = U+26A0).  Built once at import time.
+# Sorted longest-first so multi-char sequences match before their base chars.
+# Built once at import time and used by _inject_html_emoji().
 _SORTED_EMOJI_MAP: list = []
 
 
 def _rebuild_sorted_map():
     global _SORTED_EMOJI_MAP
     _SORTED_EMOJI_MAP = sorted(
-        [(k, int(v)) for k, v in CUSTOM_EMOJI_MAP.items()
-         if int(v) not in _BAD_EMOJI_IDS],
-        key=lambda kv: len(kv[0]), reverse=True,
+        CUSTOM_EMOJI_MAP.items(),
+        key=lambda kv: len(kv[0]),
+        reverse=True,
     )
 
 
 _rebuild_sorted_map()
 
 
-# ── Simple HTML stripper ───────────────────────────────────────────────────────
-_HTML_TAG_RE = _re.compile(r"<[^>]+>")
-_HTML_ENT_RE = _re.compile(r"&(lt|gt|amp|quot|#39|apos);")
-_HTML_ENT_MAP = {"lt": "<", "gt": ">", "amp": "&", "quot": '"',
-                 "#39": "'", "apos": "'"}
+def _inject_html_emoji(text: str) -> str:
+    """Replace plain emoji chars in *text* with <emoji id=DOC_ID>char</emoji>.
 
-
-def _strip_html(text: str) -> str:
-    """Strip all HTML tags and unescape HTML entities."""
-    text = _HTML_TAG_RE.sub("", text)
-    text = _HTML_ENT_RE.sub(lambda m: _HTML_ENT_MAP.get(m.group(1), m.group(0)), text)
-    return text
-
-
-def _build_emoji_message(text: str):
+    pyrotgfork 2.2.23 parses these tags natively in HTML parse mode and
+    renders them as animated premium emoji.  Falls back to the original text
+    when CUSTOM_EMOJI_MAP is empty or the library version doesn't support it.
     """
-    Strip HTML from *text*, replace every CUSTOM_EMOJI_MAP char with the ⭐
-    placeholder, and return (plain_text, [MessageEntityCustomEmoji, ...]).
-
-    This exactly mirrors the reference implementation:
-      - plain text contains only BMP placeholder chars where emoji were
-      - each entity has offset=<char index>, length=1, document_id=<int>
-      - no PyroHTML / high-level Pyrogram types are involved
-
-    Known-bad IDs (in _BAD_EMOJI_IDS) are skipped — their chars stay as-is.
-    """
-    from pyrogram import raw as pyro_raw
-
-    plain = _strip_html(text)
-    result_chars: list[str] = []
-    entities: list = []
-    i = 0
-    u16_pos = 0          # UTF-16 offset in output text
-
-    while i < len(plain):
-        matched = False
-        for emoji_char, doc_id in _SORTED_EMOJI_MAP:
-            elen = len(emoji_char)
-            if plain[i:i + elen] == emoji_char:
-                entities.append(pyro_raw.types.MessageEntityCustomEmoji(
-                    offset=u16_pos,
-                    length=1,
-                    document_id=doc_id,
-                ))
-                result_chars.append(_EMOJI_PLACEHOLDER)
-                u16_pos += 1          # placeholder is always 1 UTF-16 unit
-                i += elen
-                matched = True
-                break
-        if not matched:
-            ch = plain[i]
-            result_chars.append(ch)
-            u16_pos += len(ch.encode("utf-16-le")) // 2
-            i += 1
-
-    return "".join(result_chars), entities
-
-
-def _buttons_to_raw(buttons):
-    """Convert Pyrogram InlineKeyboardMarkup → raw.types.ReplyInlineMarkup."""
-    from pyrogram import raw as pyro_raw
-    from pyrogram.types import InlineKeyboardMarkup
-    if not buttons or not isinstance(buttons, InlineKeyboardMarkup):
-        return None
-    rows = []
-    for row in buttons.inline_keyboard:
-        raw_btns = []
-        for btn in row:
-            if btn.callback_data is not None:
-                data = btn.callback_data.encode() if isinstance(btn.callback_data, str) else btn.callback_data
-                raw_btns.append(pyro_raw.types.KeyboardButtonCallback(
-                    text=btn.text, data=data, requires_password=False,
-                ))
-            elif btn.url:
-                raw_btns.append(pyro_raw.types.KeyboardButtonUrl(
-                    text=btn.text, url=btn.url,
-                ))
-            elif btn.switch_inline_query is not None:
-                raw_btns.append(pyro_raw.types.KeyboardButtonSwitchInline(
-                    text=btn.text, query=btn.switch_inline_query, same_peer=False,
-                ))
-        if raw_btns:
-            rows.append(pyro_raw.types.KeyboardButtonRow(buttons=raw_btns))
-    return pyro_raw.types.ReplyInlineMarkup(rows=rows) if rows else None
-
-
-def _extract_msg_id(r):
-    """Extract message_id from raw Updates/UpdateShortSentMessage response."""
-    from pyrogram import raw as pyro_raw
-    if hasattr(r, "id") and not hasattr(r, "updates"):
-        return r.id
-    if hasattr(r, "updates"):
-        for upd in r.updates:
-            if isinstance(upd, (
-                pyro_raw.types.UpdateNewMessage,
-                pyro_raw.types.UpdateNewChannelMessage,
-                pyro_raw.types.UpdateNewScheduledMessage,
-            )):
-                return upd.message.id
-    return None
-
-
-def _pick_emoji_client(fallback_client, chat_id):
-    """Return the best client for SENDING custom emojis.
-
-    Rules:
-    • Private chats (chat_id > 0) — always use fallback_client (bot).
-      Using the user session here would make @Premiumdfvip message itself
-      → message lands in Saved Messages, or PEER_ID_INVALID if the peer
-      is someone the user session has never talked to.
-    • Groups / channels (chat_id < 0) — prefer user session so Telegram
-      renders the animated premium emoji (bots cannot send custom emoji).
-    """
-    if isinstance(chat_id, int) and chat_id > 0:
-        return fallback_client
-    try:
-        from bot import user as _user, IS_PREMIUM_USER
-        if _user and IS_PREMIUM_USER:
-            return _user
-    except Exception:
-        pass
-    try:
-        from bot import user as _user
-        if _user:
-            return _user
-    except Exception:
-        pass
-    return fallback_client
-
-
-async def _raw_send(client, chat_id, text, reply_to_msg_id=None, buttons=None):
-    """Send a message via raw MTProto with custom emoji entities.
-
-    Uses _build_emoji_message() which:
-      - strips HTML (no PyroHTML / no mixed entity types)
-      - replaces emoji chars with ⭐ placeholder (BMP, length=1 always)
-      - builds pure raw.types.MessageEntityCustomEmoji objects
-
-    This is exactly the reference implementation's approach and avoids the
-    DOCUMENT_INVALID errors caused by length=2 (surrogate-pair emoji) or
-    by mixing high-level Pyrogram entity types with raw MTProto calls.
-
-    On DOCUMENT_INVALID: offending IDs are cached in _BAD_EMOJI_IDS and the
-    send is retried without them — self-healing for invalid sticker pack IDs.
-    """
-    from pyrogram import raw as pyro_raw
-    _c = _pick_emoji_client(client, chat_id)
-    plain, ents = _build_emoji_message(text)
-    peer = await _c.resolve_peer(chat_id)
-    reply_to = (
-        pyro_raw.types.InputReplyToMessage(reply_to_msg_id=reply_to_msg_id)
-        if reply_to_msg_id else None
-    )
-
-    async def _invoke(entities):
-        return await _c.invoke(
-            pyro_raw.functions.messages.SendMessage(
-                peer=peer,
-                message=plain,
-                entities=entities if entities else None,
-                reply_to=reply_to,
-                reply_markup=_buttons_to_raw(buttons),
-                random_id=_c.rnd_id(),
-                no_webpage=True,
+    if not CUSTOM_EMOJI_MAP or not text:
+        return text
+    for emoji_char, doc_id in _SORTED_EMOJI_MAP:
+        if emoji_char in text:
+            text = text.replace(
+                emoji_char,
+                f'<emoji id="{doc_id}">{emoji_char}</emoji>',
             )
-        )
-
-    try:
-        r = await _invoke(ents)
-    except DocumentInvalid:
-        # Find and cache bad document_id(s), then retry without them.
-        LOGGER.warning("DOCUMENT_INVALID on emoji send — scanning for bad IDs")
-        bad = set()
-        for ent in ents:
-            if type(ent).__name__ == "MessageEntityCustomEmoji":
-                # IMPORTANT: test entity MUST use offset=0, length=1.
-                # The test message is just _EMOJI_PLACEHOLDER (1 char at pos 0).
-                # Using the original offset (from the full message) causes
-                # offset-out-of-range and falsely marks every ID as bad.
-                test_ent = pyro_raw.types.MessageEntityCustomEmoji(
-                    offset=0,
-                    length=1,
-                    document_id=ent.document_id,
-                )
-                try:
-                    await _c.invoke(
-                        pyro_raw.functions.messages.SendMessage(
-                            peer=peer,
-                            message=_EMOJI_PLACEHOLDER,
-                            entities=[test_ent],
-                            random_id=_c.rnd_id(),
-                            no_webpage=True,
-                        )
-                    )
-                except DocumentInvalid:
-                    bad.add(ent.document_id)
-                    LOGGER.warning(f"Bad emoji doc_id cached: {ent.document_id}")
-        if bad:
-            _BAD_EMOJI_IDS.update(bad)
-            _rebuild_sorted_map()
-        clean = [e for e in ents if getattr(e, "document_id", None) not in bad]
-        try:
-            r = await _invoke(clean)
-        except DocumentInvalid:
-            # All remaining entities are still bad — send as plain text.
-            LOGGER.warning("All emoji entities invalid, sending as plain text")
-            r = await _invoke([])
-
-    msg_id = _extract_msg_id(r)
-    if msg_id:
-        try:
-            return await _c.get_messages(chat_id, message_ids=msg_id)
-        except Exception:
-            pass
-    return None
-
-
-async def _raw_edit(client, chat_id, msg_id, text, buttons=None):
-    """Edit a message via raw MTProto with custom emoji support.
-
-    IMPORTANT: uses `client` directly — NOT _pick_emoji_client.
-    Only the client that originally sent the message can edit it.
-    • If user session sent it  → client = user session → emoji preserved ✅
-    • If bot sent it          → client = bot          → no animated emoji
-                                                         but edit succeeds ✅
-    Switching to user session here would cause MessageAuthorRequired errors
-    when trying to edit a bot-owned message.
-    """
-    from pyrogram import raw as pyro_raw
-    _c = client
-    plain, ents = _build_emoji_message(text)
-    peer = await _c.resolve_peer(chat_id)
-    await _c.invoke(
-        pyro_raw.functions.messages.EditMessage(
-            peer=peer,
-            id=msg_id,
-            message=plain,
-            entities=ents if ents else None,
-            reply_markup=_buttons_to_raw(buttons),
-            no_webpage=True,
-        )
-    )
+    return text
 
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
-        # In group chats with emoji map active, skip the decorative "IMAGES"
-        # background so the user session can send a text message with animated
-        # emoji entities.  Real file thumbnails (photo != "IMAGES") still go
-        # through the normal photo path even in groups.
-        # In private chats the bot handles everything, so photo works normally.
-        _is_group = hasattr(message, "chat") and message.chat.id < 0
-        _skip_images_photo = CUSTOM_EMOJI_MAP and _is_group and photo == "IMAGES"
-
-        if photo and not _skip_images_photo:
+        text = _inject_html_emoji(text)
+        if photo:
             try:
                 if photo == "IMAGES":
                     photo = rchoice(config_dict["IMAGES"])
@@ -361,17 +115,6 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise  # let outer except ReplyMarkupInvalid retry without buttons
             except Exception as e:
                 LOGGER.error(format_exc())
-        if CUSTOM_EMOJI_MAP:
-            try:
-                return await _raw_send(
-                    message._client,
-                    message.chat.id,
-                    text,
-                    reply_to_msg_id=message.id,
-                    buttons=buttons,
-                )
-            except Exception as e:
-                LOGGER.warning(f"Raw emoji send failed ({e}), falling back to plain HTML")
         return await message.reply(
             text=text,
             quote=True,
@@ -402,6 +145,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
 
 async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     try:
+        text = _inject_html_emoji(text)
         if photo:
             try:
                 if photo == "IMAGES":
@@ -422,11 +166,6 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
-        if CUSTOM_EMOJI_MAP:
-            try:
-                return await _raw_send(bot, chat_id, text, buttons=buttons)
-            except Exception as e:
-                LOGGER.warning(f"Raw emoji send failed ({e}), falling back to plain HTML")
         return await bot.send_message(
             chat_id=chat_id,
             text=text,
@@ -461,6 +200,7 @@ async def chat_info(channel_id):
 
 
 async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
+    text = _inject_html_emoji(text)
     msg_dict = {}
     for channel_id in chat_ids.split():
         channel_id, *topic_id = channel_id.split(":")
@@ -493,17 +233,6 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 except Exception as e:
                     LOGGER.error(str(e))
                 continue
-            if CUSTOM_EMOJI_MAP:
-                try:
-                    sent = await _raw_send(
-                        bot, chat.id, text,
-                        reply_to_msg_id=topic_id,
-                        buttons=buttons,
-                    )
-                    msg_dict[f"{chat.id}:{topic_id}"] = sent
-                    continue
-                except Exception as e:
-                    LOGGER.warning(f"Raw emoji send failed for {chat.id} ({e}), falling back")
             sent = await bot.send_message(
                 chat_id=chat.id,
                 text=text,
@@ -524,39 +253,14 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
 
 async def editMessage(message, text, buttons=None, photo=None):
     try:
+        text = _inject_html_emoji(text)
         if message.media:
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
                 return await message.edit_media(
                     InputMediaPhoto(photo, text), reply_markup=buttons
                 )
-            # Caption-only update: try raw edit for emoji support first.
-            # _raw_edit uses EditMessage which updates caption + entities on
-            # media messages.  Falls back to edit_caption if it fails (e.g.
-            # user session can't edit a bot-owned message).
-            if CUSTOM_EMOJI_MAP:
-                try:
-                    return await _raw_edit(
-                        message._client,
-                        message.chat.id,
-                        message.id,
-                        text,
-                        buttons=buttons,
-                    )
-                except Exception as e:
-                    LOGGER.warning(f"Raw emoji caption edit failed ({e}), fallback")
             return await message.edit_caption(caption=text, reply_markup=buttons)
-        if CUSTOM_EMOJI_MAP:
-            try:
-                return await _raw_edit(
-                    message._client,
-                    message.chat.id,
-                    message.id,
-                    text,
-                    buttons=buttons,
-                )
-            except Exception as e:
-                LOGGER.warning(f"Raw emoji edit failed ({e}), falling back to plain HTML")
         await message.edit(
             text=text,
             disable_web_page_preview=True,
