@@ -122,9 +122,10 @@ _FULL_MAP = {
     "🌟": "5267500801240092311",
 }
 
-# CUSTOM_EMOJI_MAP is always enabled.
-# The raw MTProto send approach (raw.functions.messages.SendMessage) correctly
-# handles custom emoji entities for bots — unlike the high-level pyrofork API
-# which causes DOCUMENT_INVALID when custom emoji entities are passed.
-# Set USE_CUSTOM_EMOJI=false in config.env to disable animated emojis entirely.
-CUSTOM_EMOJI_MAP = {} if not _USE_CUSTOM_EMOJI and _os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "false" else _FULL_MAP
+# CUSTOM_EMOJI_MAP is only enabled when USE_CUSTOM_EMOJI=true is explicitly set.
+# Regular bots cannot send custom emoji entities — Telegram returns:
+#     [400 DOCUMENT_INVALID] - The document is invalid
+# Only enable this if your bot is a Telegram Premium account or
+# an emoji-capable bot authorized by Telegram.
+# Default: disabled (empty map = plain Unicode emojis used everywhere).
+CUSTOM_EMOJI_MAP = _FULL_MAP if _USE_CUSTOM_EMOJI else {}
