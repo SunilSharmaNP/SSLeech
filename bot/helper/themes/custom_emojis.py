@@ -122,10 +122,8 @@ _FULL_MAP = {
     "🌟": "5267500801240092311",
 }
 
-# CUSTOM_EMOJI_MAP is only enabled when USE_CUSTOM_EMOJI=true is explicitly set.
-# Regular bots cannot send custom emoji entities — Telegram returns:
-#     [400 DOCUMENT_INVALID] - The document is invalid
-# Only enable this if your bot is a Telegram Premium account or
-# an emoji-capable bot authorized by Telegram.
-# Default: disabled (empty map = plain Unicode emojis used everywhere).
-CUSTOM_EMOJI_MAP = _FULL_MAP if _USE_CUSTOM_EMOJI else {}
+# CUSTOM_EMOJI_MAP is enabled by default (always on).
+# pyrofork 2.2.23 supports <emoji id="..."> HTML tags natively — these are
+# rendered as animated premium emoji in Telegram clients.
+# To disable animated emoji entirely, set USE_CUSTOM_EMOJI=false in config.env.
+CUSTOM_EMOJI_MAP = {} if _os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "false" else _FULL_MAP
