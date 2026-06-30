@@ -23,6 +23,7 @@ from pyrogram.errors import (
     PhotoInvalidDimensions,
     WebpageCurlFailed,
     MediaEmpty,
+    DocumentInvalid,
 )
 
 from bot import (
@@ -60,6 +61,14 @@ _SORTED_EMOJI_MAP: list = []
 
 # Matches existing <emoji ...>...</emoji> blocks so we skip them.
 _EMOJI_TAG_RE = _re.compile(r'(<emoji\b[^>]*>.*?</emoji>)', _re.DOTALL)
+
+# Strips injected <emoji id=DOC_ID>CHAR</emoji> tags → keeps only the visible char.
+_STRIP_EMOJI_RE = _re.compile(r'<emoji\b[^>]*>(.*?)</emoji>', _re.DOTALL)
+
+
+def _strip_emoji_tags(text: str) -> str:
+    """Remove <emoji id=...>char</emoji> wrappers, keeping only the visible char."""
+    return _STRIP_EMOJI_RE.sub(r'\1', text) if text else text
 
 
 def _rebuild_sorted_map():
@@ -128,6 +137,17 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 )
             except IndexError:
                 pass
+            except DocumentInvalid:
+                # Invalid photo or invalid emoji in caption — strip emoji and retry text-only
+                LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo send, falling back to text-only")
+                plain_text = _strip_emoji_tags(text)
+                return await message.reply(
+                    text=plain_text,
+                    quote=True,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_markup=buttons,
+                )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendMessage(message, text, buttons, des_dir)
@@ -160,6 +180,21 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, None, photo)
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
+    except DocumentInvalid:
+        # Custom emoji IDs in text are invalid/expired — strip tags and retry plain
+        LOGGER.warning("sendMessage: DOCUMENT_INVALID on text send, retrying without custom emoji")
+        plain_text = _strip_emoji_tags(text)
+        try:
+            return await message.reply(
+                text=plain_text,
+                quote=True,
+                disable_web_page_preview=True,
+                disable_notification=True,
+                reply_markup=buttons,
+            )
+        except Exception as e2:
+            LOGGER.error(f"sendMessage: plain retry also failed: {e2}")
+            return str(e2)
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -181,6 +216,16 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 )
             except IndexError:
                 pass
+            except DocumentInvalid:
+                LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on photo, falling back to text-only")
+                plain_text = _strip_emoji_tags(text)
+                return await bot.send_message(
+                    chat_id=chat_id,
+                    text=plain_text,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_markup=buttons,
+                )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendCustomMsg(chat_id, text, buttons, des_dir)
@@ -201,6 +246,20 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await sendCustomMsg(chat_id, text, buttons, photo)
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
+    except DocumentInvalid:
+        LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on text send, retrying without emoji")
+        plain_text = _strip_emoji_tags(text)
+        try:
+            return await bot.send_message(
+                chat_id=chat_id,
+                text=plain_text,
+                disable_web_page_preview=True,
+                disable_notification=True,
+                reply_markup=buttons,
+            )
+        except Exception as e2:
+            LOGGER.error(f"sendCustomMsg: plain retry failed: {e2}")
+            return str(e2)
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -247,6 +306,22 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     msg_dict[f"{chat.id}:{topic_id}"] = sent
                 except IndexError:
                     pass
+                except DocumentInvalid:
+                    LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on photo for {channel_id}, falling back to text-only")
+                    plain_text = _strip_emoji_tags(text)
+                    try:
+                        sent = await bot.send_message(
+                            chat_id=chat.id,
+                            text=plain_text,
+                            disable_web_page_preview=True,
+                            disable_notification=True,
+                            reply_to_message_id=topic_id,
+                            reply_markup=buttons,
+                        )
+                        msg_dict[f"{chat.id}:{topic_id}"] = sent
+                    except Exception as e2:
+                        LOGGER.error(f"sendMultiMessage: plain fallback failed: {e2}")
+                    continue
                 except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                     des_dir = await download_image_url(photo)
                     await sendMultiMessage(chat_ids, text, buttons, des_dir)
@@ -268,6 +343,21 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
             LOGGER.warning(str(f))
             await sleep(f.value * 1.2)
             return await sendMultiMessage(chat_ids, text, buttons, photo)
+        except DocumentInvalid:
+            LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on text for {channel_id}, retrying without emoji")
+            plain_text = _strip_emoji_tags(text)
+            try:
+                sent = await bot.send_message(
+                    chat_id=chat.id,
+                    text=plain_text,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_to_message_id=topic_id,
+                    reply_markup=buttons,
+                )
+                msg_dict[f"{chat.id}:{topic_id}"] = sent
+            except Exception as e2:
+                LOGGER.error(f"sendMultiMessage: plain retry failed: {e2}")
         except Exception as e:
             LOGGER.error(str(e))
     return msg_dict
@@ -296,6 +386,17 @@ async def editMessage(message, text, buttons=None, photo=None):
         pass
     except ReplyMarkupInvalid:
         return await editMessage(message, text, None, photo)
+    except DocumentInvalid:
+        # Invalid emoji in text — strip tags and retry
+        LOGGER.warning("editMessage: DOCUMENT_INVALID, retrying without custom emoji")
+        plain_text = _strip_emoji_tags(text)
+        try:
+            if message.media:
+                return await message.edit_caption(caption=plain_text, reply_markup=buttons)
+            await message.edit(text=plain_text, disable_web_page_preview=True, reply_markup=buttons)
+        except Exception as e2:
+            LOGGER.error(f"editMessage: plain retry failed: {e2}")
+            return str(e2)
     except Exception as e:
         LOGGER.error(str(e))
         return str(e)
