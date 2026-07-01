@@ -46,6 +46,11 @@ from pyrogram.enums import ChatType
 from pyrogram.types import BotCommand
 from pyrogram.errors import PeerIdInvalid
 
+try:
+    from pyrogram.enums import ButtonStyle
+except ImportError:
+    ButtonStyle = None
+
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.themes import BotTheme
 from bot.version import get_version
@@ -381,7 +386,12 @@ def get_readable_message():
 
     msg += BotTheme("FOOTER")
     buttons = ButtonMaker()
-    buttons.ibutton(BotTheme("REFRESH", Page=f"{PAGE_NO}/{PAGES}"), "status ref")
+    buttons.ibutton(
+        BotTheme("REFRESH", Page=f"{PAGE_NO}/{PAGES}"),
+        "status ref",
+        style=ButtonStyle.PRIMARY if ButtonStyle else None,
+        icon_custom_emoji_id=5231200819986047254,
+    )
     if tasks > STATUS_LIMIT:
         if config_dict["BOT_MAX_TASKS"]:
             msg += BotTheme(
@@ -393,9 +403,24 @@ def get_readable_message():
         else:
             msg += BotTheme("TASKS", Tasks=tasks)
         buttons = ButtonMaker()
-        buttons.ibutton(BotTheme("PREVIOUS"), "status pre")
-        buttons.ibutton(BotTheme("REFRESH", Page=f"{PAGE_NO}/{PAGES}"), "status ref")
-        buttons.ibutton(BotTheme("NEXT"), "status nex")
+        buttons.ibutton(
+            BotTheme("PREVIOUS"),
+            "status pre",
+            style=ButtonStyle.PRIMARY if ButtonStyle else None,
+            icon_custom_emoji_id=5334827982722710068,
+        )
+        buttons.ibutton(
+            BotTheme("REFRESH", Page=f"{PAGE_NO}/{PAGES}"),
+            "status ref",
+            style=ButtonStyle.PRIMARY if ButtonStyle else None,
+            icon_custom_emoji_id=5231200819986047254,
+        )
+        buttons.ibutton(
+            BotTheme("NEXT"),
+            "status nex",
+            style=ButtonStyle.PRIMARY if ButtonStyle else None,
+            icon_custom_emoji_id=5334859357458807293,
+        )
     button = buttons.build_menu(3)
     msg += BotTheme("Cpu", cpu=cpu_percent())
     msg += BotTheme(
