@@ -139,28 +139,16 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
             except IndexError:
                 pass
             except DocumentInvalid:
-                # Photo is invalid — keep emoji tags and retry as text-only message
-                LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo send, falling back to text-only")
-                try:
-                    return await message.reply(
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        quote=True,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_markup=buttons,
-                    )
-                except DocumentInvalid:
-                    # Emoji IDs also invalid — strip and send plain
-                    plain_text = _strip_emoji_tags(text)
-                    return await message.reply(
-                        text=plain_text,
-                        parse_mode=ParseMode.HTML,
-                        quote=True,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_markup=buttons,
-                    )
+                # Photo URL/document invalid — send text-only (emoji tags intact, bot CAN use them)
+                LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo, falling back to text-only")
+                return await message.reply(
+                    text=text,
+                    parse_mode=ParseMode.HTML,
+                    quote=True,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_markup=buttons,
+                )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendMessage(message, text, buttons, des_dir)
@@ -196,8 +184,8 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
     except DocumentInvalid:
-        # Custom emoji IDs in text are invalid/expired — strip tags and retry plain
-        LOGGER.warning("sendMessage: DOCUMENT_INVALID on text send, retrying without custom emoji")
+        # Emoji IDs themselves invalid — strip and retry plain
+        LOGGER.warning("sendMessage: DOCUMENT_INVALID on text, retrying without emoji tags")
         plain_text = _strip_emoji_tags(text)
         try:
             return await message.reply(
@@ -233,25 +221,16 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
             except IndexError:
                 pass
             except DocumentInvalid:
+                # Photo invalid — text-only fallback (emoji tags intact, bot CAN use them)
                 LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on photo, falling back to text-only")
-                try:
-                    return await bot.send_message(
-                        chat_id=chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_markup=buttons,
-                    )
-                except DocumentInvalid:
-                    plain_text = _strip_emoji_tags(text)
-                    return await bot.send_message(
-                        chat_id=chat_id,
-                        text=plain_text,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_markup=buttons,
-                    )
+                return await bot.send_message(
+                    chat_id=chat_id,
+                    text=text,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                    reply_markup=buttons,
+                )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendCustomMsg(chat_id, text, buttons, des_dir)
@@ -274,7 +253,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
     except DocumentInvalid:
-        LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on text send, retrying without emoji")
+        LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on text, retrying without emoji tags")
         plain_text = _strip_emoji_tags(text)
         try:
             return await bot.send_message(
@@ -336,6 +315,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 except IndexError:
                     pass
                 except DocumentInvalid:
+                    # Photo invalid — text-only fallback (emoji tags intact)
                     LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on photo for {channel_id}, falling back to text-only")
                     try:
                         sent = await bot.send_message(
@@ -348,23 +328,8 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                             reply_markup=buttons,
                         )
                         msg_dict[f"{chat.id}:{topic_id}"] = sent
-                    except DocumentInvalid:
-                        plain_text = _strip_emoji_tags(text)
-                        try:
-                            sent = await bot.send_message(
-                                chat_id=chat.id,
-                                text=plain_text,
-                                parse_mode=ParseMode.HTML,
-                                disable_web_page_preview=True,
-                                disable_notification=True,
-                                reply_to_message_id=topic_id,
-                                reply_markup=buttons,
-                            )
-                            msg_dict[f"{chat.id}:{topic_id}"] = sent
-                        except Exception as e2:
-                            LOGGER.error(f"sendMultiMessage: plain fallback failed: {e2}")
                     except Exception as e2:
-                        LOGGER.error(f"sendMultiMessage: plain fallback failed: {e2}")
+                        LOGGER.error(f"sendMultiMessage: text fallback also failed: {e2}")
                     continue
                 except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                     des_dir = await download_image_url(photo)
@@ -415,10 +380,23 @@ async def editMessage(message, text, buttons=None, photo=None):
         if message.media:
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
-                return await message.edit_media(
-                    InputMediaPhoto(photo, text, parse_mode=ParseMode.HTML),
-                    reply_markup=buttons,
-                )
+                try:
+                    return await message.edit_media(
+                        InputMediaPhoto(photo, text, parse_mode=ParseMode.HTML),
+                        reply_markup=buttons,
+                    )
+                except DocumentInvalid:
+                    # ── CORE FIX ──────────────────────────────────────────────
+                    # The photo URL from IMAGES is invalid (DOCUMENT_INVALID).
+                    # This is NOT an emoji-tag problem — the bot CAN use <emoji>
+                    # tags in text/captions. Just keep the existing photo and
+                    # update the caption with emoji tags intact.
+                    LOGGER.warning("editMessage: DOCUMENT_INVALID on photo, keeping existing photo and updating caption only")
+                    return await message.edit_caption(
+                        caption=text,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=buttons,
+                    )
             return await message.edit_caption(
                 caption=text,
                 parse_mode=ParseMode.HTML,
@@ -439,8 +417,8 @@ async def editMessage(message, text, buttons=None, photo=None):
     except ReplyMarkupInvalid:
         return await editMessage(message, text, None, photo)
     except DocumentInvalid:
-        # Emoji IDs invalid/expired — strip tags and retry plain
-        LOGGER.warning("editMessage: DOCUMENT_INVALID, retrying without custom emoji")
+        # Emoji tag IDs themselves are invalid — strip and retry plain
+        LOGGER.warning("editMessage: DOCUMENT_INVALID on emoji tags, retrying without emoji")
         plain_text = _strip_emoji_tags(text)
         try:
             if message.media:
