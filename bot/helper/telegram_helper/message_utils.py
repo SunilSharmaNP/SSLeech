@@ -138,16 +138,26 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
             except IndexError:
                 pass
             except DocumentInvalid:
-                # Invalid photo or invalid emoji in caption — strip emoji and retry text-only
+                # Photo is invalid — keep emoji tags and retry as text-only message
                 LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo send, falling back to text-only")
-                plain_text = _strip_emoji_tags(text)
-                return await message.reply(
-                    text=plain_text,
-                    quote=True,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                )
+                try:
+                    return await message.reply(
+                        text=text,
+                        quote=True,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_markup=buttons,
+                    )
+                except DocumentInvalid:
+                    # Emoji IDs also invalid — strip and send plain
+                    plain_text = _strip_emoji_tags(text)
+                    return await message.reply(
+                        text=plain_text,
+                        quote=True,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_markup=buttons,
+                    )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendMessage(message, text, buttons, des_dir)
