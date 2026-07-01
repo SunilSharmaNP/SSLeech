@@ -626,9 +626,69 @@ async def sendStatusMessage(msg):
             message = status_reply_dict[chat_id][0]
             await deleteMessage(message)
             del status_reply_dict[chat_id]
-        message = await sendMessage(msg, progress, buttons, photo="IMAGES")
+
+        # ── Premium emoji strategy ────────────────────────────────────────────
+        # Regular bots get DOCUMENT_INVALID when sending <emoji> entities.
+        # Only the premium user client (@Premiumdfvip) can send them.
+        # We try user client first so status messages show animated emojis.
+        # If user is unavailable or the chat is not accessible to user, we fall
+        # back to bot (emojis will be stripped to plain Unicode by sendMessage).
+        message = None
+        if user:
+            text = _inject_html_emoji(progress)
+            try:
+                images = config_dict.get("IMAGES", [])
+                if images:
+                    photo = rchoice(images)
+                    try:
+                        message = await user.send_photo(
+                            chat_id=chat_id,
+                            photo=photo,
+                            caption=text,
+                            parse_mode=ParseMode.HTML,
+                            reply_markup=buttons,
+                            disable_notification=True,
+                        )
+                    except DocumentInvalid:
+                        # Photo URL bad — keep text with emojis intact
+                        LOGGER.warning("sendStatusMessage: user DOCUMENT_INVALID on photo, sending text-only")
+                        message = await user.send_message(
+                            chat_id=chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                            disable_notification=True,
+                            reply_markup=buttons,
+                        )
+                    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
+                        # Bad photo dimensions / curl fail — text-only fallback
+                        message = await user.send_message(
+                            chat_id=chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                            disable_notification=True,
+                            reply_markup=buttons,
+                        )
+                else:
+                    message = await user.send_message(
+                        chat_id=chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_markup=buttons,
+                    )
+            except Exception as ue:
+                LOGGER.warning(f"sendStatusMessage: user client failed ({ue!r}), falling back to bot")
+                message = None
+
+        # Bot fallback — emojis stripped to plain Unicode by sendMessage
+        if not message:
+            message = await sendMessage(msg, progress, buttons, photo="IMAGES")
+
         if isinstance(message, str):
-            LOGGER.error(f"sendStatusMessage: sendMessage returned error — {message}")
+            LOGGER.error(f"sendStatusMessage: send returned error — {message}")
             return
         if message:
             if hasattr(message, "caption"):
