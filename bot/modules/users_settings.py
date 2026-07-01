@@ -2,6 +2,11 @@
 from datetime import datetime
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex, create
+
+try:
+    from pyrogram.enums import ButtonStyle
+except ImportError:
+    ButtonStyle = None
 from aiofiles import open as aiopen
 from aiofiles.os import remove as aioremove, path as aiopath, mkdir
 from langcodes import Language
@@ -200,12 +205,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
     rclone_path = f"rclone/{user_id}.conf"
     user_dict = user_data.get(user_id, {})
     if key is None:
-        buttons.ibutton("𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal")
-        buttons.ibutton("𝐌ɪʀʀᴏʀ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} mirror")
-        buttons.ibutton("𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} leech")
+        buttons.ibutton("𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal", style=ButtonStyle.PRIMARY if ButtonStyle else None)
+        buttons.ibutton("𝐌ɪʀʀᴏʀ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} mirror", style=ButtonStyle.PRIMARY if ButtonStyle else None)
+        buttons.ibutton("𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} leech", style=ButtonStyle.PRIMARY if ButtonStyle else None)
         if user_dict and any(key in user_dict for key in list(fname_dict.keys())):
-            buttons.ibutton("𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢ", f"userset {user_id} reset_all")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close")
+            buttons.ibutton("𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢ", f"userset {user_id} reset_all", style=ButtonStyle.DANGER if ButtonStyle else None)
+        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", style=ButtonStyle.DANGER if ButtonStyle else None)
 
         text = BotTheme(
             "USER_SETTING",
@@ -424,6 +429,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             f"{'✅️' if lcaption != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ",
             f"userset {user_id} lcaption",
+            style=ButtonStyle.SUCCESS if (ButtonStyle and lcaption != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
 
         lprefix = (
@@ -439,6 +445,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             f"{'✅️' if lprefix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐏ʀᴇғɪx",
             f"userset {user_id} lprefix",
+            style=ButtonStyle.SUCCESS if (ButtonStyle and lprefix != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
 
         lsuffix = (
@@ -454,6 +461,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             f"{'✅️' if lsuffix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐒ᴜғғɪx",
             f"userset {user_id} lsuffix",
+            style=ButtonStyle.SUCCESS if (ButtonStyle and lsuffix != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
 
         lremname = (
@@ -469,9 +477,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             f"{'✅️' if lremname != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ",
             f"userset {user_id} lremname",
+            style=ButtonStyle.SUCCESS if (ButtonStyle and lremname != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
 
-        buttons.ibutton("𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘ", f"userset {user_id} ldump")
+        buttons.ibutton(
+            "𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘ",
+            f"userset {user_id} ldump",
+            style=ButtonStyle.PRIMARY if ButtonStyle else None,
+        )
         ldump = "𝐍ᴏᴛ 𝐄xɪsᴛs" if (val := user_dict.get("ldump", "")) == "" else len(val)
 
         lmeta = (
@@ -482,6 +495,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             f"{'✅️' if lmeta != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐌ᴇᴛᴀᴅᴀᴛᴀ",
             f"userset {user_id} lmeta",
+            style=ButtonStyle.SUCCESS if (ButtonStyle and lmeta != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
 
         _ar_mode = user_dict.get("auto_rename", False)
