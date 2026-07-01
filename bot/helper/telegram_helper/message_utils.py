@@ -143,6 +143,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 try:
                     return await message.reply(
                         text=text,
+                        parse_mode=ParseMode.HTML,
                         quote=True,
                         disable_web_page_preview=True,
                         disable_notification=True,
@@ -153,6 +154,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                     plain_text = _strip_emoji_tags(text)
                     return await message.reply(
                         text=plain_text,
+                        parse_mode=ParseMode.HTML,
                         quote=True,
                         disable_web_page_preview=True,
                         disable_notification=True,
@@ -167,9 +169,10 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 raise  # let outer except ReplyMarkupInvalid retry without buttons
             except Exception as e:
                 LOGGER.error(format_exc())
+        parse_mode = kwargs.pop("parse_mode", ParseMode.HTML)
         return await message.reply(
             text=text,
-            parse_mode=ParseMode.HTML,
+            parse_mode=parse_mode,
             quote=True,
             disable_web_page_preview=True,
             disable_notification=True,
