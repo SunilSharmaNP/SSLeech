@@ -15,7 +15,7 @@ from signal import signal, SIGINT
 from aiofiles.os import path as aiopath, remove as aioremove
 from aiofiles import open as aiopen
 from pyrogram import idle
-from pyrogram.enums import ChatMemberStatus, ChatType
+from pyrogram.enums import ChatMemberStatus, ChatType, ParseMode
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, private, regex
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -318,6 +318,7 @@ async def restart_notification():
                     chat_id=chat_id,
                     message_id=msg_id,
                     text=msg,
+                    parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                 )
                 await aioremove(".restartmsg")
@@ -325,6 +326,7 @@ async def restart_notification():
                 await bot.send_message(
                     chat_id=cid,
                     text=msg,
+                    parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                     disable_notification=True,
                 )
@@ -369,6 +371,7 @@ async def restart_notification():
                     timz=config_dict["TIMEZONE"],
                     version=get_version(),
                 ),
+                parse_mode=ParseMode.HTML,
             )
         except Exception as e:
             LOGGER.error(e)
