@@ -169,6 +169,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 LOGGER.error(format_exc())
         return await message.reply(
             text=text,
+            parse_mode=ParseMode.HTML,
             quote=True,
             disable_web_page_preview=True,
             disable_notification=True,
@@ -228,14 +229,24 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 pass
             except DocumentInvalid:
                 LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on photo, falling back to text-only")
-                plain_text = _strip_emoji_tags(text)
-                return await bot.send_message(
-                    chat_id=chat_id,
-                    text=plain_text,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                )
+                try:
+                    return await bot.send_message(
+                        chat_id=chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_markup=buttons,
+                    )
+                except DocumentInvalid:
+                    plain_text = _strip_emoji_tags(text)
+                    return await bot.send_message(
+                        chat_id=chat_id,
+                        text=plain_text,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_markup=buttons,
+                    )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendCustomMsg(chat_id, text, buttons, des_dir)
@@ -263,6 +274,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
             return await bot.send_message(
                 chat_id=chat_id,
                 text=plain_text,
+                parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 disable_notification=True,
                 reply_markup=buttons,
@@ -318,17 +330,32 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     pass
                 except DocumentInvalid:
                     LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on photo for {channel_id}, falling back to text-only")
-                    plain_text = _strip_emoji_tags(text)
                     try:
                         sent = await bot.send_message(
                             chat_id=chat.id,
-                            text=plain_text,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True,
                             disable_notification=True,
                             reply_to_message_id=topic_id,
                             reply_markup=buttons,
                         )
                         msg_dict[f"{chat.id}:{topic_id}"] = sent
+                    except DocumentInvalid:
+                        plain_text = _strip_emoji_tags(text)
+                        try:
+                            sent = await bot.send_message(
+                                chat_id=chat.id,
+                                text=plain_text,
+                                parse_mode=ParseMode.HTML,
+                                disable_web_page_preview=True,
+                                disable_notification=True,
+                                reply_to_message_id=topic_id,
+                                reply_markup=buttons,
+                            )
+                            msg_dict[f"{chat.id}:{topic_id}"] = sent
+                        except Exception as e2:
+                            LOGGER.error(f"sendMultiMessage: plain fallback failed: {e2}")
                     except Exception as e2:
                         LOGGER.error(f"sendMultiMessage: plain fallback failed: {e2}")
                     continue
@@ -360,6 +387,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                 sent = await bot.send_message(
                     chat_id=chat.id,
                     text=plain_text,
+                    parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                     disable_notification=True,
                     reply_to_message_id=topic_id,
@@ -382,9 +410,14 @@ async def editMessage(message, text, buttons=None, photo=None):
                 return await message.edit_media(
                     InputMediaPhoto(photo, text), reply_markup=buttons
                 )
-            return await message.edit_caption(caption=text, reply_markup=buttons)
+            return await message.edit_caption(
+                caption=text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=buttons,
+            )
         await message.edit(
             text=text,
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=buttons,
         )
@@ -397,13 +430,22 @@ async def editMessage(message, text, buttons=None, photo=None):
     except ReplyMarkupInvalid:
         return await editMessage(message, text, None, photo)
     except DocumentInvalid:
-        # Invalid emoji in text — strip tags and retry
+        # Emoji IDs invalid/expired — strip tags and retry plain
         LOGGER.warning("editMessage: DOCUMENT_INVALID, retrying without custom emoji")
         plain_text = _strip_emoji_tags(text)
         try:
             if message.media:
-                return await message.edit_caption(caption=plain_text, reply_markup=buttons)
-            await message.edit(text=plain_text, disable_web_page_preview=True, reply_markup=buttons)
+                return await message.edit_caption(
+                    caption=plain_text,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=buttons,
+                )
+            await message.edit(
+                text=plain_text,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+                reply_markup=buttons,
+            )
         except Exception as e2:
             LOGGER.error(f"editMessage: plain retry failed: {e2}")
             return str(e2)
