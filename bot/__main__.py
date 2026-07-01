@@ -96,8 +96,8 @@ async def stats(client, message):
 async def start(client, message):
     try:
         buttons = ButtonMaker()
-        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL"))
-        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"))
+        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL"), icon_custom_emoji_id=5424818078833715060)
+        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"), icon_custom_emoji_id=5471952986970267163)
         reply_markup = buttons.build_menu(2)
         if len(message.command) > 1 and message.command[1] == "wzmlx":
             await deleteMessage(message)
