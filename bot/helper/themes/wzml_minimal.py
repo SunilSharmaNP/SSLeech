@@ -2,16 +2,32 @@
 class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
-    ST_BN1_NAME = '<emoji id=5471952986970267163>👑</emoji> 𝐎ᴡɴᴇʀ'
-    ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
-    ST_BN2_NAME = '<emoji id=5424818078833715060>📢</emoji> 𝐔ᴘᴅᴀᴛᴇs'
-    ST_BN2_URL = 'https://t.me/SSBotsUpdates'
-    ST_MSG = '''<b><emoji id=5325547803936572038>🙏</emoji> 𝐓ʜᴀɴᴋs 😇  
-𝐍ᴏᴡ, 𝐈 𝐖ɪʟʟ 𝐒ᴇɴᴅ 𝐀ʟʟ 𝐘ᴏᴜʀ 𝐋ᴇᴇᴄʜ/𝐌ɪʀʀᴏʀ 𝐅ɪʟᴇs & 𝐋ɪɴᴋs 𝐇ᴇʀᴇ.  
-<emoji id=5433655514094022326>🚀</emoji> 𝐒ᴛᴀʀᴛ 𝐔sɪɴɢ 𝐌ᴇ 𝐈ɴ 𝐆ʀᴏᴜᴘ & 𝐄ɴᴊᴏʏ <emoji id=5471952986970267163>❤️</emoji></b>'''
+    ST_BN1_NAME = 'Updates'
+    ST_BN1_URL = 'https://t.me/SSBotsUpdates'
+    ST_BN2_NAME = 'Group'
+    ST_BN2_URL = 'https://t.me/Sunil_Sharma_2_0'
+    ST_MSG = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
 
-    ST_BOTPM = """<i>𝐍ᴏᴡ, 𝐓ʜɪs 𝐛ᴏᴛ ᴡɪʟʟ sᴇɴᴅ ᴀʟʟ ʏᴏᴜʀ 𝐅ɪʟᴇs ᴀɴᴅ 𝐋ɪɴᴋs ʜᴇʀᴇ. 𝐒ᴛᴀʀᴛ 𝐔sɪɴɢ ...</i>"""
-    ST_UNAUTH = """<i>𝐘ᴏᴜ 𝐀ʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ ᴜsᴇʀ! 𝐃ᴇᴘʟᴏʏ ʏᴏᴜʀ ᴏᴡɴ 𝐖𝐙𝐌𝐋-𝐗 𝐌ɪʀʀᴏʀ-𝐋ᴇᴇᴄʜ 𝐛ᴏᴛ</i>"""
+<emoji id=5244837092042750681>📈</emoji> <b>I can mirror or leech from:</b>
+
+• <emoji id=5271604874419647061>🔗</emoji> <b>Direct links</b>
+
+• <emoji id=6026239398650056451>📁</emoji> <b>Telegram files</b>
+
+• <emoji id=5359772714691216710>📱</emoji> <b>Torrents & magnets</b>
+
+• <emoji id=5372878055775683161>📱</emoji> <b>Google Drive / Cloud</b>
+
+• <emoji id=5456140674028019486>⚡️</emoji> <b>Upload to Telegram</b>
+
+<emoji id=5341715473882955310>⚙️</emoji> <b>Use {help_command} to see all commands.</b>"""
+
+    ST_BOTPM = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
+
+<emoji id=5244837092042750681>📈</emoji> <b>Now I will send all your files and links here. Start using me in the group!</b>"""
+    ST_UNAUTH = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
+
+<emoji id=5240241223632954241>🚫</emoji> <b>You are not an authorized user!</b>"""
     OWN_TOKEN_GENERATE = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
     USED_TOKEN = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ᴀʟʀᴇᴀᴅʏ ᴜsᴇᴅ!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ɴᴇᴡ ᴏɴᴇ.</i>"""
     LOGGED_PASSWORD = """<b>𝐁ᴏᴛ 𝐀ʟʀᴇᴀᴅʏ 𝐋ᴏɢɢᴇᴅ 𝐈ɴ ᴠɪᴀ 𝐏ᴀssᴡᴏʀᴅ</b>\n\n<i>𝐍ᴏ ɴᴇᴇᴅ ᴛᴏ 𝐀ᴄᴄᴇᴘᴛ 𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴs.</i>"""
