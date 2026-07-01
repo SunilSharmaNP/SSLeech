@@ -120,6 +120,58 @@ def _inject_html_emoji(text: str) -> str:
     return ''.join(result)
 
 
+def _strip_markup_emoji_tags(reply_markup):
+    """Strip custom-emoji tags from button texts inside reply_markup.
+
+    This function is best-effort: it supports InlineKeyboardMarkup objects,
+    dicts with 'inline_keyboard' and plain list-based keybords. If it can't
+    modify the structure, it returns the original reply_markup.
+    """
+    if not reply_markup:
+        return reply_markup
+
+    try:
+        # pyrogram.types.InlineKeyboardMarkup has attribute inline_keyboard
+        if hasattr(reply_markup, 'inline_keyboard'):
+            kb = reply_markup.inline_keyboard
+            for row in kb:
+                for btn in row:
+                    try:
+                        if hasattr(btn, 'text') and btn.text:
+                            btn.text = _strip_emoji_tags(btn.text)
+                    except Exception:
+                        # best-effort; ignore failures for individual buttons
+                        continue
+            return reply_markup
+
+        # If reply_markup is a dict (or JSON-like) produced manually
+        if isinstance(reply_markup, dict) and 'inline_keyboard' in reply_markup:
+            for r_idx, row in enumerate(reply_markup['inline_keyboard']):
+                for b_idx, btn in enumerate(row):
+                    if isinstance(btn, dict) and 'text' in btn and btn['text']:
+                        reply_markup['inline_keyboard'][r_idx][b_idx]['text'] = _strip_emoji_tags(btn['text'])
+            return reply_markup
+
+        # If it's a list of lists
+        if isinstance(reply_markup, list):
+            for r_idx, row in enumerate(reply_markup):
+                for b_idx, btn in enumerate(row):
+                    # button could be InlineKeyboardButton or dict
+                    if hasattr(btn, 'text') and btn.text:
+                        btn.text = _strip_emoji_tags(btn.text)
+                    elif isinstance(btn, dict) and 'text' in btn and btn['text']:
+                        reply_markup[r_idx][b_idx]['text'] = _strip_emoji_tags(btn['text'])
+            return reply_markup
+
+    except Exception:
+        # If anything goes wrong, return original markup — we don't want to
+        # crash flows because of markup sanitization.
+        LOGGER.error('Failed to strip emoji tags from reply_markup', exc_info=True)
+        return reply_markup
+
+    return reply_markup
+
+
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
         text = _inject_html_emoji(text)
@@ -152,13 +204,14 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 except DocumentInvalid:
                     # Emoji IDs also invalid — strip and send plain
                     plain_text = _strip_emoji_tags(text)
+                    clean_buttons = _strip_markup_emoji_tags(buttons)
                     return await message.reply(
                         text=plain_text,
                         parse_mode=ParseMode.HTML,
                         quote=True,
                         disable_web_page_preview=True,
                         disable_notification=True,
-                        reply_markup=buttons,
+                        reply_markup=clean_buttons,
                     )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
@@ -198,13 +251,14 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         # Custom emoji IDs in text are invalid/expired — strip tags and retry plain
         LOGGER.warning("sendMessage: DOCUMENT_INVALID on text send, retrying without custom emoji")
         plain_text = _strip_emoji_tags(text)
+        clean_buttons = _strip_markup_emoji_tags(buttons)
         try:
             return await message.reply(
                 text=plain_text,
                 quote=True,
                 disable_web_page_preview=True,
                 disable_notification=True,
-                reply_markup=buttons,
+                reply_markup=clean_buttons,
             )
         except Exception as e2:
             LOGGER.error(f"sendMessage: plain retry also failed: {e2}")
@@ -243,12 +297,13 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                     )
                 except DocumentInvalid:
                     plain_text = _strip_emoji_tags(text)
+                    clean_buttons = _strip_markup_emoji_tags(buttons)
                     return await bot.send_message(
                         chat_id=chat_id,
                         text=plain_text,
                         disable_web_page_preview=True,
                         disable_notification=True,
-                        reply_markup=buttons,
+                        reply_markup=clean_buttons,
                     )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
@@ -273,6 +328,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     except DocumentInvalid:
         LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on text send, retrying without emoji")
         plain_text = _strip_emoji_tags(text)
+        clean_buttons = _strip_markup_emoji_tags(buttons)
         try:
             return await bot.send_message(
                 chat_id=chat_id,
@@ -280,7 +336,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 disable_notification=True,
-                reply_markup=buttons,
+                reply_markup=clean_buttons,
             )
         except Exception as e2:
             LOGGER.error(f"sendCustomMsg: plain retry failed: {e2}")
@@ -346,6 +402,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                         msg_dict[f"{chat.id}:{topic_id}"] = sent
                     except DocumentInvalid:
                         plain_text = _strip_emoji_tags(text)
+                        clean_buttons = _strip_markup_emoji_tags(buttons)
                         try:
                             sent = await bot.send_message(
                                 chat_id=chat.id,
@@ -354,7 +411,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                                 disable_web_page_preview=True,
                                 disable_notification=True,
                                 reply_to_message_id=topic_id,
-                                reply_markup=buttons,
+                                reply_markup=clean_buttons,
                             )
                             msg_dict[f"{chat.id}:{topic_id}"] = sent
                         except Exception as e2:
@@ -386,6 +443,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
         except DocumentInvalid:
             LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on text for {channel_id}, retrying without emoji")
             plain_text = _strip_emoji_tags(text)
+            clean_buttons = _strip_markup_emoji_tags(buttons)
             try:
                 sent = await bot.send_message(
                     chat_id=chat.id,
@@ -394,7 +452,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     disable_web_page_preview=True,
                     disable_notification=True,
                     reply_to_message_id=topic_id,
-                    reply_markup=buttons,
+                    reply_markup=clean_buttons,
                 )
                 msg_dict[f"{chat.id}:{topic_id}"] = sent
             except Exception as e2:
@@ -436,18 +494,19 @@ async def editMessage(message, text, buttons=None, photo=None):
         # Emoji IDs invalid/expired — strip tags and retry plain
         LOGGER.warning("editMessage: DOCUMENT_INVALID, retrying without custom emoji")
         plain_text = _strip_emoji_tags(text)
+        clean_buttons = _strip_markup_emoji_tags(buttons)
         try:
             if message.media:
                 return await message.edit_caption(
                     caption=plain_text,
                     parse_mode=ParseMode.HTML,
-                    reply_markup=buttons,
+                    reply_markup=clean_buttons,
                 )
             await message.edit(
                 text=plain_text,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=buttons,
+                reply_markup=clean_buttons,
             )
         except Exception as e2:
             LOGGER.error(f"editMessage: plain retry failed: {e2}")
