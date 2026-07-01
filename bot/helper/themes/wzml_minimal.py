@@ -196,19 +196,19 @@ class WZMLStyle:
     BAR = "\n┠ {Bar}"
     PROCESSED = "\n┠<b><emoji id=5445284980978621387>⚡</emoji>𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
     STATUS = '\n┠ <b><emoji id=5325547803936572038>🪄</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
-    ETA = "\n┠<b><emoji id=5301085541559983872>⏳</emoji> 𝐄ᴛᴀ :</b> {Eta}"
+    ETA = "\n┠<b><emoji id=5456140674028019486>⏳</emoji> 𝐄ᴛᴀ :</b> {Eta}"
     SPEED = "\n┠<b><emoji id=5368324170671202286>☘️</emoji> 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
-    ELAPSED = "\n┠ <b><emoji id=5301085541559983872>🕓</emoji> 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
-    ENGINE = "\n┠ <b><emoji id=5469744063815102906>🪩</emoji> 𝐄ɴɢɪɴᴇ :</b> {Engine}"
+    ELAPSED = "\n┠ <b><emoji id=5456140674028019486>🕓</emoji> 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
+    ENGINE = "\n┠ <b><emoji id=5341715473882955310>🪩</emoji> 𝐄ɴɢɪɴᴇ :</b> {Engine}"
     STA_MODE = "\n┠ <b><emoji id=5471952986970267163>🌐</emoji> 𝐌ᴏᴅᴇ :</b> {Mode}"
     SEEDERS = "\n┠ <b><emoji id=5368324170671202286>🌱</emoji> 𝐒ᴇᴇᴅᴇʀs :</b> {Seeders}"
     LEECHERS = "\n┠<b><emoji id=5368324170671202286>☘️</emoji> 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
 
     SEED_SIZE = "\n┠ <b><emoji id=5379763379953803263>📦</emoji> 𝐒ɪᴢᴇ : </b>{Size}"
-    SEED_SPEED = "\n┠ <b><emoji id=5433655514094022326>🚀</emoji> 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
+    SEED_SPEED = "\n┠ <b><emoji id=5456140674028019486>🚀</emoji> 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
     UPLOADED = "<b><emoji id=5471952986970267163>☁️</emoji> 𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
-    RATIO = "\n┠ <b><emoji id=5429518319243775957>📊</emoji> 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
-    TIME = "<b><emoji id=5301085541559983872>⏳</emoji> 𝐓ɪᴍᴇ : </b> {Time}"
+    RATIO = "\n┠ <b><emoji id=5244837092042750681>📊</emoji> 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
+    TIME = "<b><emoji id=5456140674028019486>⏳</emoji> 𝐓ɪᴍᴇ : </b> {Time}"
     SEED_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
     STATUS_SIZE = "\n┠ <b><emoji id=5379763379953803263>📦</emoji> 𝐒ɪᴢᴇ : </b>{Size}"
@@ -220,15 +220,15 @@ class WZMLStyle:
     CANCEL = "\n┠ {Cancel}\n"
     mn = "┗━━༻« <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┛\n\n"
 
-    FOOTER = "┎⌬ <b><i><emoji id=5429518319243775957>📊</emoji> 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
+    FOOTER = "┎⌬ <b><i><emoji id=5244837092042750681>📊</emoji> 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
     TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}\n"
     BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b><emoji id=5368324170671202286>🟢</emoji> 𝐀ᴠʟ:</b> {Free}\n"
-    Cpu = "┠<emoji id=5976578040426139845>🖥️</emoji><b> 𝐂ᴘᴜ:</b> {cpu}% | "
+    Cpu = "┠<emoji id=5224607267797606837>🖥️</emoji><b> 𝐂ᴘᴜ:</b> {cpu}% | "
     FREE = "<b><emoji id=5471952986970267163>💿</emoji> 𝐅:</b> {free} [{free_p}%]"
     Ram = "\n┠ <b><emoji id=5471952986970267163>🧠</emoji> 𝐑ᴀᴍ:</b> {ram}% | "
-    uptime = "<b><emoji id=5301085541559983872>⏳</emoji> 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
+    uptime = "<b><emoji id=5456140674028019486>⏳</emoji> 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
     DL = "\n┖ <b><emoji id=5471952986970267163>🔻</emoji> 𝐃ʟ:</b> {DL}/s | "
-    UL = "<b><emoji id=5971972727383264364>🔺</emoji> 𝐔ʟ:</b> {UL}/s"
+    UL = "<b><emoji id=5456140674028019486>🔺</emoji> 𝐔ʟ:</b> {UL}/s"
 
     PREVIOUS = "⫷"
     REFRESH = "📑𝐏ᴀɢᴇ\n{Page}"
@@ -240,7 +240,7 @@ class WZMLStyle:
     # async def countNode(_, message): ----> gd_count.py
     COUNT_MSG = "<b><emoji id=5471952986970267163>🔎</emoji> 𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
     COUNT_NAME = "<emoji id=5379763379953803263>📂</emoji> <b><i>{COUNT_NAME}</i></b>\n┃\n"
-    COUNT_SIZE = "┠ <emoji id=5429518319243775957>📏</emoji> <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
+    COUNT_SIZE = "┠ <emoji id=5244837092042750681>📏</emoji> <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
     COUNT_TYPE = "┠ <emoji id=5379748618268510153>🗂</emoji> <b>𝐓ʏᴘᴇ:</b> {COUNT_TYPE}\n"
     COUNT_SUB = "┠ <emoji id=5379748618268510153>📁</emoji> <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs:</b> {COUNT_SUB}\n"
     COUNT_FILE = "┠ <emoji id=5373123633415074227>📄</emoji> <b>𝐅ɪʟᴇs:</b> {COUNT_FILE}\n"
@@ -318,3 +318,4 @@ class WZMLStyle:
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
+    
