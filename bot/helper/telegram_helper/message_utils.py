@@ -569,3 +569,219 @@ async def get_tg_link_content(link, user_id, decrypter=None):
                 raise TgLinkException(
                     f"Bot User Session  don't have access to this chat!. ERROR: {e}"
                 ) from e
+
+    if private and user_sess:
+        if decrypter is None:
+            return None, ""
+        try:
+            async with Client(
+                user_id,
+                session_string=decrypter.decrypt(user_sess).decode(),
+                in_memory=True,
+                no_updates=True,
+            ) as usession:
+                user_message = await usession.get_messages(
+                    chat_id=chat, message_ids=msg_id
+                )
+        except InvalidToken:
+            raise TgLinkException("Provided Decryption Key is Invalid, Recheck & Retry")
+        except Exception as e:
+            raise TgLinkException(
+                f"User Session don't have access to this chat!. ERROR: {e}"
+            ) from e
+        if not user_message.empty:
+            return user_message, "user_sess"
+        else:
+            raise TgLinkException("Privatly Deleted or Not Accessible!")
+    elif not private:
+        return message, "bot"
+    else:
+        raise TgLinkException(
+            "Bot can't download from GROUPS without joining!, Set your Own Session to get access !"
+        )
+
+
+async def update_all_messages(force=False):
+    async with status_reply_dict_lock:
+        if (
+            not status_reply_dict
+            or not Interval
+            or (not force and time() - list(status_reply_dict.values())[0][1] < 3)
+        ):
+            return
+        for chat_id in list(status_reply_dict.keys()):
+            status_reply_dict[chat_id][1] = time()
+    async with download_dict_lock:
+        msg, buttons = await sync_to_async(get_readable_message)
+    if msg is None:
+        return
+    async with status_reply_dict_lock:
+        for chat_id in list(status_reply_dict.keys()):
+            stored = status_reply_dict.get(chat_id)
+            if not stored or isinstance(stored[0], str):
+                continue
+            if msg != stored[0].text:
+                rmsg = await editMessage(
+                    stored[0], msg, buttons, "IMAGES"
+                )
+                if isinstance(rmsg, str) and rmsg.startswith("Telegram says: [400"):
+                    del status_reply_dict[chat_id]
+                    continue
+                stored[0].text = msg
+                stored[1] = time()
+
+
+async def sendStatusMessage(msg):
+    async with download_dict_lock:
+        progress, buttons = await sync_to_async(get_readable_message)
+    if progress is None:
+        return
+    async with status_reply_dict_lock:
+        chat_id = msg.chat.id
+        if chat_id in list(status_reply_dict.keys()):
+            message = status_reply_dict[chat_id][0]
+            await deleteMessage(message)
+            del status_reply_dict[chat_id]
+        message = await sendMessage(msg, progress, buttons, photo="IMAGES")
+        if isinstance(message, str):
+            LOGGER.error(f"sendStatusMessage: sendMessage returned error — {message}")
+            return
+        if message:
+            if hasattr(message, "caption"):
+                message.caption = progress
+            else:
+                message.text = progress
+            status_reply_dict[chat_id] = [message, time()]
+            if not Interval:
+                Interval.append(
+                    setInterval(config_dict["STATUS_UPDATE_INTERVAL"], update_all_messages)
+                )
+
+
+async def open_category_btns(message):
+    user_id = message.from_user.id
+    msg_id = message.id
+    buttons = ButtonMaker()
+    _tick = True
+    if len(utds := await fetch_user_tds(user_id)) > 1:
+        for _name in utds.keys():
+            buttons.ibutton(
+                f'{"✅️" if _tick else ""} {_name}',
+                f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
+            )
+            if _tick:
+                _tick, cat_name = False, _name
+    elif len(categories_dict) > 1:
+        for _name in categories_dict.keys():
+            buttons.ibutton(
+                f'{"✅️" if _tick else ""} {_name}',
+                f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
+            )
+            if _tick:
+                _tick, cat_name = False, _name
+    buttons.ibutton("❌ Cancel", f"scat {user_id} {msg_id} scancel", "footer")
+    buttons.ibutton(f"✅ Done (60)", f"scat {user_id} {msg_id} sdone", "footer")
+    prompt = await sendMessage(
+        message,
+        f"<b>Select the category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
+        buttons.build_menu(3),
+    )
+    start_time = time()
+    bot_cache[msg_id] = [None, None, False, False, start_time]
+    while time() - start_time <= 60:
+        await sleep(0.5)
+        if bot_cache[msg_id][2] or bot_cache[msg_id][3]:
+            break
+    drive_id, index_link, _, is_cancelled, __ = bot_cache[msg_id]
+    if not is_cancelled:
+        await deleteMessage(prompt)
+    else:
+        await editMessage(prompt, "<b>Task Cancelled</b>")
+    del bot_cache[msg_id]
+    return drive_id, index_link, is_cancelled
+
+
+async def open_dump_btns(message):
+    user_id = message.from_user.id
+    msg_id = message.id
+    buttons = ButtonMaker()
+    _tick = True
+    if len(udmps := await fetch_user_dumps(user_id)) > 1:
+        for _name in udmps.keys():
+            buttons.ibutton(
+                f'{"✅️" if _tick else ""} {_name}',
+                f"dcat {user_id} {msg_id} {_name.replace(' ', '_')}",
+            )
+            if _tick:
+                _tick, cat_name = False, _name
+    buttons.ibutton("📤 Upload in All", f"dcat {user_id} {msg_id} All", "header")
+    buttons.ibutton("❌ Cancel", f"dcat {user_id} {msg_id} dcancel", "footer")
+    buttons.ibutton(f"✅ Done (60)", f"dcat {user_id} {msg_id} ddone", "footer")
+    prompt = await sendMessage(
+        message,
+        f"<b>Select the Dump category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
+        buttons.build_menu(3),
+    )
+    start_time = time()
+    bot_cache[msg_id] = [None, False, False, start_time]
+    while time() - start_time <= 60:
+        await sleep(0.5)
+        if bot_cache[msg_id][1] or bot_cache[msg_id][2]:
+            break
+    dump_chat, _, is_cancelled, __ = bot_cache[msg_id]
+    if not is_cancelled:
+        await deleteMessage(prompt)
+    else:
+        await editMessage(prompt, "<b>Task Cancelled</b>")
+    del bot_cache[msg_id]
+    return dump_chat, is_cancelled
+
+
+async def forcesub(message, ids, button=None):
+    join_button = {}
+    _msg = ""
+    for channel_id in ids.split():
+        chat = await chat_info(channel_id)
+        try:
+            await chat.get_member(message.from_user.id)
+        except UserNotParticipant:
+            if username := chat.username:
+                invite_link = f"https://t.me/{username}"
+            else:
+                invite_link = chat.invite_link
+            join_button[chat.title] = invite_link
+        except RPCError as e:
+            LOGGER.error(f"{e.NAME}: {e.MESSAGE} for {channel_id}")
+        except Exception as e:
+            LOGGER.error(f"{e} for {channel_id}")
+    if join_button:
+        if button is None:
+            button = ButtonMaker()
+        _msg = "You haven't joined our channel yet!"
+        for key, value in join_button.items():
+            button.ubutton(f"📢 Join {key}", value, "footer")
+    return _msg, button
+
+
+async def user_info(user_id):
+    try:
+        return await bot.get_users(user_id)
+    except Exception:
+        return ""
+
+
+async def check_botpm(message, button=None):
+    try:
+        temp_msg = await message._client.send_message(
+            chat_id=message.from_user.id, text="<b>Checking Access...</b>"
+        )
+        await deleteMessage(temp_msg)
+        return None, button
+    except Exception as e:
+        if button is None:
+            button = ButtonMaker()
+        _msg = "<i>You didn't START the bot in PM (Private)</i>"
+        button.ubutton(
+            "🚀 Start Bot Now", f"https://t.me/{bot_name}?start=start", "header"
+        )
+        return _msg, button
