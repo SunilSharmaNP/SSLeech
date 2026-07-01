@@ -2,9 +2,9 @@
 class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
-    ST_BN1_NAME = 'Updates'
+    ST_BN1_NAME = '📢 Updates'
     ST_BN1_URL = 'https://t.me/SSBotsUpdates'
-    ST_BN2_NAME = 'Group'
+    ST_BN2_NAME = '👥 Group'
     ST_BN2_URL = 'https://t.me/Sunil_Sharma_2_0'
     ST_MSG = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
 
