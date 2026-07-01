@@ -17,13 +17,18 @@ _EMOJI_PATTERN = re.compile("|".join(re.escape(e) for e, _ in _EMOJI_SORTED))
 
 
 def apply_custom_emojis(text: str) -> str:
-    if not text:
+    """Replace plain emoji chars with PyroTGFork <emoji id=DOC_ID>char</emoji> tags.
+
+    Uses the correct HTML tag format for PyroTGFork 2.2.x premium emoji support.
+    Only active when USE_CUSTOM_EMOJI=true and CUSTOM_EMOJI_MAP is populated.
+    """
+    if not text or not CUSTOM_EMOJI_MAP:
         return text
 
     def _replace(match: re.Match) -> str:
         emoji = match.group(0)
         eid = CUSTOM_EMOJI_MAP[emoji]
-        return f'<tg-emoji document_id="{eid}">{emoji}</tg-emoji>'
+        return f'<emoji id="{eid}">{emoji}</emoji>'
 
     return _EMOJI_PATTERN.sub(_replace, text)
 
