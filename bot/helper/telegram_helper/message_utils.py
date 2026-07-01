@@ -535,7 +535,9 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
 
 async def editMessage(message, text, buttons=None, photo=None):
     try:
-        text = _inject_html_emoji(text)
+        # For edits, avoid injecting custom-emoji tags because Telegram rejects
+        # premium/custom emoji in edit requests. Use visible-only text instead.
+        text = _strip_emoji_tags(text)
         if message.media:
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
