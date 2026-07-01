@@ -131,6 +131,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                     photo=photo,
                     reply_to_message_id=message.id,
                     caption=text,
+                    parse_mode=ParseMode.HTML,
                     reply_markup=buttons,
                     disable_notification=True,
                     **kwargs,
@@ -225,6 +226,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                     chat_id=chat_id,
                     photo=photo,
                     caption=text,
+                    parse_mode=ParseMode.HTML,
                     reply_markup=buttons,
                     disable_notification=True,
                 )
@@ -260,6 +262,7 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await bot.send_message(
             chat_id=chat_id,
             text=text,
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             disable_notification=True,
             reply_markup=buttons,
@@ -324,6 +327,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                         chat_id=chat.id,
                         photo=photo,
                         caption=text,
+                        parse_mode=ParseMode.HTML,
                         reply_markup=buttons,
                         reply_to_message_id=topic_id,
                         disable_notification=True,
@@ -373,6 +377,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
             sent = await bot.send_message(
                 chat_id=chat.id,
                 text=text,
+                parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 disable_notification=True,
                 reply_to_message_id=topic_id,
@@ -411,7 +416,8 @@ async def editMessage(message, text, buttons=None, photo=None):
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
                 return await message.edit_media(
-                    InputMediaPhoto(photo, text), reply_markup=buttons
+                    InputMediaPhoto(photo, text, parse_mode=ParseMode.HTML),
+                    reply_markup=buttons,
                 )
             return await message.edit_caption(
                 caption=text,
