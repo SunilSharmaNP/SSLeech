@@ -122,8 +122,11 @@ _FULL_MAP = {
     "🌟": "5267500801240092311",
 }
 
-# CUSTOM_EMOJI_MAP is enabled by default (always on).
-# pyrofork 2.2.23 supports <emoji id="..."> HTML tags natively — these are
-# rendered as animated premium emoji in Telegram clients.
-# To disable animated emoji entirely, set USE_CUSTOM_EMOJI=false in config.env.
-CUSTOM_EMOJI_MAP = {} if _os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "false" else _FULL_MAP
+# CUSTOM_EMOJI_MAP is DISABLED by default.
+# _inject_html_emoji() uses this map to replace plain Unicode emoji chars with
+# <emoji id=...> tags. Only enable if your bot token is authorized by Telegram
+# to send custom emoji entities (premium/verified bots).
+# The theme wzml_minimal.py already has pre-tagged <emoji id=...> for all key
+# status/message emojis — those work regardless of this flag.
+# To enable additional emoji injection, set USE_CUSTOM_EMOJI=true in config.env.
+CUSTOM_EMOJI_MAP = _FULL_MAP if _USE_CUSTOM_EMOJI else {}
