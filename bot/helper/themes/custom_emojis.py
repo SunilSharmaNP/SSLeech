@@ -117,20 +117,6 @@ _FULL_MAP = {
     "❤️": "5471952986970267163",
     "💙":  "5471952986970267163",
     "🌟":  "5267500801240092311",
-
-    # ── Task/status icons missing previously — root cause of premium emoji
-    # not appearing during task processing (only start message worked) ────────
-    "☘️":  "5445284980978621387",   # SPEED / LEECHERS icon in wzml_minimal.py
-    "🪩":  "5341715473882955310",   # ENGINE icon in wzml_minimal.py
-    "🌱":  "5368324170671202286",   # SEEDERS icon in wzml_minimal.py
-    "🔎":  "5471952986970267163",   # COUNT_MSG icon
-    "📏":  "5244837092042750681",   # COUNT_SIZE icon
-    "👥":  "5373123633415074227",   # ST_BN2_NAME icon
-    "📋":  "5373123633415074227",   # BASIC_BT icon
-    "➲":  "5424818078833715060",   # bullet/source-link icon (multiple templates)
-    "☝️":  "5443127283898405358",   # PM_BOT_MSG icon
-    "★":  "5267500801240092311",   # header/footer decorative star
-    "✩":  "5267500801240092311",   # footer decorative star
 }
 
 # CUSTOM_EMOJI_MAP: for backward compat with older import sites.
