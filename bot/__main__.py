@@ -95,9 +95,14 @@ async def stats(client, message):
 @new_task
 async def start(client, message):
     try:
+        _owner_id = config_dict.get("OWNER_ID", 0)
+        _repo_url = config_dict.get("UPSTREAM_REPO") or "https://github.com/SunilSharmaNP/SSLeech"
+        _name = message.from_user.mention
+        _uptime = get_readable_time(time() - botStartTime)
         buttons = ButtonMaker()
-        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL"), icon_custom_emoji_id=5424818078833715060)
-        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"), icon_custom_emoji_id=5471952986970267163)
+        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_id=_owner_id), icon_custom_emoji_id=5424818078833715060)
+        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"), icon_custom_emoji_id=5424818078833715060)
+        buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url), icon_custom_emoji_id=5471952986970267163)
         reply_markup = buttons.build_menu(2)
         if len(message.command) > 1 and message.command[1] == "wzmlx":
             await deleteMessage(message)
@@ -127,12 +132,17 @@ async def start(client, message):
             )
             return await sendMessage(message, msg, reply_markup)
         elif await CustomFilters.authorized(client, message):
-            start_string = BotTheme("ST_MSG", help_command=f"/{BotCommands.HelpCommand}")
+            start_string = BotTheme(
+                "ST_MSG",
+                help_command=f"/{BotCommands.HelpCommand}",
+                name=_name,
+                uptime=_uptime,
+            )
             await sendMessage(message, start_string, reply_markup, photo="IMAGES")
         elif config_dict["BOT_PM"]:
-            await sendMessage(message, BotTheme("ST_BOTPM"), reply_markup, photo="IMAGES")
+            await sendMessage(message, BotTheme("ST_BOTPM", name=_name), reply_markup, photo="IMAGES")
         else:
-            await sendMessage(message, BotTheme("ST_UNAUTH"), reply_markup, photo="IMAGES")
+            await sendMessage(message, BotTheme("ST_UNAUTH", name=_name), reply_markup, photo="IMAGES")
         try:
             await DbManger().update_pm_users(message.from_user.id)
         except Exception as db_err:
