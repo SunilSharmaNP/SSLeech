@@ -205,12 +205,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
     rclone_path = f"rclone/{user_id}.conf"
     user_dict = user_data.get(user_id, {})
     if key is None:
-        buttons.ibutton("𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal", style=ButtonStyle.PRIMARY if ButtonStyle else None)
-        buttons.ibutton("𝐌ɪʀʀᴏʀ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} mirror", style=ButtonStyle.PRIMARY if ButtonStyle else None)
-        buttons.ibutton("𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} leech", style=ButtonStyle.PRIMARY if ButtonStyle else None)
+        buttons.ibutton("⚙️ 𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal", style=ButtonStyle.PRIMARY if ButtonStyle else None)
+        buttons.ibutton("☁️ 𝐌ɪʀʀᴏʀ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} mirror", style=ButtonStyle.PRIMARY if ButtonStyle else None)
+        buttons.ibutton("📥 𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} leech", style=ButtonStyle.PRIMARY if ButtonStyle else None)
         if user_dict and any(key in user_dict for key in list(fname_dict.keys())):
-            buttons.ibutton("𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢ", f"userset {user_id} reset_all", style=ButtonStyle.DANGER if ButtonStyle else None)
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", style=ButtonStyle.DANGER if ButtonStyle else None)
+            buttons.ibutton("🔄 𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢ", f"userset {user_id} reset_all", style=ButtonStyle.DANGER if ButtonStyle else None)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", style=ButtonStyle.DANGER if ButtonStyle else None)
 
         text = BotTheme(
             "USER_SETTING",
@@ -230,19 +230,19 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
         buttons.ibutton(
-            f"{'✅️' if ytopt != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐘ᴛ-𝐃ʟᴘ 𝐎ᴘᴛɪᴏɴs",
+            f"{'✅️' if ytopt != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '📱'} 𝐘ᴛ-𝐃ʟᴘ 𝐎ᴘᴛɪᴏɴs",
             f"userset {user_id} yt_opt",
         )
         u_sess = "𝐄xɪsᴛs" if user_dict.get("usess", False) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
         buttons.ibutton(
-            f"{'✅️' if u_sess != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐔sᴇʀ 𝐒ᴇssɪᴏɴ",
+            f"{'✅️' if u_sess != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🔐'} 𝐔sᴇʀ 𝐒ᴇssɪᴏɴ",
             f"userset {user_id} usess",
         )
         bot_pm = (
             "𝐄ɴᴀʙʟᴇᴅ" if user_dict.get("bot_pm", config_dict["BOT_PM"]) else "𝐃ɪsᴀʙʟᴇᴅ"
         )
         buttons.ibutton(
-            "𝐃ɪsᴀʙʟᴇ 𝐁ᴏᴛ 𝐏ᴍ" if bot_pm == "𝐄ɴᴀʙʟᴇᴅ" else "𝐄ɴᴀʙʟᴇ 𝐁ᴏᴛ 𝐏ᴍ",
+            "📨 𝐃ɪsᴀʙʟᴇ 𝐁ᴏᴛ 𝐏ᴍ" if bot_pm == "𝐄ɴᴀʙʟᴇᴅ" else "📨 𝐄ɴᴀʙʟᴇ 𝐁ᴏᴛ 𝐏ᴍ",
             f"userset {user_id} bot_pm",
         )
         if config_dict["BOT_PM"]:
@@ -253,14 +253,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else "𝐃ɪsᴀʙʟᴇᴅ"
         )
         buttons.ibutton(
-            "𝐃ɪsᴀʙʟᴇ 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ" if mediainfo == "𝐄ɴᴀʙʟᴇᴅ" else "𝐄ɴᴀʙʟᴇ 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ",
+            "ℹ️ 𝐃ɪsᴀʙʟᴇ 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ" if mediainfo == "𝐄ɴᴀʙʟᴇᴅ" else "ℹ️ 𝐄ɴᴀʙʟᴇ 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ",
             f"userset {user_id} mediainfo",
         )
         if config_dict["SHOW_MEDIAINFO"]:
             mediainfo = "𝐅ᴏʀᴄᴇ 𝐄ɴᴀʙʟᴇᴅ"
         save_mode = "𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ" if user_dict.get("save_mode") else "𝐒ᴀᴠᴇ 𝐀s 𝐁ᴏᴛ𝐏ᴍ"
         buttons.ibutton(
-            "𝐒ᴀᴠᴇ 𝐀s 𝐁ᴏᴛ𝐏ᴍ" if save_mode == "𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ" else "𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ",
+            "📁 𝐒ᴀᴠᴇ 𝐀s 𝐁ᴏᴛ𝐏ᴍ" if save_mode == "𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ" else "📁 𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ",
             f"userset {user_id} save_mode",
         )
         dailytl = config_dict["DAILY_TASK_LIMIT"] or "∞"
@@ -289,11 +289,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             SAVE_MODE=save_mode,
             USESS=u_sess,
         )
-        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "mirror":
-        buttons.ibutton("𝐑ᴄʟᴏɴᴇ", f"userset {user_id} rcc")
+        buttons.ibutton("☁️ 𝐑ᴄʟᴏɴᴇ", f"userset {user_id} rcc")
         rccmsg = "𝐄xɪsᴛs" if await aiopath.exists(rclone_path) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
         dailytlup = (
             get_readable_file_size(config_dict["DAILY_MIRROR_LIMIT"] * 1024**3)
@@ -305,7 +305,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             if config_dict["DAILY_MIRROR_LIMIT"] and user_id != OWNER_ID
             else "️∞"
         )
-        buttons.ibutton("𝐌ɪʀʀᴏʀ 𝐏ʀᴇғɪx", f"userset {user_id} mprefix")
+        buttons.ibutton("🔗 𝐌ɪʀʀᴏʀ 𝐏ʀᴇғɪx", f"userset {user_id} mprefix")
         mprefix = (
             "𝐍ᴏᴛ 𝐄xɪsᴛs"
             if (
@@ -317,7 +317,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
 
-        buttons.ibutton("𝐌ɪʀʀᴏʀ 𝐒ᴜғғɪx", f"userset {user_id} msuffix")
+        buttons.ibutton("✨ 𝐌ɪʀʀᴏʀ 𝐒ᴜғғɪx", f"userset {user_id} msuffix")
         msuffix = (
             "𝐍ᴏᴛ 𝐄xɪsᴛs"
             if (
@@ -329,7 +329,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
 
-        buttons.ibutton("𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ", f"userset {user_id} mremname")
+        buttons.ibutton("🔄 𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ", f"userset {user_id} mremname")
         mremname = (
             "𝐍ᴏᴛ 𝐄xɪsᴛs"
             if (
@@ -342,14 +342,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
 
         ddl_serv = len(val) if (val := user_dict.get("ddl_servers", False)) else 0
-        buttons.ibutton("𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀs", f"userset {user_id} ddl_servers")
+        buttons.ibutton("💻 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀs", f"userset {user_id} ddl_servers")
 
         tds_mode = "𝐄ɴᴀʙʟᴇᴅ" if user_dict.get("td_mode", False) else "𝐃ɪsᴀʙʟᴇᴅ"
         if not config_dict["USER_TD_MODE"]:
             tds_mode = "𝐅ᴏʀᴄᴇ 𝐃ɪsᴀʙʟᴇᴅ"
 
         user_tds = len(val) if (val := user_dict.get("user_tds", False)) else 0
-        buttons.ibutton("𝐔sᴇʀ 𝐓ᴅs", f"userset {user_id} user_tds")
+        buttons.ibutton("💠 𝐔sᴇʀ 𝐓ᴅs", f"userset {user_id} user_tds")
 
         text = BotTheme(
             "MIRROR",
@@ -364,8 +364,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             USERTD=user_tds,
         )
 
-        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "leech":
         if (
@@ -374,10 +374,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             and config_dict["AS_DOCUMENT"]
         ):
             ltype = "𝐃ᴏᴄᴜᴍᴇɴᴛ"
-            buttons.ibutton("𝐒ᴇɴᴅ 𝐀s 𝐌ᴇᴅɪᴀ", f"userset {user_id} doc")
+            buttons.ibutton("📄 𝐒ᴇɴᴅ 𝐀s 𝐌ᴇᴅɪᴀ", f"userset {user_id} doc")
         else:
             ltype = "𝐌ᴇᴅɪᴀ"
-            buttons.ibutton("𝐒ᴇɴᴅ 𝐀s 𝐃ᴏᴄᴜᴍᴇɴᴛ", f"userset {user_id} doc")
+            buttons.ibutton("📄 𝐒ᴇɴᴅ 𝐀s 𝐃ᴏᴄᴜᴍᴇɴᴛ", f"userset {user_id} doc")
 
         dailytlle = (
             get_readable_file_size(config_dict["DAILY_LEECH_LIMIT"] * 1024**3)
@@ -392,7 +392,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
 
         thumbmsg = "𝐄xɪsᴛs" if await aiopath.exists(thumbpath) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
         buttons.ibutton(
-            f"{'✅️' if thumbmsg == '𝐄xɪsᴛs' else ''} 𝐓ʜᴜᴍʙɴᴀɪʟ",
+            f"{'✅️' if thumbmsg == '𝐄xɪsᴛs' else '🖼'} 𝐓ʜᴜᴍʙɴᴀɪʟ",
             f"userset {user_id} thumb",
         )
 
@@ -412,7 +412,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else "𝐃ɪsᴀʙʟᴇᴅ"
         )
         buttons.ibutton(
-            f"{'✅️' if user_dict.get('split_size') else ''} 𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛs",
+            f"{'✅️' if user_dict.get('split_size') else '📦'} 𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛs",
             f"userset {user_id} split_size",
         )
 
@@ -427,7 +427,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
         buttons.ibutton(
-            f"{'✅️' if lcaption != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ",
+            f"{'✅️' if lcaption != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '📝'} 𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ",
             f"userset {user_id} lcaption",
             style=ButtonStyle.SUCCESS if (ButtonStyle and lcaption != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
@@ -443,7 +443,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
         buttons.ibutton(
-            f"{'✅️' if lprefix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐏ʀᴇғɪx",
+            f"{'✅️' if lprefix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🔗'} 𝐋ᴇᴇᴄʜ 𝐏ʀᴇғɪx",
             f"userset {user_id} lprefix",
             style=ButtonStyle.SUCCESS if (ButtonStyle and lprefix != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
@@ -459,7 +459,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
         buttons.ibutton(
-            f"{'✅️' if lsuffix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐒ᴜғғɪx",
+            f"{'✅️' if lsuffix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '✨'} 𝐋ᴇᴇᴄʜ 𝐒ᴜғғɪx",
             f"userset {user_id} lsuffix",
             style=ButtonStyle.SUCCESS if (ButtonStyle and lsuffix != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
@@ -475,13 +475,13 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
         buttons.ibutton(
-            f"{'✅️' if lremname != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ",
+            f"{'✅️' if lremname != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🔄'} 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ",
             f"userset {user_id} lremname",
             style=ButtonStyle.SUCCESS if (ButtonStyle and lremname != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
 
         buttons.ibutton(
-            "𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘ",
+            "📁 𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘ",
             f"userset {user_id} ldump",
             style=ButtonStyle.PRIMARY if ButtonStyle else None,
         )
@@ -493,7 +493,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
         buttons.ibutton(
-            f"{'✅️' if lmeta != '𝐍ᴏᴛ 𝐄xɪsᴛs' else ''} 𝐌ᴇᴛᴀᴅᴀᴛᴀ",
+            f"{'✅️' if lmeta != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🎬'} 𝐌ᴇᴛᴀᴅᴀᴛᴀ",
             f"userset {user_id} lmeta",
             style=ButtonStyle.SUCCESS if (ButtonStyle and lmeta != "𝐍ᴏᴛ 𝐄xɪsᴛs") else (ButtonStyle.DANGER if ButtonStyle else None),
         )
@@ -545,8 +545,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             MERGE_VIDEO="✅ 𝐄ɴᴀʙʟᴇᴅ" if merge_video else "❌ 𝐃ɪsᴀʙʟᴇᴅ",
         )
 
-        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "auto_rename":
         _ar_mode = user_dict.get("auto_rename", False)
@@ -581,8 +581,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             buttons.ibutton("❌ 𝐃ɪsᴀʙʟᴇ", f"userset {user_id} ar_off")
         if _ar_fmt:
             buttons.ibutton("🗑️ 𝐂ʟᴇᴀʀ 𝐅ᴏʀᴍᴀᴛ", f"userset {user_id} dar_fmt")
-        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back leech", "footer")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back leech", "footer")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "merge_video_menu":
         merge_video = user_dict.get("merge_video", False)
@@ -628,8 +628,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 f"{'✅️' if btn in serv_list else ''} {fname_dict[btn]}",
                 f"userset {user_id} {btn}",
             )
-        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back mirror", "footer")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back mirror", "footer")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif edit_type:
         text = f"㊂ <b><u>{fname_dict[key]} 𝐒ᴇᴛᴛɪɴɢs :</u></b>\n\n"
@@ -790,8 +790,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             elif key == "user_tds":
                 buttons.ibutton("𝐒ʜᴏᴡ 𝐔sᴇʀ𝐓ᴅs", f"userset {user_id} show_tds", "header")
             buttons.ibutton("↻ 𝐃ᴇʟᴇᴛᴇ", f"userset {user_id} d{key}")
-        buttons.ibutton("𝐁ᴀᴄᴋ", f"userset {user_id} back {edit_type}", "footer")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back {edit_type}", "footer")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     return text, button
 
@@ -1061,7 +1061,7 @@ async def edit_user_settings(client, query):
         handler_dict[user_id] = False
         await query.answer()
         buttons = ButtonMaker()
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
         await sendMessage(message, from_user.mention, buttons.build_menu(1), thumb_path)
         await update_user_settings(query, "thumb", "leech")
     elif data[2] == "show_tds":
@@ -1370,9 +1370,9 @@ async def edit_user_settings(client, query):
         handler_dict[user_id] = False
         await query.answer()
         buttons = ButtonMaker()
-        buttons.ibutton("𝐘ᴇs", f"userset {user_id} reset_now y")
-        buttons.ibutton("𝐍ᴏ", f"userset {user_id} reset_now n")
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("✅ 𝐘ᴇs", f"userset {user_id} reset_now y")
+        buttons.ibutton("🚫 𝐍ᴏ", f"userset {user_id} reset_now n")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         await editMessage(
             message, "𝐃ᴏ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ 𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢs ?", buttons.build_menu(2)
         )
@@ -1426,7 +1426,7 @@ async def send_users_settings(client, message):
     if not userid:
         msg = f"<u><b>𝐓ᴏᴛᴀʟ 𝐔sᴇʀs / 𝐂ʜᴀᴛs 𝐃ᴀᴛᴀ 𝐒ᴀᴠᴇᴅ :</b> {len(user_data)}</u>"
         buttons = ButtonMaker()
-        buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close")
         button = buttons.build_menu(1)
         for user, data in user_data.items():
             msg += f"\n\n<code>{user}</code>:"
@@ -1448,9 +1448,9 @@ async def send_users_settings(client, message):
         if data := user_data[int(userid)]:
             buttons = ButtonMaker()
             buttons.ibutton(
-                "𝐃ᴇʟᴇᴛᴇ 𝐃ᴀᴛᴀ", f"userset {message.from_user.id} user_del {userid}"
+                "🗑️ 𝐃ᴇʟᴇᴛᴇ 𝐃ᴀᴛᴀ", f"userset {message.from_user.id} user_del {userid}"
             )
-            buttons.ibutton("𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close")
+            buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close")
             button = buttons.build_menu(1)
             for key, value in data.items():
                 if key in ["token", "time", "ddl_servers", "usess"]:
