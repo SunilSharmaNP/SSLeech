@@ -665,6 +665,8 @@ if len(FILELION_API) == 0:
     FILELION_API = ""
 SPIDY_API_KEY = environ.get("SPIDY_API_KEY", "spidy_ws4es4tlvnr")
 
+USE_CUSTOM_EMOJI = environ.get("USE_CUSTOM_EMOJI", "").lower() == "true"
+
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", "")
 if len(IMDB_TEMPLATE) == 0:
     IMDB_TEMPLATE = """<b>Title: </b> {title} [{year}]
@@ -828,6 +830,7 @@ config_dict = {
     "USER_TD_MODE": USER_TD_MODE,
     "USER_TD_SA": USER_TD_SA,
     "USE_SERVICE_ACCOUNTS": USE_SERVICE_ACCOUNTS,
+    "USE_CUSTOM_EMOJI": USE_CUSTOM_EMOJI,
     "WEB_PINCODE": WEB_PINCODE,
     "YT_DLP_OPTIONS": YT_DLP_OPTIONS,
     "VERIFY_PAGE_URL": VERIFY_PAGE_URL,
