@@ -146,7 +146,26 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
             except (DocumentInvalid, RPCError) as _dinv_err:
                 if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
                     raise
-                # Photo URL/document invalid — send text-only (emoji tags intact, bot CAN use them)
+                # Could be invalid <emoji> tags in caption causing entity errors.
+                # Strip emoji tags first and retry WITH the same photo — this keeps
+                # the thumbnail/card visible even when USE_CUSTOM_EMOJI is on but
+                # the bot account cannot send premium emoji in captions.
+                plain_caption = _strip_emoji_tags(text)
+                if plain_caption != text:
+                    LOGGER.warning("sendMessage: emoji entity error on photo+caption, retrying with stripped caption")
+                    try:
+                        return await message.reply_photo(
+                            photo=photo,
+                            reply_to_message_id=message.id,
+                            caption=plain_caption,
+                            parse_mode=ParseMode.HTML,
+                            reply_markup=buttons,
+                            disable_notification=True,
+                            **kwargs,
+                        )
+                    except Exception:
+                        pass
+                # Photo URL/document itself is invalid — fall back to text-only
                 LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo, falling back to text-only")
                 return await message.reply(
                     text=text,
@@ -405,17 +424,33 @@ async def editMessage(message, text, buttons=None, photo=None):
                 except (DocumentInvalid, RPCError) as _dinv_err:
                     if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
                         raise
-                    # ── CORE FIX ──────────────────────────────────────────────
-                    # The photo URL from IMAGES is invalid (DOCUMENT_INVALID).
-                    # This is NOT an emoji-tag problem — the bot CAN use <emoji>
-                    # tags in text/captions. Just keep the existing photo and
-                    # update the caption with emoji tags intact.
+                    # Could be invalid <emoji> tags in caption — strip and retry
+                    # edit_media with same photo but plain caption first.
+                    plain_caption = _strip_emoji_tags(text)
+                    if plain_caption != text:
+                        LOGGER.warning("editMessage: emoji entity error on edit_media, retrying with stripped caption")
+                        try:
+                            return await message.edit_media(
+                                InputMediaPhoto(photo, plain_caption, parse_mode=ParseMode.HTML),
+                                reply_markup=buttons,
+                            )
+                        except Exception:
+                            pass
+                    # Photo URL itself is invalid — keep existing photo, update caption only
                     LOGGER.warning("editMessage: DOCUMENT_INVALID on photo, keeping existing photo and updating caption only")
-                    return await message.edit_caption(
-                        caption=text,
-                        parse_mode=ParseMode.HTML,
-                        reply_markup=buttons,
-                    )
+                    plain_caption = _strip_emoji_tags(text)
+                    try:
+                        return await message.edit_caption(
+                            caption=text,
+                            parse_mode=ParseMode.HTML,
+                            reply_markup=buttons,
+                        )
+                    except (DocumentInvalid, RPCError):
+                        return await message.edit_caption(
+                            caption=plain_caption,
+                            parse_mode=ParseMode.HTML,
+                            reply_markup=buttons,
+                        )
             return await message.edit_caption(
                 caption=text,
                 parse_mode=ParseMode.HTML,
