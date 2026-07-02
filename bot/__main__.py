@@ -95,12 +95,21 @@ async def stats(client, message):
 @new_task
 async def start(client, message):
     try:
-        _owner_id = config_dict.get("OWNER_ID", 0)
         _repo_url = config_dict.get("UPSTREAM_REPO") or "https://github.com/SunilSharmaNP/SSLeech"
         _name = message.from_user.mention
         _uptime = get_readable_time(time() - botStartTime)
+        # Fetch owner username for a valid https:// button URL (tg:// is rejected by Telegram for bot inline buttons)
+        try:
+            _owner_user = await bot.get_users(config_dict["OWNER_ID"])
+            _owner_url = (
+                f"https://t.me/{_owner_user.username}"
+                if getattr(_owner_user, "username", None)
+                else BotTheme("ST_BN2_URL")
+            )
+        except Exception:
+            _owner_url = BotTheme("ST_BN2_URL")
         buttons = ButtonMaker()
-        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_id=_owner_id), icon_custom_emoji_id=5424818078833715060)
+        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_url=_owner_url), icon_custom_emoji_id=5424818078833715060)
         buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"), icon_custom_emoji_id=5424818078833715060)
         buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url), icon_custom_emoji_id=5471952986970267163)
         reply_markup = buttons.build_menu(2)
