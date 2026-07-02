@@ -109,9 +109,12 @@ async def start(client, message):
         except Exception:
             _owner_url = BotTheme("ST_BN2_URL")
         buttons = ButtonMaker()
-        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_url=_owner_url), icon_custom_emoji_id=5424818078833715060)
-        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"), icon_custom_emoji_id=5424818078833715060)
-        buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url), icon_custom_emoji_id=5471952986970267163)
+        # NOTE: icon_custom_emoji_id is NOT supported on URL buttons (ubutton) by
+        # Telegram — only on callback/data buttons (ibutton). Passing it here causes
+        # BUTTON_DATA_INVALID / REPLY_MARKUP_INVALID which silently drops all buttons.
+        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_url=_owner_url))
+        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"))
+        buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url))
         reply_markup = buttons.build_menu(2)
         if len(message.command) > 1 and message.command[1] == "wzmlx":
             await deleteMessage(message)
