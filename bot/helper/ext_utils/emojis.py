@@ -5,12 +5,10 @@ Premium Custom Emoji helper for hardcoded bot messages (outside themes).
 HOW IT WORKS
 ────────────
 By default, E.xxx returns the plain Unicode fallback emoji so the bot never
-triggers a DOCUMENT_INVALID error (which crashes usersetting, restart, and
-every other command that uses E.*).
+triggers a DOCUMENT_INVALID error.
 
 Custom <emoji> HTML tags are ONLY emitted when BOTH conditions are true:
-  1. USE_CUSTOM_EMOJI = True  (set this after bot init if the bot is a
-                               verified Telegram premium/bot-emoji capable account)
+  1. USE_CUSTOM_EMOJI = True  (set in config.env OR toggled via Bot Settings)
   2. The per-call plain=False (default)
 
 To enable animated emojis for the bot account:
@@ -29,13 +27,20 @@ import os
 
 class _Emoji:
     _MAP = {
-        # ── From custom_emojis.py (verified real IDs) ────────────────────────
+        # ── User-provided verified IDs ──────────────────────────────────────
+        "comet":     ("5224607267797606837", "☄️"),
+        "trending":  ("5244837092042750681", "📈"),
+        "phone":     ("5359772714691216710", "📱"),
+        "bolt":      ("5456140674028019486", "⚡️"),
+        "gear":      ("5341715473882955310", "⚙️"),
+
+        # ── From custom_emojis.py (verified real IDs) ───────────────────────
         "magnet":    ("5377535110289576661", "🧲"),
         "sparkle":   ("5325547803936572038", "✨"),
         "party":     ("5235711785482341993", "🎉"),
         "announce":  ("5424818078833715060", "📣"),
         "up_tri":    ("5971972727383264364", "🔺"),
-        "diamond":   ("5971944878815317190", "💠"),
+        "diamond":   ("5328089410963513796", "💠"),
         "link":      ("5271604874419647061", "🔗"),
         "download":  ("5443127283898405358", "📥"),
         "upload":    ("5445355530111437729", "📤"),
@@ -53,24 +58,24 @@ class _Emoji:
         "timer":     ("5382194935057372936", "⏱"),
         "bag":       ("5294167145079395967", "🛍"),
 
-        # ── Status & result ───────────────────────────────────────────────────
+        # ── Status & result ─────────────────────────────────────────────────
         "done":      ("5368324170671202286", "✅"),
         "error":     ("5447644880824181073", "❌"),
         "warning":   ("5467406605516091496", "⚠️"),
-        "cancel":    ("5381226836808691198", "🚫"),
+        "cancel":    ("5240241223632954241", "🚫"),
         "stop":      ("5467406605516091496", "🛑"),
         "mirror":    ("5471952986970267163", "🔄"),
         "restart":   ("5471952986970267163", "🔄"),
 
-        # ── Task & progress ───────────────────────────────────────────────────
+        # ── Task & progress ─────────────────────────────────────────────────
         "rocket":    ("5433655514094022326", "🚀"),
         "speed":     ("5445284980978621387", "⚡"),
         "clock":     ("5301085541559983872", "⏳"),
         "zip":       ("5379763379953803263", "📦"),
-        "folder":    ("5379748618268510153", "📁"),
+        "folder":    ("6026239398650056451", "📁"),
         "openfolder":("5379763379953803263", "📂"),
 
-        # ── Media & files ─────────────────────────────────────────────────────
+        # ── Media & files ────────────────────────────────────────────────────
         "video":     ("5373123633415074227", "🎥"),
         "image":     ("5373123633415074227", "🖼"),
         "note":      ("5373123633415074227", "📝"),
@@ -78,19 +83,19 @@ class _Emoji:
         "file":      ("5373123633415074227", "📄"),
         "log":       ("5373123633415074227", "📑"),
 
-        # ── System stats ──────────────────────────────────────────────────────
+        # ── System stats ─────────────────────────────────────────────────────
         "cpu":       ("5976578040426139845", "🖥️"),
         "ram":       ("5471952986970267163", "🧠"),
         "disk":      ("5471952986970267163", "💿"),
         "green":     ("5368324170671202286", "🟢"),
 
-        # ── User & identity ───────────────────────────────────────────────────
+        # ── User & identity ──────────────────────────────────────────────────
         "user":      ("5373123633415074227", "👤"),
         "robot":     ("5431815506048155538", "🤖"),
         "crown":     ("5471952986970267163", "👑"),
         "shield":    ("5445284980978621387", "🛡"),
 
-        # ── Links & navigation ────────────────────────────────────────────────
+        # ── Links & navigation ───────────────────────────────────────────────
         "cloud":     ("5471952986970267163", "☁️"),
         "recycle":   ("5471952986970267163", "♻️"),
         "lock":      ("5291873529464122510", "🔐"),
@@ -98,7 +103,7 @@ class _Emoji:
         "globe":     ("5471952986970267163", "🌐"),
         "search":    ("5471952986970267163", "🔍"),
 
-        # ── Misc ──────────────────────────────────────────────────────────────
+        # ── Misc ─────────────────────────────────────────────────────────────
         "megaphone": ("5424818078833715060", "📢"),
         "mail":      ("5424818078833715060", "📨"),
         "inbox":     ("5443127283898405358", "📩"),
@@ -107,21 +112,16 @@ class _Emoji:
         "wand":      ("5325547803936572038", "🪄"),
     }
 
-    # Read env var at import time so no circular imports are needed.
-    # Set USE_CUSTOM_EMOJI=true in config.env ONLY if your bot account is a
-    # verified premium/bot-emoji capable account — otherwise leave it unset.
+    # Read env var at import time. Runtime toggle via E.enable()/E.disable()
+    # or via config_dict["USE_CUSTOM_EMOJI"] (checked by message_utils).
     _use_custom: bool = os.environ.get("USE_CUSTOM_EMOJI", "").lower() == "true"
 
-    # ── Runtime toggle ────────────────────────────────────────────────────────
     def enable(self) -> None:
-        """Enable <emoji> tags (only call after confirming bot supports them)."""
         object.__setattr__(self, "_use_custom", True)
 
     def disable(self) -> None:
-        """Revert to plain Unicode fallback emojis."""
         object.__setattr__(self, "_use_custom", False)
 
-    # ── Core helpers ──────────────────────────────────────────────────────────
     def _render(self, eid: str, fallback: str) -> str:
         if self._use_custom:
             return f'<emoji id="{eid}">{fallback}</emoji>'
