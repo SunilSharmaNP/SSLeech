@@ -247,8 +247,19 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
             )
         except Exception as e2:
             if _is_button_url_error(e2):
-                LOGGER.warning("sendMessage: button URL invalid on strip-retry, retrying without buttons")
-                return await sendMessage(message, text, None, photo)
+                # We already know: photo is DOCUMENT_INVALID, emoji tags cause entity errors.
+                # Do NOT recurse with photo — just send plain stripped text, no buttons.
+                LOGGER.warning("sendMessage: button URL invalid on strip-retry, sending plain text without buttons")
+                try:
+                    return await message.reply(
+                        text=plain_text,
+                        quote=True,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                    )
+                except Exception as e3:
+                    LOGGER.error(f"sendMessage: final plain-text fallback failed: {e3}")
+                    return str(e3)
             LOGGER.error(f"sendMessage: plain retry also failed: {e2}")
             return str(e2)
     except Exception as e:
