@@ -51,13 +51,18 @@ from bot.helper.ext_utils.bot_utils import (
 )
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.exceptions import TgLinkException
-from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
+from bot.helper.themes.custom_emojis import _FULL_MAP as _EMOJI_FULL_MAP
 
 import re as _re
 
 # Sorted longest-first so multi-char sequences match before their base chars.
-# Built once at import time and used by _inject_html_emoji().
-_SORTED_EMOJI_MAP: list = []
+# Built once at import time. Sorting is always from full map; runtime gating
+# is done inside _inject_html_emoji() via config_dict["USE_CUSTOM_EMOJI"].
+_SORTED_EMOJI_MAP: list = sorted(
+    _EMOJI_FULL_MAP.items(),
+    key=lambda kv: len(kv[0]),
+    reverse=True,
+)
 
 # Matches existing <emoji ...>...</emoji> blocks so we skip them.
 _EMOJI_TAG_RE = _re.compile(r'(<emoji\b[^>]*>.*?</emoji>)', _re.DOTALL)
@@ -71,20 +76,11 @@ def _strip_emoji_tags(text: str) -> str:
     return _STRIP_EMOJI_RE.sub(r'\1', text) if text else text
 
 
-def _rebuild_sorted_map():
-    global _SORTED_EMOJI_MAP
-    _SORTED_EMOJI_MAP = sorted(
-        CUSTOM_EMOJI_MAP.items(),
-        key=lambda kv: len(kv[0]),
-        reverse=True,
-    )
-
-
-_rebuild_sorted_map()
-
-
 def _inject_html_emoji(text: str) -> str:
     """Replace plain emoji chars in *text* with <emoji id=DOC_ID>char</emoji>.
+
+    Checks config_dict["USE_CUSTOM_EMOJI"] at call time so that toggling the
+    setting via Bot Settings takes immediate effect without a restart.
 
     pyrotgfork 2.2.23 parses these tags natively in HTML parse mode and
     renders them as animated premium emoji.
@@ -93,7 +89,7 @@ def _inject_html_emoji(text: str) -> str:
     <emoji> tags (e.g. from wzml_minimal.py templates), only the plain-text
     segments between those tags are processed — existing tags are left intact.
     """
-    if not CUSTOM_EMOJI_MAP or not text:
+    if not config_dict.get("USE_CUSTOM_EMOJI", False) or not text:
         return text
 
     def _replace_in_plain(segment: str) -> str:
