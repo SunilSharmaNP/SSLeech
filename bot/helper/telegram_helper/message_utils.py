@@ -76,6 +76,15 @@ def _strip_emoji_tags(text: str) -> str:
     return _STRIP_EMOJI_RE.sub(r'\1', text) if text else text
 
 
+def _is_entity_error(exc: Exception) -> bool:
+    """True if this RPCError looks like an invalid custom-emoji entity/document
+    (e.g. DOCUMENT_INVALID, ENTITY_TEXT_INVALID, ENTITIES_TOO_LONG). Used as a
+    safety net so a single bad emoji ID never crashes a message send/edit — it
+    always falls back to plain text instead."""
+    msg = str(exc).upper()
+    return "ENTITY" in msg or "DOCUMENT_INVALID" in msg or "ENTITIES" in msg
+
+
 def _inject_html_emoji(text: str) -> str:
     """Replace plain emoji chars in *text* with <emoji id=DOC_ID>char</emoji>.
 
@@ -134,7 +143,9 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 )
             except IndexError:
                 pass
-            except DocumentInvalid:
+            except (DocumentInvalid, RPCError) as _dinv_err:
+                if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+                    raise
                 # Photo URL/document invalid — send text-only (emoji tags intact, bot CAN use them)
                 LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo, falling back to text-only")
                 return await message.reply(
@@ -179,7 +190,9 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, None, photo)
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
-    except DocumentInvalid:
+    except (DocumentInvalid, RPCError) as _dinv_err:
+        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+            raise
         # Emoji IDs themselves invalid — strip and retry plain
         LOGGER.warning("sendMessage: DOCUMENT_INVALID on text, retrying without emoji tags")
         plain_text = _strip_emoji_tags(text)
@@ -216,7 +229,9 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 )
             except IndexError:
                 pass
-            except DocumentInvalid:
+            except (DocumentInvalid, RPCError) as _dinv_err:
+                if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+                    raise
                 # Photo invalid — text-only fallback (emoji tags intact, bot CAN use them)
                 LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on photo, falling back to text-only")
                 return await bot.send_message(
@@ -248,7 +263,9 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await sendCustomMsg(chat_id, text, buttons, photo)
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
-    except DocumentInvalid:
+    except (DocumentInvalid, RPCError) as _dinv_err:
+        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+            raise
         LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on text, retrying without emoji tags")
         plain_text = _strip_emoji_tags(text)
         try:
@@ -310,7 +327,9 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     msg_dict[f"{chat.id}:{topic_id}"] = sent
                 except IndexError:
                     pass
-                except DocumentInvalid:
+                except (DocumentInvalid, RPCError) as _dinv_err:
+                    if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+                        raise
                     # Photo invalid — text-only fallback (emoji tags intact)
                     LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on photo for {channel_id}, falling back to text-only")
                     try:
@@ -349,7 +368,9 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
             LOGGER.warning(str(f))
             await sleep(f.value * 1.2)
             return await sendMultiMessage(chat_ids, text, buttons, photo)
-        except DocumentInvalid:
+        except (DocumentInvalid, RPCError) as _dinv_err:
+            if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+                raise
             LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on text for {channel_id}, retrying without emoji")
             plain_text = _strip_emoji_tags(text)
             try:
@@ -381,7 +402,9 @@ async def editMessage(message, text, buttons=None, photo=None):
                         InputMediaPhoto(photo, text, parse_mode=ParseMode.HTML),
                         reply_markup=buttons,
                     )
-                except DocumentInvalid:
+                except (DocumentInvalid, RPCError) as _dinv_err:
+                    if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+                        raise
                     # ── CORE FIX ──────────────────────────────────────────────
                     # The photo URL from IMAGES is invalid (DOCUMENT_INVALID).
                     # This is NOT an emoji-tag problem — the bot CAN use <emoji>
@@ -412,7 +435,9 @@ async def editMessage(message, text, buttons=None, photo=None):
         pass
     except ReplyMarkupInvalid:
         return await editMessage(message, text, None, photo)
-    except DocumentInvalid:
+    except (DocumentInvalid, RPCError) as _dinv_err:
+        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+            raise
         # Emoji tag IDs themselves are invalid — strip and retry plain
         LOGGER.warning("editMessage: DOCUMENT_INVALID on emoji tags, retrying without emoji")
         plain_text = _strip_emoji_tags(text)
@@ -645,7 +670,9 @@ async def sendStatusMessage(msg):
                             reply_markup=buttons,
                             disable_notification=True,
                         )
-                    except DocumentInvalid:
+                    except (DocumentInvalid, RPCError) as _dinv_err:
+                        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+                            raise
                         # Photo URL bad — keep text with emojis intact
                         LOGGER.warning("sendStatusMessage: user DOCUMENT_INVALID on photo, sending text-only")
                         message = await user.send_message(
