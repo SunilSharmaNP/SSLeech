@@ -117,6 +117,10 @@ _FULL_MAP = {
     "❤️": "5471952986970267163",
     "💙":  "5471952986970267163",
     "🌟":  "5267500801240092311",
+
+    # ── Settings/description prefix (re-added, safe now: message_utils.py
+    #    gracefully strips + retries on any entity error instead of crashing) ──
+    "➲":  "5424818078833715060",
 }
 
 # CUSTOM_EMOJI_MAP: for backward compat with older import sites.
