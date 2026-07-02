@@ -85,6 +85,13 @@ def _is_entity_error(exc: Exception) -> bool:
     return "ENTITY" in msg or "DOCUMENT_INVALID" in msg or "ENTITIES" in msg
 
 
+def _is_button_url_error(exc: Exception) -> bool:
+    """True if the error is caused by an invalid inline button URL.
+    Telegram rejects tg:// and other invalid URL schemes in bot inline buttons."""
+    msg = str(exc).upper()
+    return "BUTTON_URL_INVALID" in msg or "BUTTON_DATA_INVALID" in msg or "REPLY_MARKUP_INVALID" in msg
+
+
 def _inject_html_emoji(text: str) -> str:
     """Replace plain emoji chars in *text* with <emoji id=DOC_ID>char</emoji>.
 
@@ -167,14 +174,26 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                         pass
                 # Photo URL/document itself is invalid — fall back to text-only
                 LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo, falling back to text-only")
-                return await message.reply(
-                    text=text,
-                    parse_mode=ParseMode.HTML,
-                    quote=True,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                )
+                try:
+                    return await message.reply(
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        quote=True,
+                        disable_web_page_preview=True,
+                        disable_notification=True,
+                        reply_markup=buttons,
+                    )
+                except Exception as _btn_err:
+                    if _is_button_url_error(_btn_err):
+                        LOGGER.warning("sendMessage: button URL invalid on text fallback, retrying without buttons")
+                        return await message.reply(
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            quote=True,
+                            disable_web_page_preview=True,
+                            disable_notification=True,
+                        )
+                    raise
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendMessage(message, text, buttons, des_dir)
@@ -211,6 +230,9 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
     except (DocumentInvalid, RPCError) as _dinv_err:
         if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
+            if _is_button_url_error(_dinv_err):
+                LOGGER.warning("sendMessage: button URL invalid, retrying without buttons")
+                return await sendMessage(message, text, None, photo)
             raise
         # Emoji IDs themselves invalid — strip and retry plain
         LOGGER.warning("sendMessage: DOCUMENT_INVALID on text, retrying without emoji tags")
@@ -224,9 +246,15 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 reply_markup=buttons,
             )
         except Exception as e2:
+            if _is_button_url_error(e2):
+                LOGGER.warning("sendMessage: button URL invalid on strip-retry, retrying without buttons")
+                return await sendMessage(message, text, None, photo)
             LOGGER.error(f"sendMessage: plain retry also failed: {e2}")
             return str(e2)
     except Exception as e:
+        if _is_button_url_error(e):
+            LOGGER.warning("sendMessage: button URL invalid (outer), retrying without buttons")
+            return await sendMessage(message, text, None, photo)
         LOGGER.error(format_exc())
         return str(e)
 
