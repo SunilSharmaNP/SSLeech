@@ -996,7 +996,8 @@ class MirrorLeechListener:
                 elif self.isSuperGroup and self.isPM:
                     message += BotTheme("L_BOT_MSG")
                     buttons.ibutton(
-                        BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header"
+                        BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header",
+                        icon_custom_emoji_id=5424818078833715060,
                     )
                 if config_dict["SAFE_MODE"] and self.isSuperGroup:
                     await sendMessage(
@@ -1186,7 +1187,8 @@ class MirrorLeechListener:
                         if config_dict["SAVE_MSG"]:
                             s_btn.ibutton(BotTheme("SAVE_MSG"), "save", "footer")
                         s_btn.ibutton(
-                            BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header"
+                            BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header",
+                            icon_custom_emoji_id=5424818078833715060,
                         )
                         await sendMessage(
                             self.message,
