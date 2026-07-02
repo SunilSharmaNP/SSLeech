@@ -6,6 +6,8 @@ from random import choice as rchoice
 from time import time
 from re import match as re_match
 from cryptography.fernet import InvalidToken
+from os import listdir, getcwd
+from os import path as ospath
 
 from pyrogram import Client
 from pyrogram.enums import ParseMode
@@ -76,6 +78,29 @@ def _strip_emoji_tags(text: str) -> str:
     return _STRIP_EMOJI_RE.sub(r'\1', text) if text else text
 
 
+def _resolve_photo_source(photo):
+    """Resolve a photo input to an actual file/path or a safe fallback image."""
+    if not photo:
+        return None
+
+    if photo == "IMAGES":
+        configured_images = config_dict.get("IMAGES") or []
+        if configured_images:
+            return rchoice(configured_images)
+
+        default_dir = ospath.join(getcwd(), "IMAGES")
+        if ospath.isdir(default_dir):
+            for file_name in sorted(listdir(default_dir)):
+                if file_name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    return ospath.join(default_dir, file_name)
+        return None
+
+    if isinstance(photo, str) and not (photo.startswith("http://") or photo.startswith("https://") or photo.startswith("tg://")):
+        return photo if ospath.exists(photo) else None
+
+    return photo
+
+
 def _is_entity_error(exc: Exception) -> bool:
     """True if this RPCError looks like an invalid custom-emoji entity/document
     (e.g. DOCUMENT_INVALID, ENTITY_TEXT_INVALID, ENTITIES_TOO_LONG). Used as a
@@ -128,10 +153,9 @@ def _inject_html_emoji(text: str) -> str:
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
         text = _inject_html_emoji(text)
+        photo = _resolve_photo_source(photo)
         if photo:
             try:
-                if photo == "IMAGES":
-                    photo = rchoice(config_dict["IMAGES"])
                 return await message.reply_photo(
                     photo=photo,
                     reply_to_message_id=message.id,
@@ -215,10 +239,9 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
 async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     try:
         text = _inject_html_emoji(text)
+        photo = _resolve_photo_source(photo)
         if photo:
             try:
-                if photo == "IMAGES":
-                    photo = rchoice(config_dict["IMAGES"])
                 return await bot.send_photo(
                     chat_id=chat_id,
                     photo=photo,
@@ -302,6 +325,7 @@ async def chat_info(channel_id):
 
 async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
     text = _inject_html_emoji(text)
+    photo = _resolve_photo_source(photo)
     msg_dict = {}
     for channel_id in chat_ids.split():
         channel_id, *topic_id = channel_id.split(":")
@@ -394,9 +418,9 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
 async def editMessage(message, text, buttons=None, photo=None):
     try:
         text = _inject_html_emoji(text)
+        photo = _resolve_photo_source(photo)
         if message.media:
             if photo:
-                photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
                 try:
                     return await message.edit_media(
                         InputMediaPhoto(photo, text, parse_mode=ParseMode.HTML),
