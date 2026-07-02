@@ -6,38 +6,38 @@ class WZMLStyle:
     ST_BN1_URL = 'https://t.me/SSBotsUpdates'
     ST_BN2_NAME = '👥 Group'
     ST_BN2_URL = 'https://t.me/Sunil_Sharma_2_0'
-    ST_MSG = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
+    ST_MSG = """<b>☄️ I'm a Mirror Leech Telegram Bot! [MLTB] 💥</b>
 
-<emoji id=5244837092042750681>📈</emoji> <b>I can mirror or leech from:</b>
+📈 <b>I can mirror or leech from:</b>
 
-• <emoji id=5271604874419647061>🔗</emoji> <b>Direct links</b>
+• 🔗 <b>Direct links</b>
 
-• <emoji id=6026239398650056451>📁</emoji> <b>Telegram files</b>
+• 📁 <b>Telegram files</b>
 
-• <emoji id=5359772714691216710>📱</emoji> <b>Torrents & magnets</b>
+• 📱 <b>Torrents & magnets</b>
 
-• <emoji id=5372878055775683161>📱</emoji> <b>Google Drive / Cloud</b>
+• 📱 <b>Google Drive / Cloud</b>
 
-• <emoji id=5456140674028019486>⚡️</emoji> <b>Upload to Telegram</b>
+• ⚡️ <b>Upload to Telegram</b>
 
-<emoji id=5341715473882955310>⚙️</emoji> <b>Use {help_command} to see all commands.</b>"""
+⚙️ <b>Use {help_command} to see all commands.</b>"""
 
-    ST_BOTPM = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
+    ST_BOTPM = """<b>☄️ I'm a Mirror Leech Telegram Bot! [MLTB] 💥</b>
 
-<emoji id=5244837092042750681>📈</emoji> <b>Now I will send all your files and links here. Start using me in the group!</b>"""
-    ST_UNAUTH = """<b><emoji id=5224607267797606837>☄️</emoji> I'm a Mirror Leech Telegram Bot! [MLTB] <emoji id=5456140674028019486>💥</emoji></b>
+📈 <b>Now I will send all your files and links here. Start using me in the group!</b>"""
+    ST_UNAUTH = """<b>☄️ I'm a Mirror Leech Telegram Bot! [MLTB] 💥</b>
 
-<emoji id=5240241223632954241>🚫</emoji> <b>You are not an authorized user!</b>"""
+🚫 <b>You are not an authorized user!</b>"""
     OWN_TOKEN_GENERATE = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
     USED_TOKEN = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ᴀʟʀᴇᴀᴅʏ ᴜsᴇᴅ!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ɴᴇᴡ ᴏɴᴇ.</i>"""
     LOGGED_PASSWORD = """<b>𝐁ᴏᴛ 𝐀ʟʀᴇᴀᴅʏ 𝐋ᴏɢɢᴇᴅ 𝐈ɴ ᴠɪᴀ 𝐏ᴀssᴡᴏʀᴅ</b>\n\n<i>𝐍ᴏ ɴᴇᴇᴅ ᴛᴏ 𝐀ᴄᴄᴇᴘᴛ 𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴs.</i>"""
-    ACTIVATE_BUTTON = "<emoji id=5325547803936572038>✨</emoji> 𝐀ᴄᴛɪᴠᴀᴛᴇ 𝐓ᴏᴋᴇɴ"
+    ACTIVATE_BUTTON = "✨ 𝐀ᴄᴛɪᴠᴀᴛᴇ 𝐓ᴏᴋᴇɴ"
     TOKEN_MSG = """<b><u>𝐆ᴇɴᴇʀᴀᴛᴇᴅ 𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐋ᴏɢɪɴ 𝐓ᴏᴋᴇɴ!</u></b>
 <b>𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴ:</b> <code>{token}</code>
 <b>𝐕ᴀʟɪᴅɪᴛʏ:</b> {validity}"""
 
     # async def token_callback(_, query): ---> __main__.py
-    ACTIVATED = "<emoji id=5368324170671202286>✅️</emoji> 𝐀ᴄᴛɪᴠᴀᴛᴇᴅ <emoji id=5368324170671202286>✅</emoji>"
+    ACTIVATED = "✅️ 𝐀ᴄᴛɪᴠᴀᴛᴇᴅ ✅"
 
     # async def login(_, message): --> __main__.py
     LOGGED_IN = "<b>𝐀ʟʀᴇᴀᴅʏ 𝐁ᴏᴛ 𝐋ᴏɢɪɴ 𝐈ɴ!</b>"
@@ -46,15 +46,15 @@ class WZMLStyle:
     LOGIN_USED = "<b>𝐁ᴏᴛ 𝐋ᴏɢɪɴ 𝐔sᴀɢᴇ :</b>\n\n<code>/cmd [password]</code>"
 
     # async def log(_, message): ---> __main__.py
-    LOG_DISPLAY_BT = "<emoji id=5373123633415074227>📑</emoji> 𝐋ᴏɢ 𝐃ɪsᴘʟᴀʏ"
-    WEB_PASTE_BT = "<emoji id=5424818078833715060>📨</emoji> 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (SB)"
+    LOG_DISPLAY_BT = "📑 𝐋ᴏɢ 𝐃ɪsᴘʟᴀʏ"
+    WEB_PASTE_BT = "📨 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (SB)"
 
     # async def bot_help(client, message): ---> __main__.py
     BASIC_BT = "📋 𝐁ᴀsɪᴄ"
-    USER_BT = "<emoji id=5373123633415074227>👤</emoji> 𝐔sᴇʀs"
+    USER_BT = "👤 𝐔sᴇʀs"
     MICS_BT = "⚙️ 𝐌ɪᴄs"
-    O_S_BT = "<emoji id=5471952986970267163>👑</emoji> 𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
-    CLOSE_BT = "<emoji id=5447644880824181073>❌</emoji> 𝐂ʟᴏsᴇ"
+    O_S_BT = "👑 𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
+    CLOSE_BT = "❌ 𝐂ʟᴏsᴇ"
     HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
 
     # async def stats(client, message):
@@ -154,19 +154,19 @@ class WZMLStyle:
     L_LOG_START = "➲ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┠ <b>𝐔sᴇʀ :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ :</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b> <emoji id=5373123633415074227>🎥</emoji> 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
-    SIZE = "┎ <b><emoji id=5379763379953803263>📦</emoji> 𝐒ɪᴢᴇ : </b>{Size}\n"
-    ELAPSE = "┠ <b><emoji id=5382194935057372936>⏱</emoji> 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
-    MODE = "┠ <b><emoji id=5471952986970267163>🎛️</emoji> 𝐌ᴏᴅᴇ : </b>{Mode}\n"
+    NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
+    SIZE = "┎ <b>📦 𝐒ɪᴢᴇ : </b>{Size}\n"
+    ELAPSE = "┠ <b>⏱ 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
+    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ : </b>{Mode}\n"
     CREDIT = "━✦❘༻ <b><a href=https://t.me/SSBotsUpdates> 𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
 
     # ----- LEECH -------
-    L_TOTAL_FILES = "┠ <b><emoji id=5379748618268510153>🗂️</emoji> 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
-    L_CORRUPTED_FILES = "┠ <b><emoji id=5467406605516091496>🛑</emoji> 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs : </b>{Corrupt}\n"
-    L_CC = "┖ <b><emoji id=5325547803936572038>✨</emoji> 𝐁ʏ : </b>{Tag}\n\n"
-    PM_BOT_MSG = "<b><emoji id=5325547803936572038>☝️</emoji> 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
-    L_BOT_MSG = "<b><emoji id=5443127283898405358>📩</emoji> 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌</b>"
-    L_LL_MSG = "<b><emoji id=5271604874419647061>🔗</emoji> 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
+    L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
+    L_CORRUPTED_FILES = "┠ <b>🛑 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs : </b>{Corrupt}\n"
+    L_CC = "┖ <b>✨ 𝐁ʏ : </b>{Tag}\n\n"
+    PM_BOT_MSG = "<b>☝️ 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
+    L_BOT_MSG = "<b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌</b>"
+    L_LL_MSG = "<b>🔗 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
 
     M_TYPE = "┠ <b>𝐓ʏᴘᴇ : </b>{Mimetype}\n"
     M_SUBFOLD = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs : </b>{Folder}\n"
@@ -176,75 +176,75 @@ class WZMLStyle:
     M_BOT_MSG = "➲ <b><i>𝐋ɪɴᴋ(s) 𝐇𝐚𝐯𝐞 𝐛ᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏ᴍ </i></b>"
 
     # ----- BUTTONS -------
-    CLOUD_LINK = "<emoji id=5471952986970267163>☁️</emoji> 𝐂ʟᴏᴜᴅ 𝐋ɪɴᴋ"
-    SAVE_MSG = "<emoji id=5424818078833715060>📨</emoji> 𝐒ᴀᴠᴇ 𝐌ᴇssᴀɢᴇ"
-    RCLONE_LINK = "<emoji id=5471952986970267163>♻️</emoji> 𝐑𝐂ʟᴏɴᴇ 𝐋ɪɴᴋ"
-    DDL_LINK = "<emoji id=5271604874419647061>📎</emoji> {Serv} 𝐋ɪɴᴋ"
-    SOURCE_URL = "<emoji id=5291873529464122510>🔐</emoji> 𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ"
-    INDEX_LINK_F = "<emoji id=5379748618268510153>🗂</emoji> 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
-    INDEX_LINK_D = "<emoji id=5445284980978621387>⚡</emoji> 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
-    VIEW_LINK = "<emoji id=5471952986970267163>🌐</emoji> 𝐕ɪᴇᴡ 𝐋ɪɴᴋ"
-    CHECK_PM = "<emoji id=5443127283898405358>📥</emoji> 𝐕ɪᴇᴡ ɪɴ 𝐁ᴏᴛ 𝐏ᴍ"
-    CHECK_LL = "<emoji id=5271604874419647061>🖇</emoji> 𝐕ɪᴇᴡ ɪɴ 𝐋ɪɴᴋs 𝐋ᴏɢ"
-    MEDIAINFO_LINK = "<emoji id=5373123633415074227>📃</emoji> 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ"
-    SCREENSHOTS = "<emoji id=5373123633415074227>🖼</emoji> 𝐒ᴄʀᴇᴇɴ𝐒ʜᴏᴛs"
+    CLOUD_LINK = "☁️ 𝐂ʟᴏᴜᴅ 𝐋ɪɴᴋ"
+    SAVE_MSG = "📨 𝐒ᴀᴠᴇ 𝐌ᴇssᴀɢᴇ"
+    RCLONE_LINK = "♻️ 𝐑𝐂ʟᴏɴᴇ 𝐋ɪɴᴋ"
+    DDL_LINK = "📎 {Serv} 𝐋ɪɴᴋ"
+    SOURCE_URL = "🔐 𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ"
+    INDEX_LINK_F = "🗂 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
+    INDEX_LINK_D = "⚡ 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
+    VIEW_LINK = "🌐 𝐕ɪᴇᴡ 𝐋ɪɴᴋ"
+    CHECK_PM = "📥 𝐕ɪᴇᴡ ɪɴ 𝐁ᴏᴛ 𝐏ᴍ"
+    CHECK_LL = "🖇 𝐕ɪᴇᴡ ɪɴ 𝐋ɪɴᴋs 𝐋ᴏɢ"
+    MEDIAINFO_LINK = "📃 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ"
+    SCREENSHOTS = "🖼 𝐒ᴄʀᴇᴇɴ𝐒ʜᴏᴛs"
 
     # def get_readable_message(): ---> bot_utilis.py
-    STATUS_NAME = "<b><emoji id=5373123633415074227>🎥</emoji> 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
+    STATUS_NAME = "<b>🎥 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
 
     mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┓"
     BAR = "\n┠ {Bar}"
-    PROCESSED = "\n┠<b><emoji id=5445284980978621387>⚡</emoji>𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
-    STATUS = '\n┠ <b><emoji id=5325547803936572038>🪄</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
-    ETA = "\n┠<b><emoji id=5456140674028019486>⏳</emoji> 𝐄ᴛᴀ :</b> {Eta}"
-    SPEED = "\n┠<b><emoji id=5368324170671202286>☘️</emoji> 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
-    ELAPSED = "\n┠ <b><emoji id=5456140674028019486>🕓</emoji> 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
-    ENGINE = "\n┠ <b><emoji id=5341715473882955310>🪩</emoji> 𝐄ɴɢɪɴᴇ :</b> {Engine}"
-    STA_MODE = "\n┠ <b><emoji id=5471952986970267163>🌐</emoji> 𝐌ᴏᴅᴇ :</b> {Mode}"
-    SEEDERS = "\n┠ <b><emoji id=5368324170671202286>🌱</emoji> 𝐒ᴇᴇᴅᴇʀs :</b> {Seeders}"
-    LEECHERS = "\n┠<b><emoji id=5368324170671202286>☘️</emoji> 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
+    PROCESSED = "\n┠<b>⚡𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
+    STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
+    ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
+    SPEED = "\n┠<b>☘️ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
+    ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
+    ENGINE = "\n┠ <b>🪩 𝐄ɴɢɪɴᴇ :</b> {Engine}"
+    STA_MODE = "\n┠ <b>🌐 𝐌ᴏᴅᴇ :</b> {Mode}"
+    SEEDERS = "\n┠ <b>🌱 𝐒ᴇᴇᴅᴇʀs :</b> {Seeders}"
+    LEECHERS = "\n┠<b>☘️ 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
 
-    SEED_SIZE = "\n┠ <b><emoji id=5379763379953803263>📦</emoji> 𝐒ɪᴢᴇ : </b>{Size}"
-    SEED_SPEED = "\n┠ <b><emoji id=5456140674028019486>🚀</emoji> 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
-    UPLOADED = "<b><emoji id=5471952986970267163>☁️</emoji> 𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
-    RATIO = "\n┠ <b><emoji id=5244837092042750681>📊</emoji> 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
-    TIME = "<b><emoji id=5456140674028019486>⏳</emoji> 𝐓ɪᴍᴇ : </b> {Time}"
+    SEED_SIZE = "\n┠ <b>📦 𝐒ɪᴢᴇ : </b>{Size}"
+    SEED_SPEED = "\n┠ <b>🚀 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
+    UPLOADED = "<b>☁️ 𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
+    RATIO = "\n┠ <b>📊 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
+    TIME = "<b>⏳ 𝐓ɪᴍᴇ : </b> {Time}"
     SEED_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
-    STATUS_SIZE = "\n┠ <b><emoji id=5379763379953803263>📦</emoji> 𝐒ɪᴢᴇ : </b>{Size}"
+    STATUS_SIZE = "\n┠ <b>📦 𝐒ɪᴢᴇ : </b>{Size}"
     NON_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ :</b> {Engine}"
 
-    USER = "\n┠ <b><emoji id=5373123633415074227>👤</emoji> 𝐔sᴇʀ :</b> <code>{User}</code>"
+    USER = "\n┠ <b>👤 𝐔sᴇʀ :</b> <code>{User}</code>"
     ID = "\n┠ <b>🆔 𝐈𝐃 :</b> <code>{Id}</code>"
-    BTSEL = "\n┠ <b><emoji id=5368324170671202286>✅</emoji> 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
+    BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
     CANCEL = "\n┠ {Cancel}\n"
     mn = "┗━━༻« <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┛\n\n"
 
-    FOOTER = "┎⌬ <b><i><emoji id=5244837092042750681>📊</emoji> 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
+    FOOTER = "┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
     TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}\n"
-    BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b><emoji id=5368324170671202286>🟢</emoji> 𝐀ᴠʟ:</b> {Free}\n"
-    Cpu = "┠<emoji id=5224607267797606837>🖥️</emoji><b> 𝐂ᴘᴜ:</b> {cpu}% | "
-    FREE = "<b><emoji id=5471952986970267163>💿</emoji> 𝐅:</b> {free} [{free_p}%]"
-    Ram = "\n┠ <b><emoji id=5471952986970267163>🧠</emoji> 𝐑ᴀᴍ:</b> {ram}% | "
-    uptime = "<b><emoji id=5456140674028019486>⏳</emoji> 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
-    DL = "\n┖ <b><emoji id=5471952986970267163>🔻</emoji> 𝐃ʟ:</b> {DL}/s | "
-    UL = "<b><emoji id=5456140674028019486>🔺</emoji> 𝐔ʟ:</b> {UL}/s"
+    BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>🟢 𝐀ᴠʟ:</b> {Free}\n"
+    Cpu = "┠🖥️<b> 𝐂ᴘᴜ:</b> {cpu}% | "
+    FREE = "<b>💿 𝐅:</b> {free} [{free_p}%]"
+    Ram = "\n┠ <b>🧠 𝐑ᴀᴍ:</b> {ram}% | "
+    uptime = "<b>⏳ 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
+    DL = "\n┖ <b>🔻 𝐃ʟ:</b> {DL}/s | "
+    UL = "<b>🔺 𝐔ʟ:</b> {UL}/s"
 
     PREVIOUS = "⫷"
     REFRESH = "📑𝐏ᴀɢᴇ\n{Page}"
     NEXT = "⫸"
 
     # STOP_DUPLICATE_MSG: ---> clone.py, aria2_listener.py, task_manager.py
-    STOP_DUPLICATE = "<emoji id=5379748618268510153>📁</emoji> 𝐅ɪʟᴇ/𝐅ᴏʟᴅᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ 𝐃ʀɪᴠᴇ.\n 𝐇ᴇʀᴇ ᴀʀᴇ {content} ʟɪsᴛ ʀᴇsᴜʟᴛs:"
+    STOP_DUPLICATE = "📁 𝐅ɪʟᴇ/𝐅ᴏʟᴅᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ 𝐃ʀɪᴠᴇ.\n 𝐇ᴇʀᴇ ᴀʀᴇ {content} ʟɪsᴛ ʀᴇsᴜʟᴛs:"
 
     # async def countNode(_, message): ----> gd_count.py
-    COUNT_MSG = "<b><emoji id=5471952986970267163>🔎</emoji> 𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
-    COUNT_NAME = "<emoji id=5379763379953803263>📂</emoji> <b><i>{COUNT_NAME}</i></b>\n┃\n"
-    COUNT_SIZE = "┠ <emoji id=5244837092042750681>📏</emoji> <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
-    COUNT_TYPE = "┠ <emoji id=5379748618268510153>🗂</emoji> <b>𝐓ʏᴘᴇ:</b> {COUNT_TYPE}\n"
-    COUNT_SUB = "┠ <emoji id=5379748618268510153>📁</emoji> <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs:</b> {COUNT_SUB}\n"
-    COUNT_FILE = "┠ <emoji id=5373123633415074227>📄</emoji> <b>𝐅ɪʟᴇs:</b> {COUNT_FILE}\n"
-    COUNT_CC = "┖ <emoji id=5373123633415074227>👤</emoji> <b>𝐁ʏ:</b> {COUNT_CC}\n"
+    COUNT_MSG = "<b>🔎 𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
+    COUNT_NAME = "📂 <b><i>{COUNT_NAME}</i></b>\n┃\n"
+    COUNT_SIZE = "┠ 📏 <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
+    COUNT_TYPE = "┠ 🗂 <b>𝐓ʏᴘᴇ:</b> {COUNT_TYPE}\n"
+    COUNT_SUB = "┠ 📁 <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs:</b> {COUNT_SUB}\n"
+    COUNT_FILE = "┠ 📄 <b>𝐅ɪʟᴇs:</b> {COUNT_FILE}\n"
+    COUNT_CC = "┖ 👤 <b>𝐁ʏ:</b> {COUNT_CC}\n"
 
     # LIST ---> gd_list.py
     LIST_SEARCHING = "<b>𝐒ᴇᴀʀᴄʜɪɴɢ 𝐟ᴏʀ <i>{NAME}</i></b>"
