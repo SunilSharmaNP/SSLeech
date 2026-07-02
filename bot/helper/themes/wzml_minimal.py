@@ -3,7 +3,7 @@ class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
     ST_BN1_NAME = '😎 𝐎ᴡɴᴇʀ'
-    ST_BN1_URL = 'tg://user?id={owner_id}'
+    ST_BN1_URL = '{owner_url}'
     ST_BN2_NAME = '🔔 𝐔ᴘᴅᴀᴛᴇs'
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
     ST_BN3_NAME = '🦑 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
