@@ -262,10 +262,10 @@ class WZMLStyle:
     # USER Setting --> user_setting.py
     USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
         
-┎<b> 𝐍ᴀᴍᴇ :</b> {NAME}
-┠<b> 𝐈𝐃:</b> <code>{ID}</code>
-┠<b> 𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
-┖<b> 𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
+┎➲<b> 𝐍ᴀᴍᴇ :</b> {NAME}
+┠➲<b> 𝐈𝐃:</b> <code>{ID}</code>
+┠➲<b> 𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
+┖➲<b> 𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
 
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
 • <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ
@@ -275,46 +275,46 @@ class WZMLStyle:
 
     UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎<b> 𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
-┠<b> 𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
-┠<b> 𝐋ᴀsᴛ 𝐁ᴏᴛ 𝐔sᴇᴅ :</b> <code>{LAST_USED}</code>
-┠<b> 𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
-┠<b> 𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
-┠<b> 𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
-┖<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
+┎➲<b> 𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
+┠➲<b> 𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
+┠➲<b> 𝐋ᴀsᴛ 𝐁ᴏᴛ 𝐔sᴇᴅ :</b> <code>{LAST_USED}</code>
+┠➲<b> 𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
+┠➲<b> 𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
+┠➲<b> 𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
+┖➲<b> 𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎<b> 𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
-┠<b> 𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
-┠<b> 𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <code>{MSUFFIX}</code>
-┠<b> 𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{MREMNAME}</code>
-┠<b> 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
-┠<b> 𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
-┠<b> 𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
-┖<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
+┎➲<b> 𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
+┠➲<b> 𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
+┠➲<b> 𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <code>{MSUFFIX}</code>
+┠➲<b> 𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{MREMNAME}</code>
+┠➲<b> 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
+┠➲<b> 𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
+┠➲<b> 𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
+┖➲<b> 𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎<b> 𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
-┠<b> 𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
-┠<b> 𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{THUMB}</i>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛ 𝐒ɪᴢᴇ :</b> <code>{SPLIT_SIZE}</code>
-┠<b> 𝐄ǫᴜᴀʟ 𝐒ᴘʟɪᴛs :</b> <i>{EQUAL_SPLIT}</i>
-┠<b> 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ :</b> <i>{MEDIA_GROUP}</i>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ :</b> <code>{LCAPTION}</code>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐏ʀᴇꜰɪx :</b> <code>{LPREFIX}</code>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
-┠<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
-┖<b> 𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
+┎➲<b> 𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
+┠➲<b> 𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{THUMB}</i>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛ 𝐒ɪᴢᴇ :</b> <code>{SPLIT_SIZE}</code>
+┠➲<b> 𝐄ǫᴜᴀʟ 𝐒ᴘʟɪᴛs :</b> <i>{EQUAL_SPLIT}</i>
+┠➲<b> 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ :</b> <i>{MEDIA_GROUP}</i>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ :</b> <code>{LCAPTION}</code>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐏ʀᴇꜰɪx :</b> <code>{LPREFIX}</code>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
+┠➲<b> 𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
+┖➲<b> 𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
