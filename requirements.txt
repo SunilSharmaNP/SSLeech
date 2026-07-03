@@ -50,3 +50,4 @@ yt-dlp
 setuptools
 pymediainfo
 language-data
+langcodes
