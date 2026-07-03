@@ -195,7 +195,7 @@ class WZMLStyle:
     mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┓"
     BAR = "\n┠ {Bar}"
     PROCESSED = "\n┠<b><emoji id=5456140674028019486>⚡️</emoji> 𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
-    STATUS = '\n┠ <b><emoji id=5235711785482341993>🪄</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
+    STATUS = '\n┠ <b><emoji id=5424818078833715060>🪄</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
     ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
     SPEED = "\n┠<b>☘️ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
     ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
