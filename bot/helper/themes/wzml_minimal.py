@@ -220,7 +220,7 @@ class WZMLStyle:
     CANCEL = "\n┠ {Cancel}\n"
     mn = "┗━━༻« <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┛\n\n"
 
-    FOOTER = "┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
+    FOOTER = "<blockquote>┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
     TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}\n"
     BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>🟢 𝐀ᴠʟ:</b> {Free}\n"
     Cpu = "┠🖥️<b> 𝐂ᴘᴜ:</b> {cpu}% | "
@@ -228,7 +228,7 @@ class WZMLStyle:
     Ram = "\n┠ <b>🧠 𝐑ᴀᴍ:</b> {ram}% | "
     uptime = "<b>⏳ 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
     DL = "\n┖ <b>🔻 𝐃ʟ:</b> {DL}/s | "
-    UL = "<b>🔺 𝐔ʟ:</b> {UL}/s"
+    UL = "<b>🔺 𝐔ʟ:</b> {UL}/s</blockquote>"
 
     PREVIOUS = "⫷"
     REFRESH = "📑𝐏ᴀɢᴇ\n{Page}"
