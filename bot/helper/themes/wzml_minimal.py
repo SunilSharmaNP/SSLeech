@@ -2,15 +2,15 @@
 class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
-    ST_BN1_NAME = '<emoji id=5217822164362739968>👑</emoji> 𝐎ᴡɴᴇʀ'
+    ST_BN1_NAME = '👑 𝐎ᴡɴᴇʀ'
     ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
-    ST_BN2_NAME = '<emoji id=5294339927318739359>🔔<emoji> 𝐔ᴘᴅᴀᴛᴇs'
+    ST_BN2_NAME = '🔔 𝐔ᴘᴅᴀᴛᴇs'
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
-    ST_BN3_NAME = 'emoji id=5377535110289576661>⚡</emoji> 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
+    ST_BN3_NAME = '⚡ 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
     ST_BN3_URL = 'https://github.com/SilentDemonSD/WZML-X/tree/master'
     ST_MSG = """𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=5424818078833715060>⚡</emoji><b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> <emoji id=5424818078833715060>⚡</emoji>
+<emoji id=5424818078833715060>⚡</emoji><b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
 📝 <b>This Bot Can Mirror or Leech Files From Links, Telegram Files, Torrents, Google Drive, or Directly to Telegram.</b> 🔥
 
