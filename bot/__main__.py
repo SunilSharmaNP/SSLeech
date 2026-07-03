@@ -15,7 +15,7 @@ from signal import signal, SIGINT
 from aiofiles.os import path as aiopath, remove as aioremove
 from aiofiles import open as aiopen
 from pyrogram import idle
-from pyrogram.enums import ChatMemberStatus, ChatType, ParseMode
+from pyrogram.enums import ChatMemberStatus, ChatType
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, private, regex
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -109,9 +109,6 @@ async def start(client, message):
         except Exception:
             _owner_url = BotTheme("ST_BN2_URL")
         buttons = ButtonMaker()
-        # NOTE: icon_custom_emoji_id is NOT supported on URL buttons (ubutton) by
-        # Telegram — only on callback/data buttons (ibutton). Passing it here causes
-        # BUTTON_DATA_INVALID / REPLY_MARKUP_INVALID which silently drops all buttons.
         buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_url=_owner_url))
         buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"))
         buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url))
@@ -253,20 +250,6 @@ async def ping(_, message):
         reply, BotTheme("PING_VALUE", value=int((end_time - start_time) * 1000))
     )
 
-
-async def emojitest(_, message):
-    """Diagnostic: test premium custom emoji via MessageEntity injection."""
-    from bot.helper.themes.custom_emojis import CUSTOM_EMOJI_MAP
-
-    test_id = CUSTOM_EMOJI_MAP.get("📥", "5443127283898405358")
-    result = (
-        f"<b>Premium Emoji Test</b>\n\n"
-        f"📥 📤 🚀 ✅ ❌ 🔥 💎 ⭐ ✨\n\n"
-        f"<b>📥 ID:</b> <code>{test_id}</code>\n"
-        f"<b>Agar upar emojis animated hain → system kaam kar raha hai ✅\n"
-        f"Agar regular emojis hain → emoji IDs galat hain ❌</b>"
-    )
-    await sendMessage(message, result)
 
 
 async def log(_, message):
@@ -488,12 +471,6 @@ async def main():
             filters=command(BotCommands.PingCommand)
             & CustomFilters.authorized
             & ~CustomFilters.blacklisted,
-        )
-    )
-    bot.add_handler(
-        MessageHandler(
-            emojitest,
-            filters=command("emojitest") & CustomFilters.sudo,
         )
     )
     bot.add_handler(
