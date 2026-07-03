@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 
 
+_SMALL_CAPS = {
+    'a': 'ᴀ', 'b': 'ʙ', 'c': 'ᴄ', 'd': 'ᴅ', 'e': 'ᴇ', 'f': 'ꜰ',
+    'g': 'ɢ', 'h': 'ʜ', 'i': 'ɪ', 'j': 'ᴊ', 'k': 'ᴋ', 'l': 'ʟ',
+    'm': 'ᴍ', 'n': 'ɴ', 'o': 'ᴏ', 'p': 'ᴘ', 'q': 'q', 'r': 'ʀ',
+    's': 'ꜱ', 't': 'ᴛ', 'u': 'ᴜ', 'v': 'ᴠ', 'w': 'ᴡ', 'x': 'x',
+    'y': 'ʏ', 'z': 'ᴢ',
+}
+
+
 def _to_bold(text: str) -> str:
     result = []
     for c in str(text):
         if 'A' <= c <= 'Z':
             result.append(chr(0x1D400 + ord(c) - ord('A')))
         elif 'a' <= c <= 'z':
-            result.append(chr(0x1D41A + ord(c) - ord('a')))
+            result.append(_SMALL_CAPS.get(c, c))
         elif '0' <= c <= '9':
             result.append(chr(0x1D7CE + ord(c) - ord('0')))
         else:
@@ -1305,12 +1314,11 @@ class MirrorLeechListener:
                 if self.sameDir.get("merge_mode") and not self.sameDir.get("failed"):
                     self.sameDir["failed"] = error
         msg = (
-            f"<b>🛑 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
-            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
-            f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{_to_bold(escape(error))}</i>\n"
-            f"┠ 𝐌𝐨𝐝𝐞      : {_to_bold(self.upload_details['mode'])}\n"
-            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {_to_bold(get_readable_time(time() - self.message.date.timestamp()))}"
+            f"<b>🛑 𝐃ᴏᴡɴʟᴏᴀᴅ 𝐒ᴛᴏᴘᴘᴇᴅ!</b>\n"
+            f"┠ 𝐓ᴀꜱᴋ 𝐅ᴏʀ  : {self.tag}\n"
+            f"┠ 𝐑ᴇᴀꜱᴏɴ    : <i>{_to_bold(escape(error))}</i>\n"
+            f"┠ 𝐌ᴏᴅᴇ      : {_to_bold(self.upload_details['mode'])}\n"
+            f"┖ 𝐄ʟᴀᴘꜱᴇᴅ   : {_to_bold(get_readable_time(time() - self.message.date.timestamp()))}"
         )
         await sendMessage(self.message, msg, button)
         if count == 0:
@@ -1349,12 +1357,11 @@ class MirrorLeechListener:
                 del download_dict[self.uid]
             count = len(download_dict)
         msg = (
-            f"<b>⚠️ 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
-            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
-            f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{_to_bold(escape(error))}</i>\n"
-            f"┠ 𝐌𝐨𝐝𝐞      : {_to_bold(self.upload_details['mode'])}\n"
-            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {_to_bold(get_readable_time(time() - self.message.date.timestamp()))}"
+            f"<b>⚠️ 𝐓ᴀꜱᴋ 𝐒ᴛᴏᴘᴘᴇᴅ!</b>\n"
+            f"┠ 𝐓ᴀꜱᴋ 𝐅ᴏʀ  : {self.tag}\n"
+            f"┠ 𝐑ᴇᴀꜱᴏɴ    : <i>{_to_bold(escape(error))}</i>\n"
+            f"┠ 𝐌ᴏᴅᴇ      : {_to_bold(self.upload_details['mode'])}\n"
+            f"┖ 𝐄ʟᴀᴘꜱᴇᴅ   : {_to_bold(get_readable_time(time() - self.message.date.timestamp()))}"
         )
         await sendMessage(self.message, msg)
         if count == 0:
