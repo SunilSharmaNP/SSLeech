@@ -262,10 +262,24 @@ class MirrorLeechListener:
                 self.message.text,
             )
 
+    _MERGE_CANCEL_MSG = (
+        "❌ 𝐌ᴇʀɢᴇ 𝐁ᴀᴛᴄʜ 𝐂ᴀɴᴄᴇʟʟᴇᴅ — 𝐀 𝐟ɪʟᴇ ᴅᴏᴡɴʟᴏᴀᴅ 𝐟ᴀɪʟᴇᴅ/𝐜ᴀɴᴄᴇʟʟᴇᴅ. "
+        "𝐀ʟʟ 𝐟ɪʟᴇs 𝐦ᴜsᴛ 𝐜𝐨𝐦𝐩ʟᴇᴛᴇ 𝐛𝐞𝐟𝐨ʀᴇ 𝐦𝐞𝐫𝐠𝐞."
+    )
+
     async def onDownloadComplete(self):
         multi_links = False
         while True:
             if self.sameDir:
+                # If any file in this merge batch failed, abort immediately.
+                # (Only triggered for merge batches — merge_mode key is set.)
+                if self.sameDir.get("failed"):
+                    LOGGER.warning(
+                        f"[MERGE] Aborting task {self.uid} — "
+                        f"batch failed: {self.sameDir['failed']}"
+                    )
+                    await self.onUploadError(self._MERGE_CANCEL_MSG)
+                    return
                 if (
                     self.sameDir["total"] in [1, 0]
                     or self.sameDir["total"] > 1
@@ -276,6 +290,15 @@ class MirrorLeechListener:
                 break
             await sleep(0.2)
         async with same_directory_lock:
+            # Atomic re-check inside the lock so no failed file slips through
+            # between the wait loop and the actual merge/move decision.
+            if self.sameDir and self.sameDir.get("failed"):
+                LOGGER.warning(
+                    f"[MERGE] Last task {self.uid} aborting inside lock — "
+                    f"batch had a failed file"
+                )
+                await self.onUploadError(self._MERGE_CANCEL_MSG)
+                return
             async with download_dict_lock:
                 if self.sameDir and self.sameDir["total"] > 1:
                     self.sameDir["tasks"].remove(self.uid)
@@ -996,8 +1019,7 @@ class MirrorLeechListener:
                 elif self.isSuperGroup and self.isPM:
                     message += BotTheme("L_BOT_MSG")
                     buttons.ibutton(
-                        BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header",
-                        icon_custom_emoji_id=5424818078833715060,
+                        BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header"
                     )
                 if config_dict["SAFE_MODE"] and self.isSuperGroup:
                     await sendMessage(
@@ -1006,25 +1028,27 @@ class MirrorLeechListener:
                         buttons.build_menu(2),
                         photo=self.random_pic,
                     )
-                fmsg = "\n"
+                _BQ_OPEN  = "\n<blockquote expandable>"
+                _BQ_CLOSE = "</blockquote>"
+                fmsg = _BQ_OPEN
                 for index, (link, name) in enumerate(files.items(), start=1):
                     fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
-                    if len(msg.encode() + fmsg.encode()) > (
+                    if len(message.encode() + (fmsg + _BQ_CLOSE).encode()) > (
                         4000 if len(config_dict["IMAGES"]) == 0 else 1000
                     ):
-
+                        chunk = fmsg + _BQ_CLOSE
                         if config_dict["SAFE_MODE"]:
                             if self.isSuperGroup:
                                 await sendMessage(
                                     self.botpmmsg,
-                                    msg + BotTheme("L_LL_MSG") + fmsg,
+                                    msg + BotTheme("L_LL_MSG") + chunk,
                                     btns,
                                     photo=self.random_pic,
                                 )
                             else:
                                 await sendMessage(
                                     self.message,
-                                    message + fmsg,
+                                    message + chunk,
                                     buttons.build_menu(2),
                                     photo=self.random_pic,
                                 )
@@ -1038,26 +1062,27 @@ class MirrorLeechListener:
                                 buttons.ibutton(BotTheme("SAVE_MSG"), "save", "footer")
                             await sendMessage(
                                 self.message,
-                                message + fmsg,
+                                message + chunk,
                                 buttons.build_menu(2),
                                 photo=self.random_pic,
                             )
                         await sleep(1.5)
-                        fmsg = ""
+                        fmsg = _BQ_OPEN
 
-                if fmsg != "\n":
+                if fmsg != _BQ_OPEN:
+                    chunk = fmsg + _BQ_CLOSE
                     if config_dict["SAFE_MODE"]:
                         if self.isSuperGroup:
                             await sendMessage(
                                 self.botpmmsg,
-                                msg + BotTheme("L_LL_MSG") + fmsg,
+                                msg + BotTheme("L_LL_MSG") + chunk,
                                 btns,
                                 photo=self.random_pic,
                             )
                         else:
                             await sendMessage(
                                 self.message,
-                                message + fmsg,
+                                message + chunk,
                                 buttons.build_menu(2),
                                 photo=self.random_pic,
                             )
@@ -1067,7 +1092,7 @@ class MirrorLeechListener:
                             buttons.ibutton(BotTheme("SAVE_MSG"), "save", "footer")
                         await sendMessage(
                             self.message,
-                            message + fmsg,
+                            message + chunk,
                             buttons.build_menu(2),
                             photo=self.random_pic,
                         )
@@ -1187,8 +1212,7 @@ class MirrorLeechListener:
                         if config_dict["SAVE_MSG"]:
                             s_btn.ibutton(BotTheme("SAVE_MSG"), "save", "footer")
                         s_btn.ibutton(
-                            BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header",
-                            icon_custom_emoji_id=5424818078833715060,
+                            BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header"
                         )
                         await sendMessage(
                             self.message,
@@ -1259,6 +1283,11 @@ class MirrorLeechListener:
             if self.sameDir and self.uid in self.sameDir["tasks"]:
                 self.sameDir["tasks"].remove(self.uid)
                 self.sameDir["total"] -= 1
+                # Mark merge batch as failed so waiting tasks abort.
+                # Only propagate for true merge batches (merge_mode key present),
+                # not for ordinary folder/multi grouped downloads.
+                if self.sameDir.get("merge_mode") and not self.sameDir.get("failed"):
+                    self.sameDir["failed"] = error
         msg = (
             f"<b>{E.stop} 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
