@@ -99,7 +99,6 @@ bool_vars = [
     "INCOMPLETE_TASK_NOTIFIER",
     "UPGRADE_PACKAGES",
     "SCREENSHOTS_MODE",
-    "USE_CUSTOM_EMOJI",
 ]
 
 
@@ -565,8 +564,6 @@ async def load_config():
     SCREENSHOTS_MODE = environ.get("SCREENSHOTS_MODE", "")
     SCREENSHOTS_MODE = SCREENSHOTS_MODE.lower() == "true"
 
-    USE_CUSTOM_EMOJI = environ.get("USE_CUSTOM_EMOJI", "")
-    USE_CUSTOM_EMOJI = USE_CUSTOM_EMOJI.lower() == "true"
 
     CLEAN_LOG_MSG = environ.get("CLEAN_LOG_MSG", "")
     CLEAN_LOG_MSG = CLEAN_LOG_MSG.lower() == "true"
@@ -802,7 +799,6 @@ async def load_config():
             "USER_TD_MODE": USER_TD_MODE,
             "USER_TD_SA": USER_TD_SA,
             "USE_SERVICE_ACCOUNTS": USE_SERVICE_ACCOUNTS,
-            "USE_CUSTOM_EMOJI": USE_CUSTOM_EMOJI,
             "WEB_PINCODE": WEB_PINCODE,
             "YT_DLP_OPTIONS": YT_DLP_OPTIONS,
         }
