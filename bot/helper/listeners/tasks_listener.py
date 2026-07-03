@@ -1,4 +1,20 @@
 #!/usr/bin/env python3
+
+
+def _to_bold(text: str) -> str:
+    result = []
+    for c in str(text):
+        if 'A' <= c <= 'Z':
+            result.append(chr(0x1D400 + ord(c) - ord('A')))
+        elif 'a' <= c <= 'z':
+            result.append(chr(0x1D41A + ord(c) - ord('a')))
+        elif '0' <= c <= '9':
+            result.append(chr(0x1D7CE + ord(c) - ord('0')))
+        else:
+            result.append(c)
+    return ''.join(result)
+
+
 from random import choice
 from time import time
 from copy import deepcopy
@@ -1289,12 +1305,12 @@ class MirrorLeechListener:
                 if self.sameDir.get("merge_mode") and not self.sameDir.get("failed"):
                     self.sameDir["failed"] = error
         msg = (
-            f"<b>{E.stop} 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"<b>🛑 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
             f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
-            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
-            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{_to_bold(escape(error))}</i>\n"
+            f"┠ 𝐌𝐨𝐝𝐞      : {_to_bold(self.upload_details['mode'])}\n"
+            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {_to_bold(get_readable_time(time() - self.message.date.timestamp()))}"
         )
         await sendMessage(self.message, msg, button)
         if count == 0:
@@ -1333,12 +1349,12 @@ class MirrorLeechListener:
                 del download_dict[self.uid]
             count = len(download_dict)
         msg = (
-            f"<b>{E.warning} 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"<b>⚠️ 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
             f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
             f"┃\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
-            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
-            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{_to_bold(escape(error))}</i>\n"
+            f"┠ 𝐌𝐨𝐝𝐞      : {_to_bold(self.upload_details['mode'])}\n"
+            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {_to_bold(get_readable_time(time() - self.message.date.timestamp()))}"
         )
         await sendMessage(self.message, msg)
         if count == 0:
