@@ -4,7 +4,7 @@ from asyncio import sleep
 from aiofiles.os import remove as aioremove
 from random import choice as rchoice
 from time import time
-from re import match as re_match
+from re import match as re_match, sub as re_sub
 from cryptography.fernet import InvalidToken
 
 from pyrogram import Client
@@ -22,6 +22,7 @@ from pyrogram.errors import (
     PhotoInvalidDimensions,
     WebpageCurlFailed,
     MediaEmpty,
+    DocumentInvalid,
 )
 
 from bot import (
@@ -49,6 +50,10 @@ from bot.helper.ext_utils.bot_utils import (
 )
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.exceptions import TgLinkException
+
+
+def _strip_emoji_tags(text):
+    return re_sub(r'<emoji id=\d+>(.*?)</emoji>', r'\1', text)
 
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
@@ -102,6 +107,9 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, None, photo)
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
+    except DocumentInvalid:
+        LOGGER.warning("DocumentInvalid: custom emoji not supported, retrying without emoji tags")
+        return await sendMessage(message, _strip_emoji_tags(text), buttons, photo, **kwargs)
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -144,6 +152,9 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await sendCustomMsg(chat_id, text, buttons, photo)
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
+    except DocumentInvalid:
+        LOGGER.warning("DocumentInvalid: custom emoji not supported, retrying without emoji tags")
+        return await sendCustomMsg(chat_id, _strip_emoji_tags(text), buttons, photo)
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -428,6 +439,9 @@ async def sendStatusMessage(msg):
             await deleteMessage(message)
             del status_reply_dict[chat_id]
         if message := await sendMessage(msg, progress, buttons, photo="IMAGES"):
+            if isinstance(message, str):
+                LOGGER.error(f"sendStatusMessage: sendMessage returned error string: {message}")
+                return
             if hasattr(message, "caption"):
                 message.caption = progress
             else:
