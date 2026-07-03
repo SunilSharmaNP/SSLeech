@@ -3,11 +3,11 @@ class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
     ST_BN1_NAME = '😎 𝐎ᴡɴᴇʀ'
-    ST_BN1_URL = '{owner_url}'
+    ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
     ST_BN2_NAME = '🔔 𝐔ᴘᴅᴀᴛᴇs'
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
     ST_BN3_NAME = '🦑 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
-    ST_BN3_URL = '{repo_url}'
+    ST_BN3_URL = 'https://github.com/SilentDemonSD/WZML-X/tree/master'
     ST_MSG = """𝐇ᴇʟʟᴏ {name}!
 
 ⚡ <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> ⚡
