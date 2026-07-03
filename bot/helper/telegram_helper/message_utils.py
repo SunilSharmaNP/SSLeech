@@ -10,7 +10,6 @@ from cryptography.fernet import InvalidToken
 from pyrogram import Client
 from pyrogram.enums import ParseMode
 from pyrogram.types import InputMediaPhoto
-
 from pyrogram.errors import (
     ReplyMarkupInvalid,
     FloodWait,
@@ -23,7 +22,6 @@ from pyrogram.errors import (
     PhotoInvalidDimensions,
     WebpageCurlFailed,
     MediaEmpty,
-    DocumentInvalid,
 )
 
 from bot import (
@@ -51,90 +49,10 @@ from bot.helper.ext_utils.bot_utils import (
 )
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.exceptions import TgLinkException
-from bot.helper.themes.custom_emojis import _FULL_MAP as _EMOJI_FULL_MAP
-
-import re as _re
-
-# Sorted longest-first so multi-char sequences match before their base chars.
-# Built once at import time. Sorting is always from full map; runtime gating
-# is done inside _inject_html_emoji() via config_dict["USE_CUSTOM_EMOJI"].
-_SORTED_EMOJI_MAP: list = sorted(
-    _EMOJI_FULL_MAP.items(),
-    key=lambda kv: len(kv[0]),
-    reverse=True,
-)
-
-# Matches existing <emoji ...>...</emoji> blocks so we skip them.
-_EMOJI_TAG_RE = _re.compile(r'(<emoji\b[^>]*>.*?</emoji>)', _re.DOTALL)
-
-# Strips injected <emoji id=DOC_ID>CHAR</emoji> tags → keeps only the visible char.
-_STRIP_EMOJI_RE = _re.compile(r'<emoji\b[^>]*>(.*?)</emoji>', _re.DOTALL)
-
-
-def _strip_emoji_tags(text: str) -> str:
-    """Remove <emoji id=...>char</emoji> wrappers, keeping only the visible char."""
-    return _STRIP_EMOJI_RE.sub(r'\1', text) if text else text
-
-
-def _is_entity_error(exc: Exception) -> bool:
-    """True if this RPCError looks like an invalid custom-emoji entity/document
-    (e.g. DOCUMENT_INVALID, ENTITY_TEXT_INVALID, ENTITIES_TOO_LONG). Used as a
-    safety net so a single bad emoji ID never crashes a message send/edit — it
-    always falls back to plain text instead."""
-    msg = str(exc).upper()
-    return "ENTITY" in msg or "DOCUMENT_INVALID" in msg or "ENTITIES" in msg
-
-
-def _is_button_url_error(exc: Exception) -> bool:
-    """True if the error is caused by an invalid inline button URL.
-    Telegram rejects tg:// and other invalid URL schemes in bot inline buttons."""
-    msg = str(exc).upper()
-    return "BUTTON_URL_INVALID" in msg or "BUTTON_DATA_INVALID" in msg or "REPLY_MARKUP_INVALID" in msg
-
-
-def _inject_html_emoji(text: str) -> str:
-    """Replace plain emoji chars in *text* with <emoji id=DOC_ID>char</emoji>.
-
-    Checks config_dict["USE_CUSTOM_EMOJI"] at call time so that toggling the
-    setting via Bot Settings takes immediate effect without a restart.
-
-    pyrotgfork 2.2.23 parses these tags natively in HTML parse mode and
-    renders them as animated premium emoji.
-
-    Smart double-processing protection: if the text already contains
-    <emoji> tags (e.g. from wzml_minimal.py templates), only the plain-text
-    segments between those tags are processed — existing tags are left intact.
-    """
-    if not config_dict.get("USE_CUSTOM_EMOJI", False) or not text:
-        return text
-
-    def _replace_in_plain(segment: str) -> str:
-        for emoji_char, doc_id in _SORTED_EMOJI_MAP:
-            if emoji_char in segment:
-                segment = segment.replace(
-                    emoji_char,
-                    f'<emoji id={doc_id}>{emoji_char}</emoji>',
-                )
-        return segment
-
-    if '<emoji' not in text:
-        # Fast path — no existing tags, replace directly.
-        return _replace_in_plain(text)
-
-    # Split on existing <emoji>...</emoji> blocks; alternate: plain, tag, plain, tag …
-    parts = _EMOJI_TAG_RE.split(text)
-    result = []
-    for part in parts:
-        if part.startswith('<emoji') and part.endswith('</emoji>'):
-            result.append(part)          # already a tag — leave untouched
-        else:
-            result.append(_replace_in_plain(part))
-    return ''.join(result)
 
 
 async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
     try:
-        text = _inject_html_emoji(text)
         if photo:
             try:
                 if photo == "IMAGES":
@@ -150,50 +68,6 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 )
             except IndexError:
                 pass
-            except (DocumentInvalid, RPCError) as _dinv_err:
-                if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-                    raise
-                # Could be invalid <emoji> tags in caption causing entity errors.
-                # Strip emoji tags first and retry WITH the same photo — this keeps
-                # the thumbnail/card visible even when USE_CUSTOM_EMOJI is on but
-                # the bot account cannot send premium emoji in captions.
-                plain_caption = _strip_emoji_tags(text)
-                if plain_caption != text:
-                    LOGGER.warning("sendMessage: emoji entity error on photo+caption, retrying with stripped caption")
-                    try:
-                        return await message.reply_photo(
-                            photo=photo,
-                            reply_to_message_id=message.id,
-                            caption=plain_caption,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=buttons,
-                            disable_notification=True,
-                            **kwargs,
-                        )
-                    except Exception:
-                        pass
-                # Photo URL/document itself is invalid — fall back to text-only
-                LOGGER.warning("sendMessage: DOCUMENT_INVALID on photo, falling back to text-only")
-                try:
-                    return await message.reply(
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        quote=True,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_markup=buttons,
-                    )
-                except Exception as _btn_err:
-                    if _is_button_url_error(_btn_err):
-                        LOGGER.warning("sendMessage: button URL invalid on text fallback, retrying without buttons")
-                        return await message.reply(
-                            text=text,
-                            parse_mode=ParseMode.HTML,
-                            quote=True,
-                            disable_web_page_preview=True,
-                            disable_notification=True,
-                        )
-                    raise
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendMessage(message, text, buttons, des_dir)
@@ -228,51 +102,13 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
         return await sendMessage(message, text, None, photo)
     except MessageEmpty:
         return await sendMessage(message, text, parse_mode=ParseMode.DISABLED)
-    except (DocumentInvalid, RPCError) as _dinv_err:
-        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-            if _is_button_url_error(_dinv_err):
-                LOGGER.warning("sendMessage: button URL invalid, retrying without buttons")
-                return await sendMessage(message, text, None, photo)
-            raise
-        # Emoji IDs themselves invalid — strip and retry plain
-        LOGGER.warning("sendMessage: DOCUMENT_INVALID on text, retrying without emoji tags")
-        plain_text = _strip_emoji_tags(text)
-        try:
-            return await message.reply(
-                text=plain_text,
-                quote=True,
-                disable_web_page_preview=True,
-                disable_notification=True,
-                reply_markup=buttons,
-            )
-        except Exception as e2:
-            if _is_button_url_error(e2):
-                # We already know: photo is DOCUMENT_INVALID, emoji tags cause entity errors.
-                # Do NOT recurse with photo — just send plain stripped text, no buttons.
-                LOGGER.warning("sendMessage: button URL invalid on strip-retry, sending plain text without buttons")
-                try:
-                    return await message.reply(
-                        text=plain_text,
-                        quote=True,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                    )
-                except Exception as e3:
-                    LOGGER.error(f"sendMessage: final plain-text fallback failed: {e3}")
-                    return str(e3)
-            LOGGER.error(f"sendMessage: plain retry also failed: {e2}")
-            return str(e2)
     except Exception as e:
-        if _is_button_url_error(e):
-            LOGGER.warning("sendMessage: button URL invalid (outer), retrying without buttons")
-            return await sendMessage(message, text, None, photo)
         LOGGER.error(format_exc())
         return str(e)
 
 
 async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
     try:
-        text = _inject_html_emoji(text)
         if photo:
             try:
                 if photo == "IMAGES":
@@ -287,19 +123,6 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
                 )
             except IndexError:
                 pass
-            except (DocumentInvalid, RPCError) as _dinv_err:
-                if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-                    raise
-                # Photo invalid — text-only fallback (emoji tags intact, bot CAN use them)
-                LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on photo, falling back to text-only")
-                return await bot.send_message(
-                    chat_id=chat_id,
-                    text=text,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                )
             except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                 des_dir = await download_image_url(photo)
                 await sendCustomMsg(chat_id, text, buttons, des_dir)
@@ -321,23 +144,6 @@ async def sendCustomMsg(chat_id, text, buttons=None, photo=None, debug=False):
         return await sendCustomMsg(chat_id, text, buttons, photo)
     except ReplyMarkupInvalid:
         return await sendCustomMsg(chat_id, text, None, photo)
-    except (DocumentInvalid, RPCError) as _dinv_err:
-        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-            raise
-        LOGGER.warning("sendCustomMsg: DOCUMENT_INVALID on text, retrying without emoji tags")
-        plain_text = _strip_emoji_tags(text)
-        try:
-            return await bot.send_message(
-                chat_id=chat_id,
-                text=plain_text,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                disable_notification=True,
-                reply_markup=buttons,
-            )
-        except Exception as e2:
-            LOGGER.error(f"sendCustomMsg: plain retry failed: {e2}")
-            return str(e2)
     except Exception as e:
         LOGGER.error(format_exc())
         return str(e)
@@ -359,7 +165,6 @@ async def chat_info(channel_id):
 
 
 async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
-    text = _inject_html_emoji(text)
     msg_dict = {}
     for channel_id in chat_ids.split():
         channel_id, *topic_id = channel_id.split(":")
@@ -385,25 +190,6 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
                     msg_dict[f"{chat.id}:{topic_id}"] = sent
                 except IndexError:
                     pass
-                except (DocumentInvalid, RPCError) as _dinv_err:
-                    if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-                        raise
-                    # Photo invalid — text-only fallback (emoji tags intact)
-                    LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on photo for {channel_id}, falling back to text-only")
-                    try:
-                        sent = await bot.send_message(
-                            chat_id=chat.id,
-                            text=text,
-                            parse_mode=ParseMode.HTML,
-                            disable_web_page_preview=True,
-                            disable_notification=True,
-                            reply_to_message_id=topic_id,
-                            reply_markup=buttons,
-                        )
-                        msg_dict[f"{chat.id}:{topic_id}"] = sent
-                    except Exception as e2:
-                        LOGGER.error(f"sendMultiMessage: text fallback also failed: {e2}")
-                    continue
                 except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
                     des_dir = await download_image_url(photo)
                     await sendMultiMessage(chat_ids, text, buttons, des_dir)
@@ -426,24 +212,6 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
             LOGGER.warning(str(f))
             await sleep(f.value * 1.2)
             return await sendMultiMessage(chat_ids, text, buttons, photo)
-        except (DocumentInvalid, RPCError) as _dinv_err:
-            if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-                raise
-            LOGGER.warning(f"sendMultiMessage: DOCUMENT_INVALID on text for {channel_id}, retrying without emoji")
-            plain_text = _strip_emoji_tags(text)
-            try:
-                sent = await bot.send_message(
-                    chat_id=chat.id,
-                    text=plain_text,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_to_message_id=topic_id,
-                    reply_markup=buttons,
-                )
-                msg_dict[f"{chat.id}:{topic_id}"] = sent
-            except Exception as e2:
-                LOGGER.error(f"sendMultiMessage: plain retry failed: {e2}")
         except Exception as e:
             LOGGER.error(str(e))
     return msg_dict
@@ -451,50 +219,13 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
 
 async def editMessage(message, text, buttons=None, photo=None):
     try:
-        text = _inject_html_emoji(text)
         if message.media:
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
-                try:
-                    return await message.edit_media(
-                        InputMediaPhoto(photo, text, parse_mode=ParseMode.HTML),
-                        reply_markup=buttons,
-                    )
-                except (DocumentInvalid, RPCError) as _dinv_err:
-                    if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-                        raise
-                    # Could be invalid <emoji> tags in caption — strip and retry
-                    # edit_media with same photo but plain caption first.
-                    plain_caption = _strip_emoji_tags(text)
-                    if plain_caption != text:
-                        LOGGER.warning("editMessage: emoji entity error on edit_media, retrying with stripped caption")
-                        try:
-                            return await message.edit_media(
-                                InputMediaPhoto(photo, plain_caption, parse_mode=ParseMode.HTML),
-                                reply_markup=buttons,
-                            )
-                        except Exception:
-                            pass
-                    # Photo URL itself is invalid — keep existing photo, update caption only
-                    LOGGER.warning("editMessage: DOCUMENT_INVALID on photo, keeping existing photo and updating caption only")
-                    plain_caption = _strip_emoji_tags(text)
-                    try:
-                        return await message.edit_caption(
-                            caption=text,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=buttons,
-                        )
-                    except (DocumentInvalid, RPCError):
-                        return await message.edit_caption(
-                            caption=plain_caption,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=buttons,
-                        )
-            return await message.edit_caption(
-                caption=text,
-                parse_mode=ParseMode.HTML,
-                reply_markup=buttons,
-            )
+                return await message.edit_media(
+                    InputMediaPhoto(photo, text), reply_markup=buttons
+                )
+            return await message.edit_caption(caption=text, reply_markup=buttons)
         await message.edit(
             text=text,
             parse_mode=ParseMode.HTML,
@@ -509,28 +240,6 @@ async def editMessage(message, text, buttons=None, photo=None):
         pass
     except ReplyMarkupInvalid:
         return await editMessage(message, text, None, photo)
-    except (DocumentInvalid, RPCError) as _dinv_err:
-        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-            raise
-        # Emoji tag IDs themselves are invalid — strip and retry plain
-        LOGGER.warning("editMessage: DOCUMENT_INVALID on emoji tags, retrying without emoji")
-        plain_text = _strip_emoji_tags(text)
-        try:
-            if message.media:
-                return await message.edit_caption(
-                    caption=plain_text,
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=buttons,
-                )
-            await message.edit(
-                text=plain_text,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                reply_markup=buttons,
-            )
-        except Exception as e2:
-            LOGGER.error(f"editMessage: plain retry failed: {e2}")
-            return str(e2)
     except Exception as e:
         LOGGER.error(str(e))
         return str(e)
@@ -696,18 +405,15 @@ async def update_all_messages(force=False):
         return
     async with status_reply_dict_lock:
         for chat_id in list(status_reply_dict.keys()):
-            stored = status_reply_dict.get(chat_id)
-            if not stored or isinstance(stored[0], str):
-                continue
-            if msg != stored[0].text:
+            if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id][0].text:
                 rmsg = await editMessage(
-                    stored[0], msg, buttons, "IMAGES"
+                    status_reply_dict[chat_id][0], msg, buttons, "IMAGES"
                 )
                 if isinstance(rmsg, str) and rmsg.startswith("Telegram says: [400"):
                     del status_reply_dict[chat_id]
                     continue
-                stored[0].text = msg
-                stored[1] = time()
+                status_reply_dict[chat_id][0].text = msg
+                status_reply_dict[chat_id][1] = time()
 
 
 async def sendStatusMessage(msg):
@@ -721,82 +427,16 @@ async def sendStatusMessage(msg):
             message = status_reply_dict[chat_id][0]
             await deleteMessage(message)
             del status_reply_dict[chat_id]
-
-        # ── Premium emoji strategy ────────────────────────────────────────────
-        # Regular bots get DOCUMENT_INVALID when sending <emoji> entities.
-        # Only the premium user client (@Premiumdfvip) can send them.
-        # We try user client first so status messages show animated emojis.
-        # If user is unavailable or the chat is not accessible to user, we fall
-        # back to bot (emojis will be stripped to plain Unicode by sendMessage).
-        message = None
-        if user:
-            text = _inject_html_emoji(progress)
-            try:
-                images = config_dict.get("IMAGES", [])
-                if images:
-                    photo = rchoice(images)
-                    try:
-                        message = await user.send_photo(
-                            chat_id=chat_id,
-                            photo=photo,
-                            caption=text,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=buttons,
-                            disable_notification=True,
-                        )
-                    except (DocumentInvalid, RPCError) as _dinv_err:
-                        if not isinstance(_dinv_err, DocumentInvalid) and not _is_entity_error(_dinv_err):
-                            raise
-                        # Photo URL bad — keep text with emojis intact
-                        LOGGER.warning("sendStatusMessage: user DOCUMENT_INVALID on photo, sending text-only")
-                        message = await user.send_message(
-                            chat_id=chat_id,
-                            text=text,
-                            parse_mode=ParseMode.HTML,
-                            disable_web_page_preview=True,
-                            disable_notification=True,
-                            reply_markup=buttons,
-                        )
-                    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
-                        # Bad photo dimensions / curl fail — text-only fallback
-                        message = await user.send_message(
-                            chat_id=chat_id,
-                            text=text,
-                            parse_mode=ParseMode.HTML,
-                            disable_web_page_preview=True,
-                            disable_notification=True,
-                            reply_markup=buttons,
-                        )
-                else:
-                    message = await user.send_message(
-                        chat_id=chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                        disable_notification=True,
-                        reply_markup=buttons,
-                    )
-            except Exception as ue:
-                LOGGER.warning(f"sendStatusMessage: user client failed ({ue!r}), falling back to bot")
-                message = None
-
-        # Bot fallback — emojis stripped to plain Unicode by sendMessage
-        if not message:
-            message = await sendMessage(msg, progress, buttons, photo="IMAGES")
-
-        if isinstance(message, str):
-            LOGGER.error(f"sendStatusMessage: send returned error — {message}")
-            return
-        if message:
+        if message := await sendMessage(msg, progress, buttons, photo="IMAGES"):
             if hasattr(message, "caption"):
                 message.caption = progress
             else:
                 message.text = progress
-            status_reply_dict[chat_id] = [message, time()]
-            if not Interval:
-                Interval.append(
-                    setInterval(config_dict["STATUS_UPDATE_INTERVAL"], update_all_messages)
-                )
+        status_reply_dict[chat_id] = [message, time()]
+        if not Interval:
+            Interval.append(
+                setInterval(config_dict["STATUS_UPDATE_INTERVAL"], update_all_messages)
+            )
 
 
 async def open_category_btns(message):
@@ -820,8 +460,8 @@ async def open_category_btns(message):
             )
             if _tick:
                 _tick, cat_name = False, _name
-    buttons.ibutton("❌ Cancel", f"scat {user_id} {msg_id} scancel", "footer")
-    buttons.ibutton(f"✅ Done (60)", f"scat {user_id} {msg_id} sdone", "footer")
+    buttons.ibutton("Cancel", f"scat {user_id} {msg_id} scancel", "footer")
+    buttons.ibutton(f"Done (60)", f"scat {user_id} {msg_id} sdone", "footer")
     prompt = await sendMessage(
         message,
         f"<b>Select the category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
@@ -855,9 +495,9 @@ async def open_dump_btns(message):
             )
             if _tick:
                 _tick, cat_name = False, _name
-    buttons.ibutton("📤 Upload in All", f"dcat {user_id} {msg_id} All", "header")
-    buttons.ibutton("❌ Cancel", f"dcat {user_id} {msg_id} dcancel", "footer")
-    buttons.ibutton(f"✅ Done (60)", f"dcat {user_id} {msg_id} ddone", "footer")
+    buttons.ibutton("Upload in All", f"dcat {user_id} {msg_id} All", "header")
+    buttons.ibutton("Cancel", f"dcat {user_id} {msg_id} dcancel", "footer")
+    buttons.ibutton(f"Done (60)", f"dcat {user_id} {msg_id} ddone", "footer")
     prompt = await sendMessage(
         message,
         f"<b>Select the Dump category where you want to upload</b>\n\n<i><b>Upload Category:</b></i> <code>{cat_name}</code>\n\n<b>Timeout:</b> 60 sec",
@@ -900,7 +540,7 @@ async def forcesub(message, ids, button=None):
             button = ButtonMaker()
         _msg = "You haven't joined our channel yet!"
         for key, value in join_button.items():
-            button.ubutton(f"📢 Join {key}", value, "footer")
+            button.ubutton(f"Join {key}", value, "footer")
     return _msg, button
 
 
@@ -923,6 +563,6 @@ async def check_botpm(message, button=None):
             button = ButtonMaker()
         _msg = "<i>You didn't START the bot in PM (Private)</i>"
         button.ubutton(
-            "🚀 Start Bot Now", f"https://t.me/{bot_name}?start=start", "header"
+            "Start Bot Now", f"https://t.me/{bot_name}?start=start", "header"
         )
         return _msg, button
