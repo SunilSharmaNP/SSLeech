@@ -154,10 +154,10 @@ class WZMLStyle:
     L_LOG_START = "➲ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┠ <b>𝐔sᴇʀ :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ :</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
-    SIZE = "┎ <b>📦 𝐒ɪᴢᴇ : </b>{Size}\n"
-    ELAPSE = "┠ <b>⏱ 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
-    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ : </b>{Mode}\n"
+    NAME = "<b> <emoji id=5424818078833715060>📣</emoji> 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
+    SIZE = "┎ <b><emoji id= 5334544901428229844>ℹ️</emoji> 𝐒ɪᴢᴇ : </b>{Size}\n"
+    ELAPSE = "┠ <b><emoji id=5402186569006210455>💱</emoji> 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
+    MODE = "┠ <b><emoji id=5202064723922670546>🪙</emoji> 𝐌ᴏᴅᴇ : </b>{Mode}\n"
     CREDIT = "━✦❘༻ <b><a href=https://t.me/SSBotsUpdates> 𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
 
     # ----- LEECH -------
