@@ -203,13 +203,13 @@ async def restart(client, message):
     buttons.ibutton(f"{E.get('error', plain=True)} No, Cancel", "botrestart cancel")
     await sendMessage(
         message,
-        f"<i>{E.warning} Are you sure you want to restart the bot?\n\nAll active tasks will be interrupted.</i>",
+        f"<i>⚠️ Are you sure you want to restart the bot?\n\nAll active tasks will be interrupted.</i>",
         buttons.build_menu(2),
     )
 
 
 async def _do_restart(message):
-    restart_message = await sendMessage(message, f"<i>{E.restart} Restarting bot, please wait...</i>")
+    restart_message = await sendMessage(message, f"<i>🔄 Restarting bot, please wait...</i>")
     if scheduler.running:
         scheduler.shutdown(wait=False)
     await delete_all_messages()
@@ -223,8 +223,9 @@ async def _do_restart(message):
     )
     proc2 = await create_subprocess_exec("python3", "update.py")
     await gather(proc1.wait(), proc2.wait())
-    async with aiopen(".restartmsg", "w") as f:
-        await f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
+    if hasattr(restart_message, "chat") and hasattr(restart_message, "id"):
+        async with aiopen(".restartmsg", "w") as f:
+            await f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
     osexecl(executable, executable, "-m", "bot")
 
 
@@ -233,13 +234,13 @@ async def confirm_restart(_, query):
     await query.answer()
     data = query.data.split()
     message = query.message
-    reply_to = message.reply_to_message
+    reply_to = message.reply_to_message or message
     if data[1] == "confirm":
         await deleteMessage(message)
         await _do_restart(reply_to)
     else:
         await deleteMessage(message)
-        await sendMessage(reply_to, f"{E.done} <i>Restart cancelled.</i>")
+        await sendMessage(reply_to, f"{E.get('done', plain=True)} <i>Restart cancelled.</i>")
 
 
 async def ping(_, message):
