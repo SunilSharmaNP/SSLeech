@@ -2,15 +2,15 @@
 class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
-    ST_BN1_NAME = '😎 𝐎ᴡɴᴇʀ'
+    ST_BN1_NAME = '👑 𝐎ᴡɴᴇʀ'
     ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
     ST_BN2_NAME = '🔔 𝐔ᴘᴅᴀᴛᴇs'
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
-    ST_BN3_NAME = '🦑 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
+    ST_BN3_NAME = '⚡ 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
     ST_BN3_URL = 'https://github.com/SilentDemonSD/WZML-X/tree/master'
     ST_MSG = """𝐇ᴇʟʟᴏ {name}!
 
-⚡ <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> ⚡
+<emoji id=5424818078833715060>⚡</emoji><b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
 📝 <b>This Bot Can Mirror or Leech Files From Links, Telegram Files, Torrents, Google Drive, or Directly to Telegram.</b> 🔥
 
@@ -154,10 +154,10 @@ class WZMLStyle:
     L_LOG_START = "➲ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴛᴀʀᴛᴇᴅ :</u></b>\n┠ <b>𝐔sᴇʀ :</b> {mention} ( #ID{uid} )\n┖ <b>𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ :</b> <a href='{msg_link}'>𝐂ʟɪᴄᴋ 𝐇ᴇʀᴇ</a>"
 
     # async def onUploadComplete(): ---> tasks_listener.py
-    NAME = "<b> 🎥 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
-    SIZE = "┎ <b>📦 𝐒ɪᴢᴇ : </b>{Size}\n"
-    ELAPSE = "┠ <b>⏱ 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
-    MODE = "┠ <b>🎛️ 𝐌ᴏᴅᴇ : </b>{Mode}\n"
+    NAME = "<b> <emoji id=5424818078833715060>📣</emoji> 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
+    SIZE = "┎ <b><emoji id= 5334544901428229844>ℹ️</emoji> 𝐒ɪᴢᴇ : </b>{Size}\n"
+    ELAPSE = "┠ <b><emoji id=5402186569006210455>💱</emoji> 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
+    MODE = "┠ <b><emoji id=5202064723922670546>🪙</emoji> 𝐌ᴏᴅᴇ : </b>{Mode}\n"
     CREDIT = "━✦❘༻ <b><a href=https://t.me/SSBotsUpdates> 𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
 
     # ----- LEECH -------
@@ -195,7 +195,7 @@ class WZMLStyle:
     mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┓"
     BAR = "\n┠ {Bar}"
     PROCESSED = "\n┠<b><emoji id=5456140674028019486>⚡️</emoji> 𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
-    STATUS = '\n┠ <b><emoji id=5235711785482341993>🪄</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
+    STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
     ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
     SPEED = "\n┠<b>☘️ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
     ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
