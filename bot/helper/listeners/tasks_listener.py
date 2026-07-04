@@ -1292,11 +1292,11 @@ class MirrorLeechListener:
                 if self.sameDir.get("merge_mode") and not self.sameDir.get("failed"):
                     self.sameDir["failed"] = error
         msg = (
-            f"<b>🛑 𝐃ᴏᴡɴʟᴏᴀᴅ 𝐒ᴛᴏᴘᴘᴇᴅ!</b>\n"
-            f"┠ 𝐓ᴀꜱᴋ 𝐅ᴏʀ  : {self.tag}\n"
-            f"┠ 𝐑ᴇᴀꜱᴏɴ    : <i>{escape(error)}</i>\n"
-            f"┠ 𝐌ᴏᴅᴇ      : {self.upload_details['mode']}\n"
-            f"┖ 𝐄ʟᴀᴘꜱᴇᴅ   : {get_readable_time(time() - self.message.date.timestamp())}"
+            f"<b>🛑 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
+            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
         await sendMessage(self.message, msg, button)
         if count == 0:
@@ -1335,11 +1335,11 @@ class MirrorLeechListener:
                 del download_dict[self.uid]
             count = len(download_dict)
         msg = (
-            f"<b>⚠️ 𝐓ᴀꜱᴋ 𝐒ᴛᴏᴘᴘᴇᴅ!</b>\n"
-            f"┠ 𝐓ᴀꜱᴋ 𝐅ᴏʀ  : {self.tag}\n"
-            f"┠ 𝐑ᴇᴀꜱᴏɴ    : <i>{escape(error)}</i>\n"
-            f"┠ 𝐌ᴏᴅᴇ      : {self.upload_details['mode']}\n"
-            f"┖ 𝐄ʟᴀᴘꜱᴇᴅ   : {get_readable_time(time() - self.message.date.timestamp())}"
+            f"<b>⚠️ 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
+            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
+            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
         await sendMessage(self.message, msg)
         if count == 0:
