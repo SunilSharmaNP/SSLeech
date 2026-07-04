@@ -20,14 +20,14 @@ class WZMLStyle:
 
     ST_BOTPM = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=6296508771325707891>❤️</emoji> <b> I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
+<emoji id=6296508771325707891>❤️</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
 <emoji id=5199658498559854923>🍀</emoji> <b>Now I Will Send All Your Leeched Files Here. Start Using Me In The Group!</b> <emoji id=5220166546491459639>🔥</emoji>"""
     ST_UNAUTH = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=5424818078833715060>⚡</emoji> <b> I'm A Mirror Leech Telegram Bot ! [MLTB]</b> <emoji id=5424818078833715060>⚡</emoji>
+<emoji id=5424818078833715060>⚡</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> <emoji id=5424818078833715060>⚡</emoji>
 
-🚫 <b>You are not an authorized user!</b>"""
+<emoji id=5219866512961062330>⁉️</emoji> <b>You are not an authorized user!</b>"""
     OWN_TOKEN_GENERATE = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
     USED_TOKEN = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ᴀʟʀᴇᴀᴅʏ ᴜsᴇᴅ!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ɴᴇᴡ ᴏɴᴇ.</i>"""
     LOGGED_PASSWORD = """<b>𝐁ᴏᴛ 𝐀ʟʀᴇᴀᴅʏ 𝐋ᴏɢɢᴇᴅ 𝐈ɴ ᴠɪᴀ 𝐏ᴀssᴡᴏʀᴅ</b>\n\n<i>𝐍ᴏ ɴᴇᴇᴅ ᴛᴏ 𝐀ᴄᴄᴇᴘᴛ 𝐓ᴇᴍᴘ 𝐓ᴏᴋᴇɴs.</i>"""
@@ -161,19 +161,19 @@ class WZMLStyle:
     CREDIT = "━✦❘༻ <b><a href=https://t.me/SSBotsUpdates> 𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
 
     # ----- LEECH -------
-    L_TOTAL_FILES = "┠ <b>🗂️ 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
-    L_CORRUPTED_FILES = "┠ <b>🛑 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs : </b>{Corrupt}\n"
-    L_CC = "┖ <b>✨ 𝐁ʏ : </b>{Tag}\n\n"
-    PM_BOT_MSG = "<b>☝️ 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
-    L_BOT_MSG = "<b>📩 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌</b>"
-    L_LL_MSG = "<b>🔗 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
+    L_TOTAL_FILES = "┠ <b><emoji id=5190806721286657692>📊</emoji> 𝐓ᴏᴛᴀʟ 𝐅ɪʟᴇs : </b>{Files}\n"
+    L_CORRUPTED_FILES = "┠ <b><emoji id=5219866512961062330>⁉️</emoji> 𝐂ᴏʀʀᴜᴘᴛᴇᴅ 𝐅ɪʟᴇs : </b>{Corrupt}\n"
+    L_CC = "┖ <b><emoji id=5427168083074628963>💎</emoji> 𝐁ʏ : </b>{Tag}\n\n"
+    PM_BOT_MSG = "<b><emoji id=5449683594425410231>🔼</emoji> 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴀʙᴏᴠᴇ</b>"
+    L_BOT_MSG = "<b><emoji id=5443127283898405358>📥</emoji> 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏𝐌</b>"
+    L_LL_MSG = "<b><emoji id=5271604874419647061>🔗</emoji> 𝐅ɪʟᴇ(ꜱ) 𝐇ᴀᴠᴇ ʙᴇᴇɴ 𝐒ᴇɴᴛ. 𝐀ᴄᴄᴇss ᴠɪᴀ 𝐋ɪɴᴋs...</b>\n"
 
-    M_TYPE = "┠ <b>𝐓ʏᴘᴇ : </b>{Mimetype}\n"
-    M_SUBFOLD = "┠ <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs : </b>{Folder}\n"
-    TOTAL_FILES = "┠ <b>𝐅ɪʟᴇs : </b>{Files}\n"
-    RCPATH = "┠ <b>𝐏ᴀᴛʜ : </b><code>{RCpath}</code>\n"
-    M_CC = "┖ <b>𝐁ʏ : </b>{Tag}\n\n"
-    M_BOT_MSG = "➲ <b><i>𝐋ɪɴᴋ(s) 𝐇𝐚𝐯𝐞 𝐛ᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏ᴍ </i></b>"
+    M_TYPE = "┠ <b><emoji id=5341715473882955310>⚙️</emoji> 𝐓ʏᴘᴇ : </b>{Mimetype}\n"
+    M_SUBFOLD = "┠ <b><emoji id=5190806721286657692>📊</emoji> 𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs : </b>{Folder}\n"
+    TOTAL_FILES = "┠ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐅ɪʟᴇs : </b>{Files}\n"
+    RCPATH = "┠ <b><emoji id=5271604874419647061>🔗</emoji> 𝐏ᴀᴛʜ : </b><code>{RCpath}</code>\n"
+    M_CC = "┖ <b><emoji id=5427168083074628963>💎</emoji> 𝐁ʏ : </b>{Tag}\n\n"
+    M_BOT_MSG = "➲ <b><i><emoji id=5443127283898405358>📥</emoji> 𝐋ɪɴᴋ(s) 𝐇𝐚𝐯𝐞 ʙᴇᴇɴ 𝐒ᴇɴᴛ ᴛᴏ 𝐁ᴏᴛ 𝐏ᴍ </i></b>"
 
     # ----- BUTTONS -------
     CLOUD_LINK = "☁️ 𝐂ʟᴏᴜᴅ 𝐋ɪɴᴋ"
@@ -190,61 +190,61 @@ class WZMLStyle:
     SCREENSHOTS = "🖼 𝐒ᴄʀᴇᴇɴ𝐒ʜᴏᴛs"
 
     # def get_readable_message(): ---> bot_utilis.py
-    STATUS_NAME = "<b>🎥 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
+    STATUS_NAME = "<b><emoji id=5294339927318739359>🎙</emoji> 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
 
     mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┓"
     BAR = "\n┠ {Bar}"
     PROCESSED = "\n┠<b><emoji id=5456140674028019486>⚡️</emoji> 𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
-    STATUS = '\n┠ <b>🪄 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
-    ETA = "\n┠<b>⏳ 𝐄ᴛᴀ :</b> {Eta}"
-    SPEED = "\n┠<b>☘️ 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
-    ELAPSED = "\n┠ <b>🕓 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
-    ENGINE = "\n┠ <b>🪩 𝐄ɴɢɪɴᴇ :</b> {Engine}"
-    STA_MODE = "\n┠ <b>🌐 𝐌ᴏᴅᴇ :</b> {Mode}"
-    SEEDERS = "\n┠ <b>🌱 𝐒ᴇᴇᴅᴇʀs :</b> {Seeders}"
-    LEECHERS = "\n┠<b>☘️ 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
+    STATUS = '\n┠ <b><emoji id=5427168083074628963>💎</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
+    ETA = "\n┠<b><emoji id=5386367538735104399>⌛</emoji> 𝐄ᴛᴀ :</b> {Eta}"
+    SPEED = "\n┠<b><emoji id=5220195537520711716>⚡️</emoji> 𝐒ᴘᴇᴇᴅ :</b> {Speed}"
+    ELAPSED = "\n┠ <b><emoji id=5382194935057372936>⏱</emoji> 𝐄ʟᴀᴘsᴇᴅ :</b> {Elapsed}"
+    ENGINE = "\n┠ <b><emoji id=5341715473882955310>⚙️</emoji> 𝐄ɴɢɪɴᴇ :</b> {Engine}"
+    STA_MODE = "\n┠ <b><emoji id=5224450179368767019>🌎</emoji> 𝐌ᴏᴅᴇ :</b> {Mode}"
+    SEEDERS = "\n┠ <b><emoji id=5429651785352501917>↗️</emoji> 𝐒ᴇᴇᴅᴇʀs :</b> {Seeders}"
+    LEECHERS = "\n┠<b><emoji id=5406745015365943482>⬇️</emoji> 𝐋ᴇᴇᴄʜᴇʀs :</b> {Leechers}"
 
-    SEED_SIZE = "\n┠ <b>📦 𝐒ɪᴢᴇ : </b>{Size}"
-    SEED_SPEED = "\n┠ <b>🚀 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
-    UPLOADED = "<b>☁️ 𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
-    RATIO = "\n┠ <b>📊 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
-    TIME = "<b>⏳ 𝐓ɪᴍᴇ : </b> {Time}"
-    SEED_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ:</b> {Engine}"
+    SEED_SIZE = "\n┠ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐒ɪᴢᴇ : </b>{Size}"
+    SEED_SPEED = "\n┠ <b><emoji id=5217880283860194582>🚀</emoji> 𝐒ᴘᴇᴇᴅ : </b> {Speed} | "
+    UPLOADED = "<b><emoji id=5445355530111437729>📤</emoji> 𝐔ᴘʟᴏᴀᴅᴇᴅ : </b> {Upload}"
+    RATIO = "\n┠ <b><emoji id=5190806721286657692>📊</emoji> 𝐑ᴀᴛɪᴏ : </b> {Ratio} | "
+    TIME = "<b><emoji id=5386367538735104399>⌛</emoji> 𝐓ɪᴍᴇ : </b> {Time}"
+    SEED_ENGINE = "\n┠ <b><emoji id=5341715473882955310>⚙️</emoji> 𝐄ɴɢɪɴᴇ:</b> {Engine}"
 
-    STATUS_SIZE = "\n┠ <b>📦 𝐒ɪᴢᴇ : </b>{Size}"
-    NON_ENGINE = "\n┠ <b>⚙️ 𝐄ɴɢɪɴᴇ :</b> {Engine}"
+    STATUS_SIZE = "\n┠ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐒ɪᴢᴇ : </b>{Size}"
+    NON_ENGINE = "\n┠ <b><emoji id=5341715473882955310>⚙️</emoji> 𝐄ɴɢɪɴᴇ :</b> {Engine}"
 
-    USER = "\n┠ <b>👤 𝐔sᴇʀ :</b> <code>{User}</code>"
-    ID = "\n┠ <b>🆔 𝐈𝐃 :</b> <code>{Id}</code>"
-    BTSEL = "\n┠ <b>✅ 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
+    USER = "\n┠ <b><emoji id=5217822164362739968>👑</emoji> 𝐔sᴇʀ :</b> <code>{User}</code>"
+    ID = "\n┠ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐈𝐃 :</b> <code>{Id}</code>"
+    BTSEL = "\n┠ <b><emoji id=5206607081334906820>✔️</emoji> 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
     CANCEL = "\n┠ {Cancel}\n"
     mn = "┗━━༻« <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┛\n\n"
 
-    FOOTER = "<blockquote>┎⌬ <b><i>📊 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
+    FOOTER = "<blockquote>┎⌬ <b><i><emoji id=5190806721286657692>📊</emoji> 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
     TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}\n"
-    BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b>🟢 𝐀ᴠʟ:</b> {Free}\n"
-    Cpu = "┠🖥️<b> 𝐂ᴘᴜ:</b> {cpu}% | "
-    FREE = "<b>💿 𝐅:</b> {free} [{free_p}%]"
-    Ram = "\n┠ <b>🧠 𝐑ᴀᴍ:</b> {ram}% | "
-    uptime = "<b>⏳ 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
-    DL = "\n┖ <b>🔻 𝐃ʟ:</b> {DL}/s | "
-    UL = "<b>🔺 𝐔ʟ:</b> {UL}/s</blockquote>"
+    BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b><emoji id=5206607081334906820>✔️</emoji> 𝐀ᴠʟ:</b> {Free}\n"
+    Cpu = "┠<emoji id=5282843764451195532>🖥</emoji><b> 𝐂ᴘᴜ:</b> {cpu}% | "
+    FREE = "<b><emoji id=5334544901428229844>ℹ️</emoji> 𝐅:</b> {free} [{free_p}%]"
+    Ram = "\n┠ <b><emoji id=5193177581888755275>💻</emoji> 𝐑ᴀᴍ:</b> {ram}% | "
+    uptime = "<b><emoji id=5386367538735104399>⌛</emoji> 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
+    DL = "\n┖ <b><emoji id=5406745015365943482>⬇️</emoji> 𝐃ʟ:</b> {DL}/s | "
+    UL = "<b><emoji id=5429651785352501917>↗️</emoji> 𝐔ʟ:</b> {UL}/s</blockquote>"
 
     PREVIOUS = "⫷"
     REFRESH = "📑𝐏ᴀɢᴇ\n{Page}"
     NEXT = "⫸"
 
     # STOP_DUPLICATE_MSG: ---> clone.py, aria2_listener.py, task_manager.py
-    STOP_DUPLICATE = "📁 𝐅ɪʟᴇ/𝐅ᴏʟᴅᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ 𝐃ʀɪᴠᴇ.\n 𝐇ᴇʀᴇ ᴀʀᴇ {content} ʟɪsᴛ ʀᴇsᴜʟᴛs:"
+    STOP_DUPLICATE = "<emoji id=5219866512961062330>⁉️</emoji> 𝐅ɪʟᴇ/𝐅ᴏʟᴅᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ 𝐃ʀɪᴠᴇ.\n 𝐇ᴇʀᴇ ᴀʀᴇ {content} ʟɪsᴛ ʀᴇsᴜʟᴛs:"
 
     # async def countNode(_, message): ----> gd_count.py
-    COUNT_MSG = "<b>🔎 𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
-    COUNT_NAME = "📂 <b><i>{COUNT_NAME}</i></b>\n┃\n"
-    COUNT_SIZE = "┠ 📏 <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
-    COUNT_TYPE = "┠ 🗂 <b>𝐓ʏᴘᴇ:</b> {COUNT_TYPE}\n"
-    COUNT_SUB = "┠ 📁 <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs:</b> {COUNT_SUB}\n"
-    COUNT_FILE = "┠ 📄 <b>𝐅ɪʟᴇs:</b> {COUNT_FILE}\n"
-    COUNT_CC = "┖ 👤 <b>𝐁ʏ:</b> {COUNT_CC}\n"
+    COUNT_MSG = "<b><emoji id=5452069934089641166>❓</emoji> 𝐂ᴏᴜɴᴛɪɴɢ:</b> <code>{LINK}</code>"
+    COUNT_NAME = "<emoji id=5190806721286657692>📊</emoji> <b><i>{COUNT_NAME}</i></b>\n┃\n"
+    COUNT_SIZE = "┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐒ɪᴢᴇ:</b> {COUNT_SIZE}\n"
+    COUNT_TYPE = "┠ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐓ʏᴘᴇ:</b> {COUNT_TYPE}\n"
+    COUNT_SUB = "┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐒ᴜʙ𝐅ᴏʟᴅᴇʀs:</b> {COUNT_SUB}\n"
+    COUNT_FILE = "┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐅ɪʟᴇs:</b> {COUNT_FILE}\n"
+    COUNT_CC = "┖ <emoji id=5217822164362739968>👑</emoji> <b>𝐁ʏ:</b> {COUNT_CC}\n"
 
     # LIST ---> gd_list.py
     LIST_SEARCHING = "<b>𝐒ᴇᴀʀᴄʜɪɴɢ 𝐟ᴏʀ <i>{NAME}</i></b>"
@@ -262,10 +262,10 @@ class WZMLStyle:
     # USER Setting --> user_setting.py
     USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
         
-┎➲ 👤 <b>𝐍ᴀᴍᴇ :</b> {NAME}
-┠➲ 🆔 <b>𝐈𝐃 :</b> <code>{ID}</code>
-┠➲ 📡 <b>𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
-┖➲ 🌐 <b>𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
+┎➲ <emoji id=5217822164362739968>👑</emoji> <b>𝐍ᴀᴍᴇ :</b> {NAME}
+┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐈𝐃 :</b> <code>{ID}</code>
+┠➲ <emoji id=5224450179368767019>🌎</emoji> <b>𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
+┖➲ <emoji id=5224450179368767019>🌎</emoji> <b>𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
 
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
 • <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ
@@ -275,48 +275,48 @@ class WZMLStyle:
 
     UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎➲ 📱 <b>𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
-┠➲ 📊 <b>𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
-┠➲ ⏳ <b>𝐋ᴀsᴛ 𝐁ᴏᴛ 𝐔sᴇᴅ :</b> <code>{LAST_USED}</code>
-┠➲ 🔓 <b>𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
-┠➲ 🎛️ <b>𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
-┠➲ 📁 <b>𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
-┖➲ 📤 <b>𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
+┎➲ <emoji id=5193177581888755275>💻</emoji> <b>𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
+┠➲ <emoji id=5190806721286657692>📊</emoji> <b>𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
+┠➲ <emoji id=5386367538735104399>⌛</emoji> <b>𝐋ᴀsᴛ 𝐁ᴏᴛ 𝐔sᴇᴅ :</b> <code>{LAST_USED}</code>
+┠➲ <emoji id=5197288647275071607>🛡</emoji> <b>𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
+┠➲ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
+┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
+┖➲ <emoji id=5445355530111437729>📤</emoji> <b>𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎➲ ☁️ <b>𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
-┠➲ 🔗 <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
-┠➲ ✨ <b>𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <code>{MSUFFIX}</code>
-┠➲ 🔄 <b>𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{MREMNAME}</code>
-┠➲ 💻 <b>𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
-┠➲ 💠 <b>𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
-┠➲ 📊 <b>𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
-┖➲ 📈 <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
+┎➲ <emoji id=5224450179368767019>🌎</emoji> <b>𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
+┠➲ <emoji id=5271604874419647061>🔗</emoji> <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
+┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <code>{MSUFFIX}</code>
+┠➲ <emoji id=5416117059207572332>➡️</emoji> <b>𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{MREMNAME}</code>
+┠➲ <emoji id=5193177581888755275>💻</emoji> <b>𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
+┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
+┠➲ <emoji id=5190806721286657692>📊</emoji> <b>𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
+┖➲ <emoji id=5429651785352501917>↗️</emoji> <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎➲ 📥 <b>𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
-┠➲ 📄 <b>𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
-┠➲ 🖼 <b>𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{THUMB}</i>
-┠➲ 📦 <b>𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛ 𝐒ɪᴢᴇ :</b> <code>{SPLIT_SIZE}</code>
-┠➲ ⚡ <b>𝐄ǫᴜᴀʟ 𝐒ᴘʟɪᴛs :</b> <i>{EQUAL_SPLIT}</i>
-┠➲ 🧲 <b>𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ :</b> <i>{MEDIA_GROUP}</i>
-┠➲ 📝 <b>𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ :</b> <code>{LCAPTION}</code>
-┠➲ 🔗 <b>𝐋ᴇᴇᴄʜ 𝐏ʀᴇꜰɪx :</b> <code>{LPREFIX}</code>
-┠➲ ✨ <b>𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
-┠➲ 📁 <b>𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
-┠➲ 🔄 <b>𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
-┠➲ 🎛️ <b>𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
-┠➲ 🤖 <b>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ :</b> <i>{AUTO_RENAME}</i>
-┠➲ 🎬 <b>𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
-┖➲ 🎞️ <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ :</b> <i>{MERGE_VIDEO}</i>
+┎➲ <emoji id=5443127283898405358>📥</emoji> <b>𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
+┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
+┠➲ <emoji id=5294339927318739359>🎙</emoji> <b>𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{THUMB}</i>
+┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛ 𝐒ɪᴢᴇ :</b> <code>{SPLIT_SIZE}</code>
+┠➲ <emoji id=5456140674028019486>⚡</emoji> <b>𝐄ǫᴜᴀʟ 𝐒ᴘʟɪᴛs :</b> <i>{EQUAL_SPLIT}</i>
+┠➲ <emoji id=5377535110289576661>🧲</emoji> <b>𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ :</b> <i>{MEDIA_GROUP}</i>
+┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ :</b> <code>{LCAPTION}</code>
+┠➲ <emoji id=5271604874419647061>🔗</emoji> <b>𝐋ᴇᴇᴄʜ 𝐏ʀᴇꜰɪx :</b> <code>{LPREFIX}</code>
+┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
+┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
+┠➲ <emoji id=5416117059207572332>➡️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
+┠➲ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
+┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ :</b> <i>{AUTO_RENAME}</i>
+┠➲ <emoji id=5294339927318739359>🎙</emoji> <b>𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
+┖➲ <emoji id=5294339927318739359>🎙</emoji> <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ :</b> <i>{MERGE_VIDEO}</i>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
