@@ -223,7 +223,8 @@ async def editMessage(message, text, buttons=None, photo=None):
             if photo:
                 photo = rchoice(config_dict["IMAGES"]) if photo == "IMAGES" else photo
                 return await message.edit_media(
-                    InputMediaPhoto(photo, text), reply_markup=buttons
+                    InputMediaPhoto(photo, text, ParseMode.HTML),
+                    reply_markup=buttons,
                 )
             return await message.edit_caption(
                 caption=text,
