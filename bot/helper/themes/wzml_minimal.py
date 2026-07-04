@@ -8,24 +8,24 @@ class WZMLStyle:
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
     ST_BN3_NAME = '⚡ 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
     ST_BN3_URL = 'https://github.com/SilentDemonSD/WZML-X/tree/master'
-    ST_MSG = """𝐇ᴇʟʟᴏ {name}!
+    ST_MSG = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
 <emoji id=5424818078833715060>⚡</emoji><b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
-📝 <b>This Bot Can Mirror or Leech Files From Links, Telegram Files, Torrents, Google Drive, or Directly to Telegram.</b> 🔥
+<emoji id=5222044641200720562>🌸</emoji> <b>This Bot Can Mirror or Leech Files From Links, Telegram Files, Torrents, Google Drive, or Directly to Telegram.</b> <emoji id=5217549292205528507>😰</emoji>
 
-🌟🌐 <b>Use {help_command} to get a list of available commands</b> 🌐
+<emoji id=5199658498559854923>🍀</emoji> <b>Use {help_command} to get a list of available commands</b> <emoji id=5215638109068220476>🎆<emoji>
 
-💀 <b>Uptime :</b> {uptime}"""
+<emoji id=5220214598585568818>🚨</emoji> <b>Uptime :</b> {uptime}"""
 
-    ST_BOTPM = """𝐇ᴇʟʟᴏ {name}!
+    ST_BOTPM = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-⚡ <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> ⚡
+<emoji id=6296508771325707891>❤️</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
-📝 <b>Now I will send all your Leeched files here. Start using me in the group!</b> 🔥"""
-    ST_UNAUTH = """𝐇ᴇʟʟᴏ {name}!
+<emoji id=5199658498559854923>🍀</emoji> <b>Now I Will Send All Your Leeched Files Here. Start Using Me In The Group!</b> <emoji id=5220166546491459639>🔥</emoji>"""
+    ST_UNAUTH = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-⚡ <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> ⚡
+<emoji id=5424818078833715060>⚡</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> <emoji id=5424818078833715060>⚡</emoji>
 
 🚫 <b>You are not an authorized user!</b>"""
     OWN_TOKEN_GENERATE = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
