@@ -1,10 +1,5 @@
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-try:
-    from pyrogram.enums import ButtonStyle
-except ImportError:
-    ButtonStyle = None
-
+from pyrogram.enums import ButtonStyle
 
 class ButtonMaker:
     def __init__(self):
@@ -14,64 +9,84 @@ class ButtonMaker:
         self.__last_body_button = []
         self.__footer_button = []
 
-    def _make_btn(self, key, url=None, data=None, style=None, icon_custom_emoji_id=None):
-        kwargs = {"text": key}
-        if url is not None:
-            kwargs["url"] = url
-        if data is not None:
-            kwargs["callback_data"] = data
-        if style is not None and ButtonStyle is not None:
-            kwargs["style"] = style
-        if icon_custom_emoji_id is not None and ButtonStyle is not None:
-            kwargs["icon_custom_emoji_id"] = icon_custom_emoji_id
-        return InlineKeyboardButton(**kwargs)
-
-    def _get_list(self, position):
-        if position == "header":
-            return self.__header_button
-        elif position == "f_body":
-            return self.__first_body_button
-        elif position == "l_body":
-            return self.__last_body_button
-        elif position == "footer":
-            return self.__footer_button
-        return self.__button
-
     def ubutton(self, key, link, position=None, style=None, icon_custom_emoji_id=None):
-        self._get_list(position).append(
-            self._make_btn(key, url=link, style=style, icon_custom_emoji_id=icon_custom_emoji_id)
+        button = InlineKeyboardButton(
+            text=key,
+            url=link,
+            style=style,
+            icon_custom_emoji_id=icon_custom_emoji_id,
         )
+
+        if not position:
+            self.__button.append(button)
+        elif position == "header":
+            self.__header_button.append(button)
+        elif position == "f_body":
+            self.__first_body_button.append(button)
+        elif position == "l_body":
+            self.__last_body_button.append(button)
+        elif position == "footer":
+            self.__footer_button.append(button)
 
     def ibutton(self, key, data, position=None, style=None, icon_custom_emoji_id=None):
-        self._get_list(position).append(
-            self._make_btn(key, data=data, style=style, icon_custom_emoji_id=icon_custom_emoji_id)
+        button = InlineKeyboardButton(
+            text=key,
+            callback_data=data,
+            style=style,
+            icon_custom_emoji_id=icon_custom_emoji_id,
         )
 
-    # Aliases used in newer bot codebases
-    def url_button(self, key, link, position=None, style=None, icon_custom_emoji_id=None):
-        self.ubutton(key, link, position=position, style=style, icon_custom_emoji_id=icon_custom_emoji_id)
-
-    def data_button(self, key, data, position=None, style=None, icon_custom_emoji_id=None):
-        self.ibutton(key, data, position=position, style=style, icon_custom_emoji_id=icon_custom_emoji_id)
+        if not position:
+            self.__button.append(button)
+        elif position == "header":
+            self.__header_button.append(button)
+        elif position == "f_body":
+            self.__first_body_button.append(button)
+        elif position == "l_body":
+            self.__last_body_button.append(button)
+        elif position == "footer":
+            self.__footer_button.append(button)
 
     def build_menu(self, b_cols=1, h_cols=8, fb_cols=2, lb_cols=2, f_cols=8):
-        def chunk(lst, n):
-            return [lst[i: i + n] for i in range(0, len(lst), n)]
+        menu = [
+            self.__button[i:i + b_cols]
+            for i in range(0, len(self.__button), b_cols)
+        ]
 
-        menu = chunk(self.__button, b_cols)
         if self.__header_button:
-            menu = chunk(self.__header_button, h_cols) + menu
-        if self.__first_body_button:
-            menu += chunk(self.__first_body_button, fb_cols)
-        if self.__last_body_button:
-            menu += chunk(self.__last_body_button, lb_cols)
-        if self.__footer_button:
-            menu += chunk(self.__footer_button, f_cols)
-        return InlineKeyboardMarkup(menu)
+            if len(self.__header_button) > h_cols:
+                menu = [
+                    self.__header_button[i:i + h_cols]
+                    for i in range(0, len(self.__header_button), h_cols)
+                ] + menu
+            else:
+                menu.insert(0, self.__header_button)
 
-    def reset(self):
-        for lst in [
-            self.__button, self.__header_button, self.__first_body_button,
-            self.__last_body_button, self.__footer_button,
-        ]:
-            lst.clear()
+        if self.__first_body_button:
+            if len(self.__first_body_button) > fb_cols:
+                menu.extend(
+                    self.__first_body_button[i:i + fb_cols]
+                    for i in range(0, len(self.__first_body_button), fb_cols)
+                )
+            else:
+                menu.append(self.__first_body_button)
+
+        if self.__last_body_button:
+            if len(self.__last_body_button) > lb_cols:
+                menu.extend(
+                    self.__last_body_button[i:i + lb_cols]
+                    for i in range(0, len(self.__last_body_button), lb_cols)
+                )
+            else:
+                menu.append(self.__last_body_button)
+
+        if self.__footer_button:
+            if len(self.__footer_button) > f_cols:
+                menu.extend(
+                    self.__footer_button[i:i + f_cols]
+                    for i in range(0, len(self.__footer_button), f_cols)
+                )
+            else:
+                menu.append(self.__footer_button)
+
+        return InlineKeyboardMarkup(menu)
