@@ -225,7 +225,11 @@ async def editMessage(message, text, buttons=None, photo=None):
                 return await message.edit_media(
                     InputMediaPhoto(photo, text), reply_markup=buttons
                 )
-            return await message.edit_caption(caption=text, reply_markup=buttons)
+            return await message.edit_caption(
+                caption=text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=buttons,
+            )
         await message.edit(
             text=text,
             parse_mode=ParseMode.HTML,
