@@ -14,7 +14,7 @@ class WZMLStyle:
 
 <emoji id=5222044641200720562>🌸</emoji> <b>This Bot Can Mirror or Leech Files From Links, Telegram Files, Torrents, Google Drive, or Directly to Telegram.</b> <emoji id=5217549292205528507>😰</emoji>
 
-<emoji id=5199658498559854923>🍀</emoji> <b>Use {help_command} to get a list of available commands</b> <emoji id=5215638109068220476>🎆<emoji>
+<emoji id=5199658498559854923>🍀</emoji> <b>Use {help_command} to get a list of available commands</b> <emoji id=5215638109068220476>🎆</emoji>
 
 <emoji id=5220214598585568818>🚨</emoji> <b>Uptime :</b> {uptime}"""
 
@@ -155,7 +155,7 @@ class WZMLStyle:
 
     # async def onUploadComplete(): ---> tasks_listener.py
     NAME = "<b> <emoji id=5424818078833715060>📣</emoji> 𝐓ɪᴛᴛʟᴇ :</b><b> {Name}</b>\n\n"
-    SIZE = "┎ <b><emoji id= 5334544901428229844>ℹ️</emoji> 𝐒ɪᴢᴇ : </b>{Size}\n"
+    SIZE = "┎ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐒ɪᴢᴇ : </b>{Size}\n"
     ELAPSE = "┠ <b><emoji id=5402186569006210455>💱</emoji> 𝐄ʟᴀᴘsᴇᴅ : </b>{Time}\n"
     MODE = "┠ <b><emoji id=5202064723922670546>🪙</emoji> 𝐌ᴏᴅᴇ : </b>{Mode}\n"
     CREDIT = "━✦❘༻ <b><a href=https://t.me/SSBotsUpdates> 𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦━\n\n"
