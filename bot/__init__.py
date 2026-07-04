@@ -62,21 +62,6 @@ pyroutils.MIN_CHAT_ID = -999999999999
 pyroutils.MIN_CHANNEL_ID = -100999999999999
 botStartTime = time()
 
-# ── Pyrogram HTML parser bug fix ─────────────────────────────────────────────
-# int(attrs.get("id")) crashes when <emoji> tag has no id attribute (returns None)
-try:
-    from pyrogram.parser import html as _pyro_html
-    _orig_handle_starttag = _pyro_html.HTML.handle_starttag
-    def _patched_handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        if tag == "emoji" and attrs.get("id") is None:
-            return
-        return _orig_handle_starttag(self, tag, attrs)
-    _pyro_html.HTML.handle_starttag = _patched_handle_starttag
-except Exception as _patch_err:
-    print(f"[WARNING] Pyrogram HTML patch failed: {_patch_err}")
-# ─────────────────────────────────────────────────────────────────────────────
-
 basicConfig(
     format="[%(asctime)s] [%(levelname)s] - %(message)s",  #  [%(filename)s:%(lineno)d]
     datefmt="%d-%b-%y %I:%M:%S %p",
