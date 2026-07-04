@@ -6,7 +6,7 @@ from os import path as ospath
 from importlib.metadata import version as pkg_version, PackageNotFoundError
 from aiofiles import open as aiopen
 from aiofiles.os import remove as aioremove, path as aiopath, mkdir
-from re import match as re_match
+from re import match as re_match, sub as re_sub
 from time import time
 from html import escape
 from uuid import uuid4
@@ -304,9 +304,10 @@ def get_readable_message():
                 "BAR",
                 Bar=f"{get_progress_bar_string(download.progress())} {download.progress()}",
             )
+            _strip = lambda s: re_sub(r'\.\d+', '', str(s))
             msg += BotTheme(
                 "PROCESSED",
-                Processed=f"{download.processed_bytes()} of {download.size()}",
+                Processed=f"{_strip(download.processed_bytes())} of {_strip(download.size())}",
             )
             msg += BotTheme("STATUS", Status=download.status(), Url=msg_link)
             msg += BotTheme("ETA", Eta=download.eta())
