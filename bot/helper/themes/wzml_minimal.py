@@ -20,12 +20,12 @@ class WZMLStyle:
 
     ST_BOTPM = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=6296508771325707891>❤️</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
+<emoji id=6296508771325707891>❤️</emoji> <b> I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
 <emoji id=5199658498559854923>🍀</emoji> <b>Now I Will Send All Your Leeched Files Here. Start Using Me In The Group!</b> <emoji id=5220166546491459639>🔥</emoji>"""
     ST_UNAUTH = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=5424818078833715060>⚡</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b> <emoji id=5424818078833715060>⚡</emoji>
+<emoji id=5424818078833715060>⚡</emoji> <b> I'm A Mirror Leech Telegram Bot ! [MLTB]</b> <emoji id=5424818078833715060>⚡</emoji>
 
 🚫 <b>You are not an authorized user!</b>"""
     OWN_TOKEN_GENERATE = """<b>𝐓ᴇᴍᴘᴏʀᴀʀʏ 𝐓ᴏᴋᴇɴ ɪs ɴᴏᴛ ʏᴏᴜʀs!</b>\n\n<i>𝐊ɪɴᴅʟʏ ɢᴇɴᴇʀᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ.</i>"""
