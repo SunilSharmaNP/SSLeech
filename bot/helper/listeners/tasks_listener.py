@@ -1031,7 +1031,7 @@ class MirrorLeechListener:
                         buttons.build_menu(2),
                         photo=self.random_pic,
                     )
-                _BQ_OPEN  = "\n<blockquote expandable>"
+                _BQ_OPEN  = "\n<blockquote>"
                 _BQ_CLOSE = "</blockquote>"
                 fmsg = _BQ_OPEN
                 for index, (link, name) in enumerate(files.items(), start=1):
