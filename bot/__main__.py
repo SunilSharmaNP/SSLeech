@@ -109,9 +109,9 @@ async def start(client, message):
         except Exception:
             _owner_url = BotTheme("ST_BN2_URL")
         buttons = ButtonMaker()
-        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_url=_owner_url))
-        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"))
-        buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url))
+        buttons.ubutton(BotTheme("ST_BN1_NAME"), BotTheme("ST_BN1_URL", owner_url=_owner_url), icon_custom_emoji_id=5217822164362739968)
+        buttons.ubutton(BotTheme("ST_BN2_NAME"), BotTheme("ST_BN2_URL"), icon_custom_emoji_id=5294339927318739359)
+        buttons.ubutton(BotTheme("ST_BN3_NAME"), BotTheme("ST_BN3_URL", repo_url=_repo_url), icon_custom_emoji_id=5456140674028019486)
         reply_markup = buttons.build_menu(2)
         if len(message.command) > 1 and message.command[1] == "wzmlx":
             await deleteMessage(message)
@@ -132,7 +132,7 @@ async def start(client, message):
                 and data["token"] == config_dict["LOGIN_PASS"]
             ):
                 return await sendMessage(message, BotTheme("LOGGED_PASSWORD"))
-            buttons.ibutton(BotTheme("ACTIVATE_BUTTON"), f"pass {input_token}", "header")
+            buttons.ibutton(BotTheme("ACTIVATE_BUTTON"), f"pass {input_token}", "header", icon_custom_emoji_id=5427168083074628963)
             reply_markup = buttons.build_menu(2)
             msg = BotTheme(
                 "TOKEN_MSG",
