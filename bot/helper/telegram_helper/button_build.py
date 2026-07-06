@@ -22,9 +22,14 @@ class ButtonMaker:
             kwargs["callback_data"] = data
         if style is not None and ButtonStyle is not None:
             kwargs["style"] = style
-        if icon_custom_emoji_id is not None and ButtonStyle is not None:
+        if icon_custom_emoji_id is not None:
             kwargs["icon_custom_emoji_id"] = icon_custom_emoji_id
-        return InlineKeyboardButton(**kwargs)
+        try:
+            return InlineKeyboardButton(**kwargs)
+        except TypeError:
+            kwargs.pop("icon_custom_emoji_id", None)
+            kwargs.pop("style", None)
+            return InlineKeyboardButton(**kwargs)
 
     def _get_list(self, position):
         if position == "header":
