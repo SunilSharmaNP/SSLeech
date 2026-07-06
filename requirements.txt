@@ -23,7 +23,7 @@ psutil
 pybase64
 pycountry
 pymongo
-pyrofork==2.3.69
+pyrofork
 python-dotenv
 python-magic
 qbittorrent-api
