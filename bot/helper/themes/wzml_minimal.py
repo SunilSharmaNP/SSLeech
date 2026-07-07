@@ -217,7 +217,7 @@ class WZMLStyle:
     USER = "\n┠ <b><emoji id=5217822164362739968>👑</emoji> 𝐔sᴇʀ :</b> <code>{User}</code>"
     ID = "\n┠ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐈𝐃 :</b> <code>{Id}</code>"
     BTSEL = "\n┠ <b><emoji id=5206607081334906820>✔️</emoji> 𝐒ᴇʟᴇᴄᴛ :</b> {Btsel}"
-    CANCEL = "\n┠ {Cancel}\n"
+    CANCEL = "\n┠ <b><emoji id=5334544901428229844>ℹ️</emoji> 𝐂ᴀɴᴄᴇʟ :</b> {Cancel}\n"
     mn = "┗━━༻« <b><a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┛\n\n"
 
     FOOTER = "<blockquote>┎⌬ <b><i><emoji id=5190806721286657692>📊</emoji> 𝐒𝐒 𝐁ᴏᴛs 𝐒ᴛᴀᴛs ⋆｡°✩₊˚.༄</i></b>\n"
