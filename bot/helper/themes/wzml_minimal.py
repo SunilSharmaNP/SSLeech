@@ -231,7 +231,7 @@ class WZMLStyle:
     UL = "<b><emoji id=5429651785352501917>↗️</emoji> 𝐔ʟ:</b> {UL}/s</blockquote>"
 
     PREVIOUS = "⫷"
-    REFRESH = "📑𝐏ᴀɢᴇ\n{Page}"
+    REFRESH = "📑 𝐏ᴀɢᴇ\n{Page}"
     NEXT = "⫸"
 
     # STOP_DUPLICATE_MSG: ---> clone.py, aria2_listener.py, task_manager.py
@@ -262,10 +262,10 @@ class WZMLStyle:
     # USER Setting --> user_setting.py
     USER_SETTING = """㊂ <b><u>𝐔sᴇʀ 𝐒ᴇᴛᴛɪɴɢs :</u></b>
         
-┎➲ <emoji id=5217822164362739968>👑</emoji> <b>𝐍ᴀᴍᴇ :</b> {NAME}
-┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐈𝐃 :</b> <code>{ID}</code>
-┠➲ <emoji id=5224450179368767019>🌎</emoji> <b>𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
-┖➲ <emoji id=5224450179368767019>🌎</emoji> <b>𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
+┎ <emoji id=5217822164362739968>👑</emoji> <b>𝐍ᴀᴍᴇ :</b> {NAME}
+┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐈𝐃 :</b> <code>{ID}</code>
+┠ <emoji id=5224450179368767019>🌎</emoji> <b>𝐓ᴇʟᴇɢʀᴀᴍ 𝐃𝐂 :</b> {DC}
+┖ <emoji id=5224450179368767019>🌎</emoji> <b>𝐋ᴀɴɢᴜᴀɢᴇ :</b> {LANG}
 
 ➲ <u><b>𝐀ᴠᴀɪʟᴀʙʟᴇ 𝐀ʀɢs:</b></u>
 • <b>-s</b> or <b>-set</b>: 𝐒ᴇᴛ 𝐃ɪʀᴇᴄᴛʟʏ ᴠɪᴀ 𝐀ʀɢ
@@ -275,48 +275,48 @@ class WZMLStyle:
 
     UNIVERSAL = """㊂ <b><u>𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎➲ <emoji id=5193177581888755275>💻</emoji> <b>𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
-┠➲ <emoji id=5190806721286657692>📊</emoji> <b>𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
-┠➲ <emoji id=5386367538735104399>⌛</emoji> <b>𝐋ᴀsᴛ 𝐁ᴏᴛ 𝐔sᴇᴅ :</b> <code>{LAST_USED}</code>
-┠➲ <emoji id=5197288647275071607>🛡</emoji> <b>𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
-┠➲ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
-┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
-┖➲ <emoji id=5445355530111437729>📤</emoji> <b>𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
+┎ <emoji id=5193177581888755275>💻</emoji> <b>𝐘T-DLP 𝐎ᴘᴛɪᴏɴs :</b> <b><code>{YT}</code></b>
+┠ <emoji id=5190806721286657692>📊</emoji> <b>𝐃ᴀɪʟʏ 𝐓ᴀsᴋs :</b> <code>{DT}</code> ᴘᴇʀ ᴅᴀʏ
+┠ <emoji id=5386367538735104399>⌛</emoji> <b>𝐋ᴀsᴛ 𝐁ᴏᴛ 𝐔sᴇᴅ :</b> <code>{LAST_USED}</code>
+┠ <emoji id=5197288647275071607>🛡</emoji> <b>𝐔sᴇʀ 𝐒ᴇssɪᴏɴ :</b> <code>{USESS}</code>
+┠ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐌ᴇᴅɪᴀɪɴғᴏ 𝐌ᴏᴅᴇ :</b> <code>{MEDIAINFO}</code>
+┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐒ᴀᴠᴇ 𝐌ᴏᴅᴇ :</b> <code>{SAVE_MODE}</code>
+┖ <emoji id=5445355530111437729>📤</emoji> <b>𝐔sᴇʀ 𝐁ᴏᴛ 𝐏ᴍ :</b> <code>{BOT_PM}</code>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎➲ <emoji id=5224450179368767019>🌎</emoji> <b>𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
-┠➲ <emoji id=5271604874419647061>🔗</emoji> <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
-┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <code>{MSUFFIX}</code>
-┠➲ <emoji id=5416117059207572332>➡️</emoji> <b>𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{MREMNAME}</code>
-┠➲ <emoji id=5193177581888755275>💻</emoji> <b>𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
-┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
-┠➲ <emoji id=5190806721286657692>📊</emoji> <b>𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
-┖➲ <emoji id=5429651785352501917>↗️</emoji> <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
+┎ <emoji id=5224450179368767019>🌎</emoji> <b>𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
+┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <code>{MPREFIX}</code>
+┠ <emoji id=5427168083074628963>💎</emoji> <b>𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <code>{MSUFFIX}</code>
+┠ <emoji id=5416117059207572332>➡️</emoji> <b>𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{MREMNAME}</code>
+┠ <emoji id=5193177581888755275>💻</emoji> <b>𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
+┠ <emoji id=5427168083074628963>💎</emoji> <b>𝐔sᴇʀ 𝐓ᴅ 𝐌ᴏᴅᴇ :</b> <i>{TMODE}</i>
+┠ <emoji id=5190806721286657692>📊</emoji> <b>𝐓ᴏᴛᴀʟ 𝐔sᴇʀ 𝐓ᴅ(s) :</b> <i>{USERTD}</i>
+┖ <emoji id=5429651785352501917>↗️</emoji> <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <code>{DM}</code> ᴘᴇʀ ᴅᴀʏ
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎➲ <emoji id=5443127283898405358>📥</emoji> <b>𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
-┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
-┠➲ <emoji id=5294339927318739359>🎙</emoji> <b>𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{THUMB}</i>
-┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛ 𝐒ɪᴢᴇ :</b> <code>{SPLIT_SIZE}</code>
-┠➲ <emoji id=5456140674028019486>⚡</emoji> <b>𝐄ǫᴜᴀʟ 𝐒ᴘʟɪᴛs :</b> <i>{EQUAL_SPLIT}</i>
-┠➲ <emoji id=5377535110289576661>🧲</emoji> <b>𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ :</b> <i>{MEDIA_GROUP}</i>
-┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ :</b> <code>{LCAPTION}</code>
-┠➲ <emoji id=5271604874419647061>🔗</emoji> <b>𝐋ᴇᴇᴄʜ 𝐏ʀᴇꜰɪx :</b> <code>{LPREFIX}</code>
-┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
-┠➲ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
-┠➲ <emoji id=5416117059207572332>➡️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
-┠➲ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
-┠➲ <emoji id=5427168083074628963>💎</emoji> <b>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ :</b> <i>{AUTO_RENAME}</i>
-┠➲ <emoji id=5294339927318739359>🎙</emoji> <b>𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
-┖➲ <emoji id=5294339927318739359>🎙</emoji> <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ :</b> <i>{MERGE_VIDEO}</i>
+┎ <emoji id=5443127283898405358>📥</emoji> <b>𝐃ᴀɪʟʏ 𝐋ᴇᴇᴄʜ : </b><code>{DL}</code> ᴘᴇʀ ᴅᴀʏ
+┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐓ʏᴘᴇ :</b> <i>{LTYPE}</i>
+┠ <emoji id=5294339927318739359>🎙</emoji> <b>𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{THUMB}</i>
+┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛ 𝐒ɪᴢᴇ :</b> <code>{SPLIT_SIZE}</code>
+┠ <emoji id=5456140674028019486>⚡</emoji> <b>𝐄ǫᴜᴀʟ 𝐒ᴘʟɪᴛs :</b> <i>{EQUAL_SPLIT}</i>
+┠ <emoji id=5377535110289576661>🧲</emoji> <b>𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ :</b> <i>{MEDIA_GROUP}</i>
+┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ :</b> <code>{LCAPTION}</code>
+┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐋ᴇᴇᴄʜ 𝐏ʀᴇꜰɪx :</b> <code>{LPREFIX}</code>
+┠ <emoji id=5427168083074628963>💎</emoji> <b>𝐋ᴇᴇᴄʜ 𝐒ᴜꜰꜰɪx :</b> <code>{LSUFFIX}</code>
+┠ <emoji id=5334544901428229844>ℹ️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘs :</b> <code>{LDUMP}</code>
+┠ <emoji id=5416117059207572332>➡️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <code>{LREMNAME}</code>
+┠ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <code>{LMETA}</code>
+┠ <emoji id=5427168083074628963>💎</emoji> <b>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ :</b> <i>{AUTO_RENAME}</i>
+┠ <emoji id=5294339927318739359>🎙</emoji> <b>𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ (𝐒ᴘɪᴅʏ) :</b> <i>{AUTO_POSTER}</i>
+┖ <emoji id=5294339927318739359>🎙</emoji> <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ :</b> <i>{MERGE_VIDEO}</i>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
