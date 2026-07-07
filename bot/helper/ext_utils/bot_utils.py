@@ -311,7 +311,7 @@ def get_readable_message():
             )
             msg += BotTheme("STATUS", Status=download.status(), Url=msg_link)
             msg += BotTheme("SPEED", Speed=download.speed())
-            msg += BotTheme("ETA", Eta=download.eta())   BotTheme("ELAPSED", Elapsed=get_readable_time(elapsed))
+            msg += BotTheme("ETA", Eta=download.eta()   | "ELAPSED", Elapsed=get_readable_time(elapsed))
             msg += BotTheme("ENGINE", Engine=download.eng())
             msg += BotTheme("STA_MODE", Mode=download.upload_details["mode"])
             if hasattr(download, "seeders_num"):
