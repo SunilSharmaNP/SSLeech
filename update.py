@@ -167,11 +167,11 @@ def main():
 
     upstream_branch = upstream_branch or "merge"
 
-    # ── Step 3: Update packages ───────────────────────────────────────────────
-    _update_packages()
-
-    # ── Step 4: Clean git reset from upstream (wzv3-style, no backup files) ──
+    # ── Step 3: Pull upstream code FIRST (gets updated requirements.txt) ─────
     _run_update(upstream_repo, upstream_branch)
+
+    # ── Step 4: Install packages from the freshly pulled requirements.txt ────
+    _update_packages()
 
 
 if __name__ == "__main__":
