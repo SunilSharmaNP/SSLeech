@@ -224,9 +224,9 @@ class WZMLStyle:
     TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}\n"
     BOT_TASKS = "┠ <b> 𝐓ᴀsᴋs:</b> {Tasks}/{Ttask} | <b><emoji id=5206607081334906820>✔️</emoji> 𝐀ᴠʟ:</b> {Free}\n"
     Cpu = "┠<emoji id=5282843764451195532>🖥</emoji><b> 𝐂ᴘᴜ:</b> {cpu}% | "
-    FREE = "<b><emoji id=5334544901428229844>ℹ️</emoji> 𝐅:</b> {free} [{free_p}%]"
+    FREE = "<b><emoji id=5334544901428229844>ℹ️</emoji> 𝐅:</b> {free}"
     Ram = "\n┠ <b><emoji id=5193177581888755275>💻</emoji> 𝐑ᴀᴍ:</b> {ram}% | "
-    uptime = "<b><emoji id=5386367538735104399>⌛</emoji> 𝐔ᴘᴛɪᴍᴇ:</b> {uptime}"
+    uptime = "<b><emoji id=5386367538735104399>⌛</emoji> 𝐔ᴘ:</b> {uptime}"
     DL = "\n┖ <b><emoji id=5406745015365943482>⬇️</emoji> 𝐃ʟ:</b> {DL}/s | "
     UL = "<b><emoji id=5429651785352501917>↗️</emoji> 𝐔ʟ:</b> {UL}/s</blockquote>"
 
