@@ -301,11 +301,11 @@ async def search_images():
 async def bot_help(client, message):
     buttons = ButtonMaker()
     user_id = message.from_user.id
-    buttons.ibutton(BotTheme("BASIC_BT"), f"wzmlx {user_id} guide basic")
-    buttons.ibutton(BotTheme("USER_BT"), f"wzmlx {user_id} guide users")
-    buttons.ibutton(BotTheme("MICS_BT"), f"wzmlx {user_id} guide miscs")
-    buttons.ibutton(BotTheme("O_S_BT"), f"wzmlx {user_id} guide admin")
-    buttons.ibutton(BotTheme("CLOSE_BT"), f"wzmlx {user_id} close")
+    buttons.ibutton(BotTheme("BASIC_BT"), f"wzmlx {user_id} guide basic", icon_custom_emoji_id=5334544901428229844)
+    buttons.ibutton(BotTheme("USER_BT"), f"wzmlx {user_id} guide users", icon_custom_emoji_id=5373123633415074227)
+    buttons.ibutton(BotTheme("MICS_BT"), f"wzmlx {user_id} guide miscs", icon_custom_emoji_id=5341715473882955310)
+    buttons.ibutton(BotTheme("O_S_BT"), f"wzmlx {user_id} guide admin", icon_custom_emoji_id=5217822164362739968)
+    buttons.ibutton(BotTheme("CLOSE_BT"), f"wzmlx {user_id} close", icon_custom_emoji_id=5447644880824181073)
     await sendMessage(message, BotTheme("HELP_HEADER"), buttons.build_menu(2))
 
 
