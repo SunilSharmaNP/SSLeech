@@ -145,17 +145,6 @@ def _get_tg_filename(message) -> str:
 @new_task
 async def start_merge(client, message):
     uid      = message.from_user.id
-    udict    = user_data.get(uid, {})
-
-    if not udict.get("merge_video", False):
-        return await sendMessage(
-            message,
-            f"<b>⚙️ {_t('Merge Video Disabled')}!</b>\n"
-            f"{_DIV}\n"
-            f"{_t('Enable it from')}:\n"
-            f"<code>/{BotCommands.UserSetCommand[0]}</code> "
-            f"→ {_t('Leech Settings')} → 🎞 {_t('Merge Video')} ✅",
-        )
 
     if uid in merge_sessions:
         await _clear_session(uid)
@@ -400,17 +389,6 @@ async def _dispatch_all_downloads(client, uid: int, session: dict, out_name: str
     except Exception:
         pass
     merge_sessions.pop(uid, None)
-
-    # Auto-disable merge_video when session ends
-    from bot.helper.ext_utils.bot_utils import update_user_ldata
-    from bot import DATABASE_URL
-    update_user_ldata(uid, "merge_video", False)
-    if DATABASE_URL:
-        try:
-            from bot.helper.ext_utils.db_handler import DbManger
-            await DbManger().update_user_data(uid)
-        except Exception:
-            pass
 
     total  = len(queue)
     is_zip = (mode == "zip")
