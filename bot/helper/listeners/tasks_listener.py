@@ -1022,7 +1022,8 @@ class MirrorLeechListener:
                 elif self.isSuperGroup and self.isPM:
                     message += BotTheme("L_BOT_MSG")
                     buttons.ibutton(
-                        BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header"
+                        BotTheme("CHECK_PM"), f"wzmlx {user_id} botpm", "header",
+                        icon_custom_emoji_id=5443127283898405358
                     )
                 if config_dict["SAFE_MODE"] and self.isSuperGroup:
                     await sendMessage(
@@ -1292,11 +1293,11 @@ class MirrorLeechListener:
                 if self.sameDir.get("merge_mode") and not self.sameDir.get("failed"):
                     self.sameDir["failed"] = error
         msg = (
-            f"<b>🛑 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
-            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
-            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
-            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
+            f"<b>{E.stop} 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"┠ {E.user} 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
+            f"┠ {E.alarm} 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ {E.gear} 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
+            f"┖ {E.timer} 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
         await sendMessage(self.message, msg, button)
         if count == 0:
@@ -1335,11 +1336,11 @@ class MirrorLeechListener:
                 del download_dict[self.uid]
             count = len(download_dict)
         msg = (
-            f"<b>⚠️ 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
-            f"┠ 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
-            f"┠ 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
-            f"┠ 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
-            f"┖ 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
+            f"<b>{E.warning} 𝐓𝐚𝐬𝐤 𝐒𝐭𝐨𝐩𝐩𝐞𝐝!</b>\n"
+            f"┠ {E.user} 𝐓𝐚𝐬𝐤 𝐅𝐨𝐫  : {self.tag}\n"
+            f"┠ {E.alarm} 𝐑𝐞𝐚𝐬𝐨𝐧    : <i>{escape(error)}</i>\n"
+            f"┠ {E.gear} 𝐌𝐨𝐝𝐞      : {self.upload_details['mode']}\n"
+            f"┖ {E.timer} 𝐄𝐥𝐚𝐩𝐬𝐞𝐝   : {get_readable_time(time() - self.message.date.timestamp())}"
         )
         await sendMessage(self.message, msg)
         if count == 0:
