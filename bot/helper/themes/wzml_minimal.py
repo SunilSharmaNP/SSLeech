@@ -2,11 +2,11 @@
 class WZMLStyle:
     # ----------------------
     # async def start(client, message) ---> __main__.py
-    ST_BN1_NAME = '👑 𝐎ᴡɴᴇʀ'
+    ST_BN1_NAME = ' 𝐎ᴡɴᴇʀ'
     ST_BN1_URL = 'https://t.me/Sunil_Sharma_2_0'
-    ST_BN2_NAME = '🔔 𝐔ᴘᴅᴀᴛᴇs'
+    ST_BN2_NAME = ' 𝐔ᴘᴅᴀᴛᴇs'
     ST_BN2_URL = 'https://t.me/SSBotsUpdates'
-    ST_BN3_NAME = '⚡ 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
+    ST_BN3_NAME = ' 𝐁ᴀsᴇ 𝐑ᴇᴘᴏ'
     ST_BN3_URL = 'https://github.com/SilentDemonSD/WZML-X/tree/master'
     ST_MSG = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
@@ -315,8 +315,7 @@ class WZMLStyle:
 ┠ <emoji id=5416117059207572332>➡️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <i>{LREMNAME}</i>
 ┠ <emoji id=5341715473882955310>⚙️</emoji> <b>𝐋ᴇᴇᴄʜ 𝐌ᴇᴛᴀᴅᴀᴛᴀ :</b> <i>{LMETA}</i>
 ┠ <emoji id=5427168083074628963>💎</emoji> <b>𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ :</b> <i>{AUTO_RENAME}</i>
-┠ <emoji id=5294339927318739359>🎙</emoji> <b>𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ :</b> <i>{AUTO_POSTER}</i>
-┖ <emoji id=5294339927318739359>🎙</emoji> <b>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ :</b> <i>{MERGE_VIDEO}</i>
+┖ <emoji id=5294339927318739359>🎙</emoji> <b>𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ :</b> <i>{AUTO_POSTER}</i>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
