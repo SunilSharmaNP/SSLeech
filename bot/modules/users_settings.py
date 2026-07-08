@@ -203,12 +203,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
     rclone_path = f"rclone/{user_id}.conf"
     user_dict = user_data.get(user_id, {})
     if key is None:
-        buttons.ibutton("⚙️ 𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal")
-        buttons.ibutton("☁️ 𝐌ɪʀʀᴏʀ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} mirror")
-        buttons.ibutton("📥 𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} leech")
+        buttons.ibutton("⚙️ 𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal", icon_custom_emoji_id=5341715473882955310)
+        buttons.ibutton("☁️ 𝐌ɪʀʀᴏʀ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} mirror", icon_custom_emoji_id=5224450179368767019)
+        buttons.ibutton("📥 𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} leech", icon_custom_emoji_id=5443127283898405358)
         if user_dict and any(key in user_dict for key in list(fname_dict.keys())):
-            buttons.ibutton("🔄 𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢ", f"userset {user_id} reset_all")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close")
+            buttons.ibutton("🔄 𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢ", f"userset {user_id} reset_all", icon_custom_emoji_id=5445267414562389170)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", icon_custom_emoji_id=5447644880824181073)
 
         text = BotTheme(
             "USER_SETTING",
@@ -229,19 +229,22 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if ytopt != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '📱'} 𝐘ᴛ-𝐃ʟᴘ 𝐎ᴘᴛɪᴏɴs",
-            f"userset {user_id} yt_opt"
+            f"userset {user_id} yt_opt",
+            icon_custom_emoji_id=5341715473882955310
         )
         u_sess = "𝐄xɪsᴛs" if user_dict.get("usess", False) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
         buttons.ibutton(
             f"{'✅️' if u_sess != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🔐'} 𝐔sᴇʀ 𝐒ᴇssɪᴏɴ",
-            f"userset {user_id} usess"
+            f"userset {user_id} usess",
+            icon_custom_emoji_id=5197288647275071607
         )
         bot_pm = (
             "𝐄ɴᴀʙʟᴇᴅ" if user_dict.get("bot_pm", config_dict["BOT_PM"]) else "𝐃ɪsᴀʙʟᴇᴅ"
         )
         buttons.ibutton(
             "📨 𝐃ɪsᴀʙʟᴇ 𝐁ᴏᴛ 𝐏ᴍ" if bot_pm == "𝐄ɴᴀʙʟᴇᴅ" else "📨 𝐄ɴᴀʙʟᴇ 𝐁ᴏᴛ 𝐏ᴍ",
-            f"userset {user_id} bot_pm"
+            f"userset {user_id} bot_pm",
+            icon_custom_emoji_id=5424818078833715060
         )
         if config_dict["BOT_PM"]:
             bot_pm = "𝐅ᴏʀᴄᴇ 𝐄ɴᴀʙʟᴇᴅ"
@@ -253,13 +256,15 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             "ℹ️ 𝐃ɪsᴀʙʟᴇ 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ" if mediainfo == "𝐄ɴᴀʙʟᴇᴅ" else "ℹ️ 𝐄ɴᴀʙʟᴇ 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ",
             f"userset {user_id} mediainfo",
+            icon_custom_emoji_id=5334544901428229844
         )
         if config_dict["SHOW_MEDIAINFO"]:
             mediainfo = "𝐅ᴏʀᴄᴇ 𝐄ɴᴀʙʟᴇᴅ"
         save_mode = "𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ" if user_dict.get("save_mode") else "𝐒ᴀᴠᴇ 𝐀s 𝐁ᴏᴛ𝐏ᴍ"
         buttons.ibutton(
             "📁 𝐒ᴀᴠᴇ 𝐀s 𝐁ᴏᴛ𝐏ᴍ" if save_mode == "𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ" else "📁 𝐒ᴀᴠᴇ 𝐀s 𝐃ᴜᴍᴘ",
-            f"userset {user_id} save_mode"
+            f"userset {user_id} save_mode",
+            icon_custom_emoji_id=5443127283898405358
         )
         dailytl = config_dict["DAILY_TASK_LIMIT"] or "∞"
         dailytas = (
@@ -287,11 +292,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             SAVE_MODE=save_mode,
             USESS=u_sess,
         )
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "mirror":
-        buttons.ibutton("☁️ 𝐑ᴄʟᴏɴᴇ", f"userset {user_id} rcc")
+        buttons.ibutton("☁️ 𝐑ᴄʟᴏɴᴇ", f"userset {user_id} rcc", icon_custom_emoji_id=5224450179368767019)
         rccmsg = "𝐄xɪsᴛs" if await aiopath.exists(rclone_path) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
         dailytlup = (
             get_readable_file_size(config_dict["DAILY_MIRROR_LIMIT"] * 1024**3)
@@ -303,7 +308,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             if config_dict["DAILY_MIRROR_LIMIT"] and user_id != OWNER_ID
             else "️∞"
         )
-        buttons.ibutton("🔗 𝐌ɪʀʀᴏʀ 𝐏ʀᴇғɪx", f"userset {user_id} mprefix")
+        buttons.ibutton("🔗 𝐌ɪʀʀᴏʀ 𝐏ʀᴇғɪx", f"userset {user_id} mprefix", icon_custom_emoji_id=5271604874419647061)
         mprefix = (
             "𝐍ᴏᴛ 𝐄xɪsᴛs"
             if (
@@ -315,7 +320,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
 
-        buttons.ibutton("✨ 𝐌ɪʀʀᴏʀ 𝐒ᴜғғɪx", f"userset {user_id} msuffix")
+        buttons.ibutton("✨ 𝐌ɪʀʀᴏʀ 𝐒ᴜғғɪx", f"userset {user_id} msuffix", icon_custom_emoji_id=5397916757333654639)
         msuffix = (
             "𝐍ᴏᴛ 𝐄xɪsᴛs"
             if (
@@ -327,7 +332,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             else val
         )
 
-        buttons.ibutton("🔄 𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ", f"userset {user_id} mremname")
+        buttons.ibutton("🔄 𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ", f"userset {user_id} mremname", icon_custom_emoji_id=5429651785352501917)
         mremname = (
             "𝐍ᴏᴛ 𝐄xɪsᴛs"
             if (
@@ -340,14 +345,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
 
         ddl_serv = len(val) if (val := user_dict.get("ddl_servers", False)) else 0
-        buttons.ibutton("💻 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀs", f"userset {user_id} ddl_servers")
+        buttons.ibutton("💻 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀs", f"userset {user_id} ddl_servers", icon_custom_emoji_id=5193177581888755275)
 
         tds_mode = "𝐄ɴᴀʙʟᴇᴅ" if user_dict.get("td_mode", False) else "𝐃ɪsᴀʙʟᴇᴅ"
         if not config_dict["USER_TD_MODE"]:
             tds_mode = "𝐅ᴏʀᴄᴇ 𝐃ɪsᴀʙʟᴇᴅ"
 
         user_tds = len(val) if (val := user_dict.get("user_tds", False)) else 0
-        buttons.ibutton("💠 𝐔sᴇʀ 𝐓ᴅs", f"userset {user_id} user_tds")
+        buttons.ibutton("💠 𝐔sᴇʀ 𝐓ᴅs", f"userset {user_id} user_tds", icon_custom_emoji_id=5427168083074628963)
 
         text = BotTheme(
             "MIRROR",
@@ -362,8 +367,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             USERTD=user_tds,
         )
 
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "leech":
         if (
@@ -372,10 +377,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             and config_dict["AS_DOCUMENT"]
         ):
             ltype = "𝐃ᴏᴄᴜᴍᴇɴᴛ"
-            buttons.ibutton("📄 𝐒ᴇɴᴅ 𝐀s 𝐌ᴇᴅɪᴀ", f"userset {user_id} doc")
+            buttons.ibutton("📄 𝐒ᴇɴᴅ 𝐀s 𝐌ᴇᴅɪᴀ", f"userset {user_id} doc", icon_custom_emoji_id=5445355530111437729)
         else:
             ltype = "𝐌ᴇᴅɪᴀ"
-            buttons.ibutton("📄 𝐒ᴇɴᴅ 𝐀s 𝐃ᴏᴄᴜᴍᴇɴᴛ", f"userset {user_id} doc")
+            buttons.ibutton("📄 𝐒ᴇɴᴅ 𝐀s 𝐃ᴏᴄᴜᴍᴇɴᴛ", f"userset {user_id} doc", icon_custom_emoji_id=5445355530111437729)
 
         dailytlle = (
             get_readable_file_size(config_dict["DAILY_LEECH_LIMIT"] * 1024**3)
@@ -391,7 +396,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         thumbmsg = "𝐄xɪsᴛs" if await aiopath.exists(thumbpath) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
         buttons.ibutton(
             f"{'✅️' if thumbmsg == '𝐄xɪsᴛs' else '🖼'} 𝐓ʜᴜᴍʙɴᴀɪʟ",
-            f"userset {user_id} thumb"
+            f"userset {user_id} thumb",
+            icon_custom_emoji_id=5210956306952758910
         )
 
         split_size = (
@@ -411,7 +417,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if user_dict.get('split_size') else '📦'} 𝐋ᴇᴇᴄʜ 𝐒ᴘʟɪᴛs",
-            f"userset {user_id} split_size"
+            f"userset {user_id} split_size",
+            icon_custom_emoji_id=5190806721286657692
         )
 
         lcaption = (
@@ -426,7 +433,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if lcaption != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '📝'} 𝐋ᴇᴇᴄʜ 𝐂ᴀᴘᴛɪᴏɴ",
-            f"userset {user_id} lcaption"
+            f"userset {user_id} lcaption",
+            icon_custom_emoji_id=5334544901428229844
         )
 
         lprefix = (
@@ -441,7 +449,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if lprefix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🔗'} 𝐋ᴇᴇᴄʜ 𝐏ʀᴇғɪx",
-            f"userset {user_id} lprefix"
+            f"userset {user_id} lprefix",
+            icon_custom_emoji_id=5271604874419647061
         )
 
         lsuffix = (
@@ -456,7 +465,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if lsuffix != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '✨'} 𝐋ᴇᴇᴄʜ 𝐒ᴜғғɪx",
-            f"userset {user_id} lsuffix"
+            f"userset {user_id} lsuffix",
+            icon_custom_emoji_id=5397916757333654639
         )
 
         lremname = (
@@ -471,12 +481,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if lremname != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🔄'} 𝐋ᴇᴇᴄʜ 𝐑ᴇᴍɴᴀᴍᴇ",
-            f"userset {user_id} lremname"
+            f"userset {user_id} lremname",
+            icon_custom_emoji_id=5429651785352501917
         )
 
         buttons.ibutton(
             "📁 𝐋ᴇᴇᴄʜ 𝐃ᴜᴍᴘ",
-            f"userset {user_id} ldump"
+            f"userset {user_id} ldump",
+            icon_custom_emoji_id=5445355530111437729
         )
         ldump = "𝐍ᴏᴛ 𝐄xɪsᴛs" if (val := user_dict.get("ldump", "")) == "" else len(val)
 
@@ -487,7 +499,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         buttons.ibutton(
             f"{'✅️' if lmeta != '𝐍ᴏᴛ 𝐄xɪsᴛs' else '🎬'} 𝐌ᴇᴛᴀᴅᴀᴛᴀ",
-            f"userset {user_id} lmeta"
+            f"userset {user_id} lmeta",
+            icon_custom_emoji_id=5294339927318739359
         )
 
         _ar_mode = user_dict.get("auto_rename", False)
@@ -498,18 +511,19 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             "✏️ 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ ✅" if _ar_mode == "custom" else
             "🔄 𝐀ᴜᴛᴏ 𝐑ᴇɴᴀᴍᴇ"
         )
-        buttons.ibutton(_ar_label, f"userset {user_id} auto_rename")
+        buttons.ibutton(_ar_label, f"userset {user_id} auto_rename", icon_custom_emoji_id=5341715473882955310)
 
         auto_poster = user_dict.get("auto_poster", False)
         buttons.ibutton(
             f"{'✅️' if auto_poster else ''} 🎬 𝐀ᴜᴛᴏ 𝐏ᴏsᴛᴇʀ",
-            f"userset {user_id} auto_poster"
+            f"userset {user_id} auto_poster",
+            icon_custom_emoji_id=5294339927318739359
         )
 
-        merge_video = user_dict.get("merge_video", False)
         buttons.ibutton(
-            f"{'✅️' if merge_video else ''} 🎞️ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ",
-            f"userset {user_id} merge_video_menu"
+            "🎞️ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ",
+            f"userset {user_id} merge_video_menu",
+            icon_custom_emoji_id=5449683594425410231
         )
 
         _ar_display = (
@@ -534,11 +548,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             LMETA=escape(lmeta),
             AUTO_RENAME=_ar_display,
             AUTO_POSTER="✅ 𝐄ɴᴀʙʟᴇᴅ" if auto_poster else "❌ 𝐃ɪsᴀʙʟᴇᴅ",
-            MERGE_VIDEO="✅ 𝐄ɴᴀʙʟᴇᴅ" if merge_video else "❌ 𝐃ɪsᴀʙʟᴇᴅ",
         )
 
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "auto_rename":
         _ar_mode = user_dict.get("auto_rename", False)
@@ -564,44 +577,33 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(
             f"{'✅ ' if _ar_mode == 'auto' else ''}🤖 𝐀ᴜᴛᴏ 𝐌ᴏᴅᴇ",
             f"userset {user_id} ar_auto",
+            icon_custom_emoji_id=5341715473882955310
         )
         buttons.ibutton(
             f"{'✅ ' if _ar_mode == 'custom' else ''}✏️ 𝐒ᴇᴛ 𝐂ᴜsᴛᴏᴍ 𝐅ᴏʀᴍᴀᴛ",
             f"userset {user_id} ar_fmt",
+            icon_custom_emoji_id=5334544901428229844
         )
         if _ar_mode:
-            buttons.ibutton("❌ 𝐃ɪsᴀʙʟᴇ", f"userset {user_id} ar_off")
+            buttons.ibutton("❌ 𝐃ɪsᴀʙʟᴇ", f"userset {user_id} ar_off", icon_custom_emoji_id=5447644880824181073)
         if _ar_fmt:
-            buttons.ibutton("🗑️ 𝐂ʟᴇᴀʀ 𝐅ᴏʀᴍᴀᴛ", f"userset {user_id} dar_fmt")
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back leech", "footer")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+            buttons.ibutton("🗑️ 𝐂ʟᴇᴀʀ 𝐅ᴏʀᴍᴀᴛ", f"userset {user_id} dar_fmt", icon_custom_emoji_id=5445267414562389170)
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back leech", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "merge_video_menu":
-        merge_video = user_dict.get("merge_video", False)
-        status_str  = "✅ 𝐄ɴᴀʙʟᴇᴅ" if merge_video else "❌ 𝐃ɪsᴀʙʟᴇᴅ"
-        merge_cmd   = BotCommands.StartMergeCommand[0]
-        merge_cmd2  = BotCommands.StartMergeCommand[1]
+        merge_cmd  = BotCommands.StartMergeCommand[0]
+        merge_cmd2 = BotCommands.StartMergeCommand[1]
         text = (
-            f"🎞️ <b><u>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ 𝐒ᴇᴛᴛɪɴɢs</u></b>\n\n"
-            f"➲ <b>𝐒ᴛᴀᴛᴜs :</b> {status_str}\n\n"
-            f"<b>📋 𝐌ᴇʀɢᴇ 𝐓ᴏᴏʟ 𝐂ᴏᴍᴍᴀɴᴅs :</b>\n"
+            f"🎞️ <b><u>𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ</u></b>\n\n"
+            f"<b>📋 𝐌ᴇʀɢᴇ 𝐓ᴏᴏʟ 𝐂ᴏᴍᴍᴀɴᴅ :</b>\n"
             f"  ➤ <code>/{merge_cmd}</code>\n"
             f"    <i>𝐎ʀ ᴀʟᴛᴇʀɴᴀᴛɪᴠᴇ: <code>/{merge_cmd2}</code></i>\n\n"
             f"<b>ℹ️ 𝐇ᴏᴡ 𝐈ᴛ 𝐖ᴏʀᴋs :</b>\n"
-            f"  • 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ ᴍᴜsᴛ ʙᴇ <b>𝐄ɴᴀʙʟᴇᴅ</b> ᴛᴏ ᴜsᴇ /<code>{merge_cmd}</code>\n"
             f"  • ᴜsᴇ /<code>{merge_cmd}</code> ᴛᴏ ᴏᴘᴇɴ ᴛʜᴇ ᴍᴇʀɢᴇ ᴛᴏᴏʟ ᴍᴇɴᴜ\n"
-            f"  • ϙᴜᴇᴜᴇ ᴠɪᴅᴇᴏs/ʟɪɴᴋs ᴛʜᴇɴ ᴄʟɪᴄᴋ 🔀 𝐌ᴇʀɢᴇ 𝐍ᴏᴡ\n"
-            f"  • ᴀᴜᴛᴏ-ᴅɪsᴀʙʟᴇs ᴀғᴛᴇʀ ᴇᴀᴄʜ sᴇssɪᴏɴ"
+            f"  • ϙᴜᴇᴜᴇ ᴠɪᴅᴇᴏs/ʟɪɴᴋs ᴛʜᴇɴ ᴄʟɪᴄᴋ 🔀 𝐌ᴇʀɢᴇ 𝐍ᴏᴡ"
         )
-        buttons.ibutton(
-            f"{'✔ ' if merge_video else ''}✅ 𝐄ɴᴀʙʟᴇ",
-            f"userset {user_id} mv_enable",
-        )
-        buttons.ibutton(
-            f"{'✔ ' if not merge_video else ''}❌ 𝐃ɪsᴀʙʟᴇ",
-            f"userset {user_id} mv_disable",
-        )
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} mv_back", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} mv_back", "footer", icon_custom_emoji_id=5416117059207572332)
         button = buttons.build_menu(2)
     elif key == "ddl_servers":
         ddl_serv, serv_list = 0, []
@@ -619,9 +621,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             buttons.ibutton(
                 f"{'✅️' if btn in serv_list else ''} {fname_dict[btn]}",
                 f"userset {user_id} {btn}",
+                icon_custom_emoji_id=5193177581888755275
             )
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back mirror", "footer")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back mirror", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif edit_type:
         text = f"㊂ <b><u>{fname_dict[key]} 𝐒ᴇᴛᴛɪɴɢs :</u></b>\n\n"
@@ -657,21 +660,21 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 "equal_splits" not in user_dict and config_dict["EQUAL_SPLITS"]
             ):
                 buttons.ibutton(
-                    "𝐃ɪsᴀʙʟᴇ 𝐄ϙᴜᴀʟ 𝐒ᴘʟɪᴛs", f"userset {user_id} esplits", "header"
+                    "𝐃ɪsᴀʙʟᴇ 𝐄ϙᴜᴀʟ 𝐒ᴘʟɪᴛs", f"userset {user_id} esplits", "header", icon_custom_emoji_id=5190806721286657692
                 )
             else:
                 buttons.ibutton(
-                    "𝐄ɴᴀʙʟᴇ 𝐄ϙᴜᴀʟ 𝐒ᴘʟɪᴛs", f"userset {user_id} esplits", "header"
+                    "𝐄ɴᴀʙʟᴇ 𝐄ϙᴜᴀʟ 𝐒ᴘʟɪᴛs", f"userset {user_id} esplits", "header", icon_custom_emoji_id=5190806721286657692
                 )
             if user_dict.get("media_group", False) or (
                 "media_group" not in user_dict and config_dict["MEDIA_GROUP"]
             ):
                 buttons.ibutton(
-                    "𝐃ɪsᴀʙʟᴇ 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ", f"userset {user_id} mgroup", "header"
+                    "𝐃ɪsᴀʙʟᴇ 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ", f"userset {user_id} mgroup", "header", icon_custom_emoji_id=5190806721286657692
                 )
             else:
                 buttons.ibutton(
-                    "𝐄ɴᴀʙʟᴇ 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ", f"userset {user_id} mgroup", "header"
+                    "𝐄ɴᴀʙʟᴇ 𝐌ᴇᴅɪᴀ 𝐆ʀᴏᴜᴘ", f"userset {user_id} mgroup", "header", icon_custom_emoji_id=5190806721286657692
                 )
         elif key == "ar_fmt":
             _ar_fmt_val = user_dict.get("auto_rename_fmt", "")
@@ -734,6 +737,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 "𝐃ɪsᴀʙʟᴇ 𝐃ᴅʟ" if ddl_mode == "𝐄ɴᴀʙʟᴇᴅ" else "𝐄ɴᴀʙʟᴇ 𝐃ᴅʟ",
                 f"userset {user_id} s{key}",
                 "header",
+                icon_custom_emoji_id=5193177581888755275
             )
         elif key == "user_tds":
             set_exist = len(val) if (val := user_dict.get(key, False)) else "𝐍ᴏᴛ 𝐄xɪsᴛs"
@@ -742,6 +746,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 "𝐃ɪsᴀʙʟᴇ 𝐔sᴇʀ𝐓ᴅs" if tds_mode == "𝐄ɴᴀʙʟᴇᴅ" else "𝐄ɴᴀʙʟᴇ 𝐔sᴇʀ𝐓ᴅs",
                 f"userset {user_id} td_mode",
                 "header",
+                icon_custom_emoji_id=5427168083074628963
             )
             if not config_dict["USER_TD_MODE"]:
                 tds_mode = "𝐅ᴏʀᴄᴇ 𝐃ɪsᴀʙʟᴇᴅ"
@@ -764,10 +769,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                     else f"𝐒ᴇᴛ {fname_dict[key]}"
                 ),
                 f"userset {user_id} {key} edit",
+                icon_custom_emoji_id=5206607081334906820
             )
         else:
             text += "\n\n" + desp_dict[key][1]
-            buttons.ibutton("𝐒ᴛᴏᴘ 𝐂ʜᴀɴɢᴇ", f"userset {user_id} {key}")
+            buttons.ibutton("𝐒ᴛᴏᴘ 𝐂ʜᴀɴɢᴇ", f"userset {user_id} {key}", icon_custom_emoji_id=5447644880824181073)
         if (
             set_exist
             and set_exist not in ["𝐄xɪsᴛs", "𝐍ᴏᴛ 𝐄xɪsᴛs"]
@@ -778,12 +784,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             )
         ):
             if key == "thumb":
-                buttons.ibutton("𝐕ɪᴇᴡ 𝐓ʜᴜᴍʙɴᴀɪʟ", f"userset {user_id} vthumb", "header")
+                buttons.ibutton("𝐕ɪᴇᴡ 𝐓ʜᴜᴍʙɴᴀɪʟ", f"userset {user_id} vthumb", "header", icon_custom_emoji_id=5210956306952758910)
             elif key == "user_tds":
-                buttons.ibutton("𝐒ʜᴏᴡ 𝐔sᴇʀ𝐓ᴅs", f"userset {user_id} show_tds", "header")
-            buttons.ibutton("↻ 𝐃ᴇʟᴇᴛᴇ", f"userset {user_id} d{key}")
-        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back {edit_type}", "footer")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+                buttons.ibutton("𝐒ʜᴏᴡ 𝐔sᴇʀ𝐓ᴅs", f"userset {user_id} show_tds", "header", icon_custom_emoji_id=5210956306952758910)
+            buttons.ibutton("↻ 𝐃ᴇʟᴇᴛᴇ", f"userset {user_id} d{key}", icon_custom_emoji_id=5445267414562389170)
+        buttons.ibutton("◀ 𝐁ᴀᴄᴋ", f"userset {user_id} back {edit_type}", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     return text, button
 
@@ -1053,7 +1059,7 @@ async def edit_user_settings(client, query):
         handler_dict[user_id] = False
         await query.answer()
         buttons = ButtonMaker()
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"wzmlx {user_id} close")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"wzmlx {user_id} close", icon_custom_emoji_id=5447644880824181073)
         await sendMessage(message, from_user.mention, buttons.build_menu(1), thumb_path)
         await update_user_settings(query, "thumb", "leech")
     elif data[2] == "show_tds":
@@ -1190,20 +1196,6 @@ async def edit_user_settings(client, query):
         handler_dict[user_id] = False
         await query.answer()
         await update_user_settings(query, "merge_video_menu")
-    elif data[2] == "mv_enable":
-        handler_dict[user_id] = False
-        await query.answer("✅ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ 𝐄ɴᴀʙʟᴇᴅ!", show_alert=True)
-        update_user_ldata(user_id, "merge_video", True)
-        await update_user_settings(query, "merge_video_menu")
-        if DATABASE_URL:
-            await DbManger().update_user_data(user_id)
-    elif data[2] == "mv_disable":
-        handler_dict[user_id] = False
-        await query.answer("❌ 𝐌ᴇʀɢᴇ 𝐕ɪᴅᴇᴏ 𝐃ɪsᴀʙʟᴇᴅ!", show_alert=True)
-        update_user_ldata(user_id, "merge_video", False)
-        await update_user_settings(query, "merge_video_menu")
-        if DATABASE_URL:
-            await DbManger().update_user_data(user_id)
     elif data[2] == "mv_back":
         handler_dict[user_id] = False
         await query.answer()
@@ -1362,9 +1354,9 @@ async def edit_user_settings(client, query):
         handler_dict[user_id] = False
         await query.answer()
         buttons = ButtonMaker()
-        buttons.ibutton("✅ 𝐘ᴇs", f"userset {user_id} reset_now y")
-        buttons.ibutton("🚫 𝐍ᴏ", f"userset {user_id} reset_now n")
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
+        buttons.ibutton("✅ 𝐘ᴇs", f"userset {user_id} reset_now y", icon_custom_emoji_id=5206607081334906820)
+        buttons.ibutton("🚫 𝐍ᴏ", f"userset {user_id} reset_now n", icon_custom_emoji_id=5447644880824181073)
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         await editMessage(
             message, "𝐃ᴏ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ 𝐑ᴇsᴇᴛ 𝐒ᴇᴛᴛɪɴɢs ?", buttons.build_menu(2)
         )
@@ -1418,7 +1410,7 @@ async def send_users_settings(client, message):
     if not userid:
         msg = f"<u><b>𝐓ᴏᴛᴀʟ 𝐔sᴇʀs / 𝐂ʜᴀᴛs 𝐃ᴀᴛᴀ 𝐒ᴀᴠᴇᴅ :</b> {len(user_data)}</u>"
         buttons = ButtonMaker()
-        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close")
+        buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(1)
         for user, data in user_data.items():
             msg += f"\n\n<code>{user}</code>:"
@@ -1440,9 +1432,10 @@ async def send_users_settings(client, message):
         if data := user_data[int(userid)]:
             buttons = ButtonMaker()
             buttons.ibutton(
-                "🗑️ 𝐃ᴇʟᴇᴛᴇ 𝐃ᴀᴛᴀ", f"userset {message.from_user.id} user_del {userid}"
+                "🗑️ 𝐃ᴇʟᴇᴛᴇ 𝐃ᴀᴛᴀ", f"userset {message.from_user.id} user_del {userid}",
+                icon_custom_emoji_id=5445267414562389170
             )
-            buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close")
+            buttons.ibutton("❌ 𝐂ʟᴏsᴇ", f"userset {message.from_user.id} close", icon_custom_emoji_id=5447644880824181073)
             button = buttons.build_menu(1)
             for key, value in data.items():
                 if key in ["token", "time", "ddl_servers", "usess"]:
