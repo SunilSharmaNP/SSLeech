@@ -385,7 +385,8 @@ def get_readable_message():
     buttons = ButtonMaker()
     buttons.ibutton(
         BotTheme("REFRESH", Page=f"{PAGE_NO}/{PAGES}"),
-        "status ref"
+        "status ref",
+        icon_custom_emoji_id=5373123633415074227
     )
     if tasks > STATUS_LIMIT:
         if config_dict["BOT_MAX_TASKS"]:
@@ -400,15 +401,18 @@ def get_readable_message():
         buttons = ButtonMaker()
         buttons.ibutton(
             BotTheme("PREVIOUS"),
-            "status pre"
+            "status pre",
+            icon_custom_emoji_id=5416117059207572332
         )
         buttons.ibutton(
             BotTheme("REFRESH", Page=f"{PAGE_NO}/{PAGES}"),
-            "status ref"
+            "status ref",
+            icon_custom_emoji_id=5373123633415074227
         )
         buttons.ibutton(
             BotTheme("NEXT"),
-            "status nex"
+            "status nex",
+            icon_custom_emoji_id=5416117059207572332
         )
     button = buttons.build_menu(3)
     msg += BotTheme("Cpu", cpu=cpu_percent())
