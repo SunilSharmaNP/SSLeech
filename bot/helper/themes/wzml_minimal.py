@@ -50,11 +50,11 @@ class WZMLStyle:
     WEB_PASTE_BT = "📨 𝐖ᴇʙ 𝐏ᴀsᴛᴇ (SB)"
 
     # async def bot_help(client, message): ---> __main__.py
-    BASIC_BT = "📋 𝐁ᴀsɪᴄ"
-    USER_BT = "👤 𝐔sᴇʀs"
-    MICS_BT = "⚙️ 𝐌ɪᴄs"
-    O_S_BT = "👑 𝐎ᴡɴᴇʀ & 𝐒ᴜᴅᴏs"
-    CLOSE_BT = "❌ 𝐂ʟᴏsᴇ"
+    BASIC_BT = "𝐁ᴀsɪᴄ"
+    USER_BT = "𝐔sᴇʀs"
+    MICS_BT = "𝐌ɪᴄs"
+    O_S_BT = "𝐒ᴜᴅᴏs"
+    CLOSE_BT = "𝐂ʟᴏsᴇ"
     HELP_HEADER = "㊂ <b><i>𝐇ᴇʟᴘ 𝐆ᴜɪᴅᴇ 𝐌ᴇɴᴜ!</i></b>\n\n<b>𝐍ᴏᴛᴇ: <i>𝐂ʟɪᴄᴋ ᴏɴ ᴀɴʏ 𝐂ᴍᴅ ᴛᴏ sᴇᴇ ᴍᴏʀᴇ ᴍɪɴᴏʀ ᴅᴇᴛᴀʟɪs.</i></b>"
 
     # async def stats(client, message):
@@ -193,7 +193,7 @@ class WZMLStyle:
     STATUS_NAME = "<b><emoji id=5294339927318739359>🎙</emoji> 𝐓ɪᴛᴛʟᴇ : </b><code> {Name}</code>"
 
     mm = "\n\n┏━━༻«<b> <a href=https://t.me/SSBotsUpdates>★彡 𝐒𝐒 𝐁ᴏᴛs 彡★</a></b> »༺━━┓"
-    BAR = "\n┠ {Bar}"
+    BAR = "\n┠<b><emoji id=5361651920596470397>📶</emoji> :</b> {Bar}"
     PROCESSED = "\n┠<b><emoji id=5456140674028019486>⚡️</emoji> 𝐏ʀᴏᴄᴇssᴇᴅ :</b> {Processed}"
     STATUS = '\n┠ <b><emoji id=5427168083074628963>💎</emoji> 𝐒ᴛᴀᴛᴜs :</b> <a href="{Url}">{Status}</a>'
     ETA = "\n┠<b><emoji id=5386367538735104399>⌛</emoji> 𝐄ᴛᴀ :</b> {Eta}"
@@ -230,9 +230,9 @@ class WZMLStyle:
     DL = "\n┖ <b><emoji id=5406745015365943482>⬇️</emoji> 𝐃ʟ:</b> {DL}/s | "
     UL = "<b><emoji id=5429651785352501917>↗️</emoji> 𝐔ʟ:</b> {UL}/s</blockquote>"
 
-    PREVIOUS = "⫷"
-    REFRESH = "📑 𝐏ᴀɢᴇ \n{Page}"
-    NEXT = "⫸"
+    PREVIOUS = "<emoji id=5386988698898203207>⏪</emoji>"
+    REFRESH = "<emoji id=5372981976804366741>🔄</emoji> 𝐏ᴀɢᴇ \n{Page}"
+    NEXT = "<emoji id=5386535874917051805>⏩</emoji>"
 
     # STOP_DUPLICATE_MSG: ---> clone.py, aria2_listener.py, task_manager.py
     STOP_DUPLICATE = "<emoji id=5219866512961062330>⁉️</emoji> 𝐅ɪʟᴇ/𝐅ᴏʟᴅᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ 𝐃ʀɪᴠᴇ.\n 𝐇ᴇʀᴇ ᴀʀᴇ {content} ʟɪsᴛ ʀᴇsᴜʟᴛs:"
