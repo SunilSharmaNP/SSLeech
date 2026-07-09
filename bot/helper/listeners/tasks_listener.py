@@ -155,6 +155,7 @@ class MirrorLeechListener:
         self.user_dict = user_data.get(self.user_id, {})
         self.isPM = config_dict["BOT_PM"] or self.user_dict.get("bot_pm")
         self.suproc = None
+        self.is_cancelled = False
         self.sameDir = sameDir
         self.rcFlags = rcFlags
         self.upPath = upPath
@@ -325,6 +326,8 @@ class MirrorLeechListener:
                 name = str(download.name()).replace("/", "")
                 gid = download.gid()
         LOGGER.info(f"Download Completed: {name}")
+        if self.is_cancelled:
+            return
         if multi_links:
             await self.onUploadError(f"{E.done} 𝐏𝐚𝐫𝐭 𝐑𝐞𝐚𝐝𝐲 — 𝐰𝐚𝐢𝐭𝐢𝐧𝐠 𝐟𝐨𝐫 𝐫𝐞𝐦𝐚𝐢𝐧𝐢𝐧𝐠 𝐩𝐚𝐫𝐭𝐬 𝐭𝐨 𝐜𝐨𝐦𝐩𝐥𝐞𝐭𝐞…")
             return
@@ -633,6 +636,8 @@ class MirrorLeechListener:
             LOGGER.info(f"Start from Queued/Upload: {name}")
         async with queue_dict_lock:
             non_queued_up.add(self.uid)
+        if self.is_cancelled:
+            return
         if self.isLeech:
             size = await get_path_size(up_dir)
             for s in m_size:
@@ -1280,6 +1285,7 @@ class MirrorLeechListener:
         await delete_links(self.message)
 
     async def onDownloadError(self, error, button=None):
+        self.is_cancelled = True
         async with download_dict_lock:
             if self.uid in download_dict.keys():
                 del download_dict[self.uid]
@@ -1331,6 +1337,7 @@ class MirrorLeechListener:
             await clean_download(self.newDir)
 
     async def onUploadError(self, error):
+        self.is_cancelled = True
         async with download_dict_lock:
             if self.uid in download_dict.keys():
                 del download_dict[self.uid]
