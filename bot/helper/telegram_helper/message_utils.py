@@ -413,9 +413,8 @@ async def update_all_messages(force=False):
                 rmsg = await editMessage(
                     status_reply_dict[chat_id][0], msg, buttons, "IMAGES"
                 )
-                if isinstance(rmsg, str):
-                    if rmsg.startswith("Telegram says: [400"):
-                        del status_reply_dict[chat_id]
+                if isinstance(rmsg, str) and rmsg.startswith("Telegram says: [400"):
+                    del status_reply_dict[chat_id]
                     continue
                 status_reply_dict[chat_id][0].text = msg
                 status_reply_dict[chat_id][1] = time()
@@ -432,17 +431,11 @@ async def sendStatusMessage(msg):
             message = status_reply_dict[chat_id][0]
             await deleteMessage(message)
             del status_reply_dict[chat_id]
-        message = await sendMessage(msg, progress, buttons, photo="IMAGES")
-        if isinstance(message, str):
-            LOGGER.error(f"Failed to send status message: {message}")
-            return
-        if not message:
-            LOGGER.error("Failed to send status message: sendMessage returned no message")
-            return
-        if hasattr(message, "caption"):
-            message.caption = progress
-        else:
-            message.text = progress
+        if message := await sendMessage(msg, progress, buttons, photo="IMAGES"):
+            if hasattr(message, "caption"):
+                message.caption = progress
+            else:
+                message.text = progress
         status_reply_dict[chat_id] = [message, time()]
         if not Interval:
             Interval.append(
