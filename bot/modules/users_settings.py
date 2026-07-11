@@ -11,6 +11,15 @@ from PIL import Image
 from time import time
 from functools import partial
 from html import escape
+
+# Premium emoji tags must NOT be passed through html.escape() — it breaks <> into &lt;&gt;
+_TICK  = '<emoji id=5206607081334906820>✔️</emoji>'
+_CROSS = '<emoji id=5210952531676504517>❌</emoji>'
+def _pesc(val):
+    """escape() for HTML, but leave premium-emoji tags intact."""
+    if val in (_TICK, _CROSS) or str(val).startswith('<emoji '):
+        return val
+    return escape(str(val))
 from io import BytesIO
 from asyncio import sleep
 from cryptography.fernet import Fernet
@@ -284,7 +293,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         text = BotTheme(
             "UNIVERSAL",
             NAME=name,
-            YT=escape(ytopt),
+            YT=_pesc(ytopt),
             DT=f"{dailytas} / {dailytl}",
             LAST_USED=lastused,
             BOT_PM=bot_pm,
@@ -360,9 +369,9 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             RCLONE=rccmsg,
             DDL_SERVER=ddl_serv,
             DM=f"{dailyup} / {dailytlup}",
-            MREMNAME=escape(mremname),
-            MPREFIX=escape(mprefix),
-            MSUFFIX=escape(msuffix),
+            MREMNAME=_pesc(mremname),
+            MPREFIX=_pesc(mprefix),
+            MSUFFIX=_pesc(msuffix),
             TMODE=tds_mode,
             USERTD=user_tds,
         )
@@ -540,12 +549,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             SPLIT_SIZE=split_size,
             EQUAL_SPLIT=equal_splits,
             MEDIA_GROUP=media_group,
-            LCAPTION=escape(lcaption),
-            LPREFIX=escape(lprefix),
-            LSUFFIX=escape(lsuffix),
+            LCAPTION=_pesc(lcaption),
+            LPREFIX=_pesc(lprefix),
+            LSUFFIX=_pesc(lsuffix),
             LDUMP=ldump,
-            LREMNAME=escape(lremname),
-            LMETA=escape(lmeta),
+            LREMNAME=_pesc(lremname),
+            LMETA=_pesc(lmeta),
             AUTO_RENAME=_ar_display,
             AUTO_POSTER="<emoji id=5206607081334906820>✔️</emoji>" if auto_poster else "<emoji id=5210952531676504517>❌</emoji>",
         )
@@ -645,10 +654,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 == ""
                 else val
             )
-            text += f"➲ <b>𝐘ᴛ-𝐃ʟᴘ 𝐎ᴘᴛɪᴏɴs :</b> <code>{escape(set_exist)}</code>\n\n"
+            text += f"➲ <b>𝐘ᴛ-𝐃ʟᴘ 𝐎ᴘᴛɪᴏɴs :</b> {_pesc(set_exist)}\n\n"
         elif key == "usess":
             set_exist = "<emoji id=5206607081334906820>✔️</emoji>" if user_dict.get("usess") else "<emoji id=5210952531676504517>❌</emoji>"
-            text += f"➲ <b>{fname_dict[key]} :</b> <code>{set_exist}</code>\n➲ <b>𝐄ɴᴄʀʏᴘᴛɪᴏɴ :</b> {'🔐' if set_exist == '<emoji id=5206607081334906820>✔️</emoji>' else '🔓'}\n\n"
+            text += f"➲ <b>{fname_dict[key]} :</b> {set_exist}\n➲ <b>𝐄ɴᴄʀʏᴘᴛɪᴏɴ :</b> {'🔐' if set_exist == _TICK else '🔓'}\n\n"
         elif key == "split_size":
             set_exist = (
                 get_readable_file_size(config_dict["LEECH_SPLIT_SIZE"]) + " (𝐃ᴇғᴀᴜʟᴛ)"
