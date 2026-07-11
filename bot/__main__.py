@@ -319,7 +319,7 @@ async def restart_notification():
 
     async def send_incompelete_task_message(cid, msg):
         try:
-            if msg.startswith("⌬ <b><i>Restarted Successfully!</i></b>"):
+            if cid == chat_id and msg_id:
                 await bot.edit_message_text(
                     chat_id=chat_id,
                     message_id=msg_id,
@@ -366,21 +366,32 @@ async def restart_notification():
                     await send_incompelete_task_message(cid, msg)
 
     if await aiopath.isfile(".restartmsg"):
+        restart_text = BotTheme(
+            "RESTART_SUCCESS",
+            time=now.strftime("%I:%M:%S %p"),
+            date=now.strftime("%d/%m/%y"),
+            timz=config_dict["TIMEZONE"],
+            version=get_version(),
+        )
         try:
             await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=msg_id,
-                text=BotTheme(
-                    "RESTART_SUCCESS",
-                    time=now.strftime("%I:%M:%S %p"),
-                    date=now.strftime("%d/%m/%y"),
-                    timz=config_dict["TIMEZONE"],
-                    version=get_version(),
-                ),
+                text=restart_text,
                 parse_mode=ParseMode.HTML,
             )
         except Exception as e:
-            LOGGER.error(e)
+            LOGGER.warning(f"Could not edit restart message ({e}), sending new one…")
+            try:
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=restart_text,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                )
+            except Exception as e2:
+                LOGGER.error(f"Failed to send restart notification: {e2}")
         await aioremove(".restartmsg")
 
 
