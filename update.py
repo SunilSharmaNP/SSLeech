@@ -86,6 +86,17 @@ def _run_update(upstream_repo, upstream_branch):
         _LOGGER.info("No UPSTREAM_REPO set — skipping git update.")
         return
 
+    # ── Preserve runtime files that must survive git reset ────────────────────
+    # .restartmsg holds (chat_id, msg_id) written by _do_restart() so the bot
+    # can edit "Restarting…" → "Restarted Successfully!" after coming back up.
+    # git add . stages it, then git reset --hard deletes it — we save/restore it.
+    _RUNTIME_FILES = [".restartmsg"]
+    _saved = {}
+    for _f in _RUNTIME_FILES:
+        if path.exists(_f):
+            with open(_f, "r") as _fh:
+                _saved[_f] = _fh.read()
+
     if path.exists(".git"):
         srun(["rm", "-rf", ".git"], capture_output=True)
 
@@ -110,6 +121,11 @@ def _run_update(upstream_repo, upstream_branch):
                 f"stderr: {result.stderr.decode().strip()}"
             )
             break
+
+    # ── Restore preserved runtime files ───────────────────────────────────────
+    for _f, _content in _saved.items():
+        with open(_f, "w") as _fh:
+            _fh.write(_content)
 
     if result and result.returncode == 0:
         _LOGGER.info("Successfully updated with latest commits !!")
