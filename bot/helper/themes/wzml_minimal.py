@@ -10,7 +10,7 @@ class WZMLStyle:
     ST_BN3_URL = 'https://github.com/SilentDemonSD/WZML-X/tree/master'
     ST_MSG = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=5424818078833715060>⚡</emoji><b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
+<emoji id=5424818078833715060>⚡</emoji><b> I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
 <emoji id=5222044641200720562>🌸</emoji> <b>This Bot Can Mirror or Leech Files From Links, Telegram Files, Torrents, Google Drive, or Directly to Telegram.</b> <emoji id=5217549292205528507>😰</emoji>
 
@@ -20,7 +20,7 @@ class WZMLStyle:
 
     ST_BOTPM = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
 
-<emoji id=6296508771325707891>❤️</emoji> <b>I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
+<emoji id=6296508771325707891>❤️</emoji> <b> I'm A Mirror Leech Telegram Bot ! [MLTB]</b>
 
 <emoji id=5199658498559854923>🍀</emoji> <b>Now I Will Send All Your Leeched Files Here. Start Using Me In The Group!</b> <emoji id=5220166546491459639>🔥</emoji>"""
     ST_UNAUTH = """<emoji id=5210956306952758910>👀</emoji> 𝐇ᴇʟʟᴏ {name}!
@@ -184,7 +184,7 @@ class WZMLStyle:
     INDEX_LINK_F = "🗂 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
     INDEX_LINK_D = "⚡ 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
     VIEW_LINK = "🌐 𝐕ɪᴇᴡ 𝐋ɪɴᴋ"
-    CHECK_PM = "📥 𝐕ɪᴇᴡ ɪɴ 𝐁ᴏᴛ 𝐏ᴍ"
+    CHECK_PM = " 𝐕ɪᴇᴡ ɪɴ 𝐁ᴏᴛ 𝐏ᴍ"
     CHECK_LL = "🖇 𝐕ɪᴇᴡ ɪɴ 𝐋ɪɴᴋs 𝐋ᴏɢ"
     MEDIAINFO_LINK = "📃 𝐌ᴇᴅɪᴀ𝐈ɴғᴏ"
     SCREENSHOTS = "🖼 𝐒ᴄʀᴇᴇɴ𝐒ʜᴏᴛs"
