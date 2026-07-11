@@ -125,12 +125,20 @@ def _run_update(upstream_repo, upstream_branch):
 
 
 def _update_packages():
-    _LOGGER.info("Upgrading installed packages ...")
-    ret = scall("pip install -U -r requirements.txt -q --no-warn-script-location", shell=True)
+    _LOGGER.info("Checking packages against requirements.txt ...")
+    # --upgrade-strategy only-if-needed  →  pip skips packages already satisfying
+    # the pinned constraint; no unnecessary upgrades of base-image packages.
+    # -U / --upgrade is intentionally OMITTED so that on each restart only truly
+    # new or version-changed deps are installed, keeping restarts fast.
+    ret = scall(
+        "pip install -r requirements.txt -q --no-warn-script-location "
+        "--upgrade-strategy only-if-needed",
+        shell=True,
+    )
     if ret == 0:
-        _LOGGER.info("Packages updated successfully.")
+        _LOGGER.info("Successfully Updated all the Packages !")
     else:
-        _LOGGER.warning("Package upgrade had warnings — continuing anyway.")
+        _LOGGER.warning("Package install had warnings — continuing anyway.")
 
 
 def main():
