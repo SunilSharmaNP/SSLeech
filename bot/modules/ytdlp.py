@@ -35,6 +35,10 @@ from bot.helper.ext_utils.bot_utils import (
     arg_parser,
 )
 from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
+from bot.helper.mirror_utils.download_utils.direct_link_generator import (
+    direct_link_generator,
+)
+from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.mirror_utils.rclone_utils.list import RcloneList
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
@@ -562,7 +566,35 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
 
-    options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+    # ── luluvdo.com / lulustream.com ────────────────────────────────────────────
+    # yt-dlp has no built-in extractor for luluvdo. The video is served as an
+    # HLS m3u8 stream embedded in packed (obfuscated) JS. We resolve the real
+    # stream URL in pure Python here, then hand the m3u8 to yt-dlp which handles
+    # HLS natively via its GenericIE / HlsIE extractor.
+    if any(h in link for h in ("luluvdo.com", "lulustream.com")):
+        try:
+            resolved = await sync_to_async(direct_link_generator, link)
+            if isinstance(resolved, tuple):
+                stream_url, ref_header = resolved
+                # ref_header format: "Referer: https://luluvdo.com/"
+                ref_val = ref_header.split(": ", 1)[-1]
+            else:
+                stream_url, ref_val = resolved, "https://luluvdo.com/"
+            LOGGER.info(f"luluvdo resolved → {stream_url[:80]}…")
+            link = stream_url
+            # Pre-seed options so Referer is sent for the m3u8 request
+            options = {
+                "usenetrc": True,
+                "cookiefile": "cookies.txt",
+                "http_headers": {"Referer": ref_val},
+            }
+        except DirectDownloadLinkException as e:
+            await sendMessage(message, f"{tag} {e}")
+            await delete_links(message)
+            return
+    else:
+        options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+    # ────────────────────────────────────────────────────────────────────────────
     ydl_opts = {}
     if opt:
         if opt.strip().startswith("{"):
