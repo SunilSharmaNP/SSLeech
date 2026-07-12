@@ -214,6 +214,8 @@ def direct_link_generator(link):
         return devuploads(link)
     elif "lulacloud.com" in domain:
         return lulacloud(link)
+    elif any(x in domain for x in ["luluvdo.com", "lulustream.com"]):
+        return luluvdo(link)
     elif "uploadhaven" in domain:
         return uploadhaven(link)
     elif "fuckingfast.co" in domain:
@@ -2384,6 +2386,129 @@ def fuckingfast_dl(url):
             raise DirectDownloadLinkException("ERROR: Could not find download link in page")
     except Exception as e:
         raise DirectDownloadLinkException(f"ERROR: {str(e)}") from e
+
+
+def _luluvdo_decode(html_text):
+    """
+    Decode a Dean Edwards p,a,c,k,e,d packed JavaScript block found in an HTML page.
+
+    The packer format is:
+        eval(function(p,a,c,k,e,d){...return p}('CODE',BASE,COUNT,'KEYS'.split('|')))
+
+    We manually walk the characters so we are immune to single-quote escaping issues
+    and don't need re.DOTALL hacks or an external JS runtime.
+    Returns the decoded JS string, or None on failure.
+    """
+    marker = "eval(function(p,a,c,k,e,d){"
+    start = html_text.find(marker)
+    if start == -1:
+        return None
+
+    # Skip past the function body {…} using brace counting
+    i = start + len(marker)
+    depth = 1
+    while i < len(html_text) and depth:
+        if html_text[i] == "{":
+            depth += 1
+        elif html_text[i] == "}":
+            depth -= 1
+        i += 1
+
+    # Expect ('CODE',BASE,COUNT,'KEYS'.split('|'))
+    if i >= len(html_text) or html_text[i] != "(":
+        return None
+    i += 1  # skip '('
+
+    # --- parse CODE string ---
+    if i >= len(html_text) or html_text[i] != "'":
+        return None
+    i += 1
+    code_chars = []
+    while i < len(html_text):
+        ch = html_text[i]
+        if ch == "\\":
+            i += 1
+            code_chars.append(html_text[i] if i < len(html_text) else "")
+        elif ch == "'":
+            break
+        else:
+            code_chars.append(ch)
+        i += 1
+    code = "".join(code_chars)
+    i += 1  # skip closing '
+
+    # --- parse ,BASE,COUNT, ---
+    m_args = search(r"\s*,\s*(\d+)\s*,\s*\d+\s*,\s*'", html_text[i:])
+    if not m_args:
+        return None
+    base = int(m_args.group(1))
+    i += m_args.end()
+
+    # --- parse KEYS string ---
+    keys_chars = []
+    while i < len(html_text):
+        ch = html_text[i]
+        if ch == "\\":
+            i += 1
+            keys_chars.append(html_text[i] if i < len(html_text) else "")
+        elif ch == "'":
+            break
+        else:
+            keys_chars.append(ch)
+        i += 1
+    keys = "".join(keys_chars).split("|")
+
+    # --- replace each base-N token in code with its key ---
+    def _tok(match_obj):
+        tok = match_obj.group(0)
+        try:
+            idx = int(tok, base)   # Python's int() handles base 2-36 natively
+            return keys[idx] if idx < len(keys) and keys[idx] else tok
+        except (ValueError, IndexError):
+            return tok
+
+    return sub(r"\b[a-z0-9]+\b", _tok, code)
+
+
+def luluvdo(url):
+    """
+    Extract the HLS m3u8 stream URL from a luluvdo.com / lulustream.com video page.
+
+    luluvdo.com embeds the video source inside a Dean Edwards packed JS block.
+    We decode it in pure Python and return (m3u8_url, referer_header).
+    """
+    try:
+        origin = "https://" + (urlparse(url).hostname or "luluvdo.com")
+        headers = {
+            "User-Agent": user_agent,
+            "Referer": origin + "/",
+        }
+        with Session() as session:
+            res = session.get(url, headers=headers, timeout=15)
+        if res.status_code != 200:
+            raise DirectDownloadLinkException(
+                f"ERROR: luluvdo HTTP {res.status_code} for {url}"
+            )
+
+        decoded = _luluvdo_decode(res.text)
+        if not decoded:
+            raise DirectDownloadLinkException(
+                "ERROR: Could not decode luluvdo JS player — page layout may have changed"
+            )
+
+        # The player setup looks like: sources:[{file:"https://....m3u8?..."}]
+        m = search(r'sources:\[\{file:"(https://[^"]+\.m3u8[^"]*)"', decoded)
+        if not m:
+            raise DirectDownloadLinkException(
+                "ERROR: m3u8 stream URL not found in luluvdo player"
+            )
+
+        stream_url = m.group(1)
+        return (stream_url, f"Referer: {origin}/")
+    except DirectDownloadLinkException:
+        raise
+    except Exception as e:
+        raise DirectDownloadLinkException(f"ERROR: luluvdo — {e}") from e
 
 
 def lulacloud(url):
