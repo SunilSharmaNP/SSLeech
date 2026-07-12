@@ -262,6 +262,123 @@ def extract_info(link, options):
         return result
 
 
+async def _parse_luluvdo_m3u8(url, headers):
+    """
+    Fetch HLS master playlist and return yt-dlp format dicts (one per quality variant).
+    Also returns estimated total duration in seconds (from media playlist EXTINF tags).
+    Falls back to a single best-quality entry on any error.
+    """
+    import re
+    from urllib.parse import urljoin as _urljoin
+
+    _fallback = (
+        [{
+            "format_id": "hls-best",
+            "url": url,
+            "ext": "mp4",
+            "protocol": "m3u8",
+            "vcodec": "h264",
+            "acodec": "mp4a.40.2",
+            "height": None,
+            "tbr": None,
+            "filesize": None,
+            "filesize_approx": None,
+            "http_headers": headers,
+        }],
+        0,
+    )
+
+    try:
+        async with ClientSession() as sess:
+            async with sess.get(url, headers=headers) as resp:
+                if resp.status != 200:
+                    return _fallback
+                content = await resp.text()
+    except Exception:
+        return _fallback
+
+    # Not a master playlist — single media playlist; estimate duration from EXTINF
+    if "#EXT-X-STREAM-INF" not in content:
+        duration = sum(
+            float(ln.split(":")[1].split(",")[0])
+            for ln in content.splitlines()
+            if ln.startswith("#EXTINF:")
+        )
+        fmt = _fallback[0][0].copy()
+        fmt["url"] = url
+        return [fmt], duration
+
+    # Master playlist — parse variants
+    formats = []
+    lines = content.strip().splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if line.startswith("#EXT-X-STREAM-INF"):
+            bw, height = 0, 0
+            bw_m = re.search(r"BANDWIDTH=(\d+)", line)
+            res_m = re.search(r"RESOLUTION=\d+x(\d+)", line)
+            if bw_m:
+                bw = int(bw_m.group(1))
+            if res_m:
+                height = int(res_m.group(1))
+            j = i + 1
+            while j < len(lines) and lines[j].strip().startswith("#"):
+                j += 1
+            if j < len(lines):
+                vurl = lines[j].strip()
+                if not vurl.startswith("http"):
+                    vurl = _urljoin(url, vurl)
+                fmt_id = f"hls-{height}p" if height else f"hls-{bw // 1000}k"
+                formats.append({
+                    "format_id": fmt_id,
+                    "url": vurl,
+                    "ext": "mp4",
+                    "protocol": "m3u8",
+                    "vcodec": "h264",
+                    "acodec": "mp4a.40.2",
+                    "height": height or None,
+                    "tbr": round(bw / 1000) if bw else None,
+                    "filesize": None,
+                    "filesize_approx": None,
+                    "http_headers": headers,
+                })
+            i = j + 1
+        else:
+            i += 1
+
+    if not formats:
+        return _fallback
+
+    formats = sorted(formats, key=lambda x: x.get("height") or 0)
+
+    # Try to estimate duration from the highest-quality variant's media playlist
+    best_url = formats[-1]["url"]
+    best_tbr = formats[-1].get("tbr") or 0
+    duration = 0.0
+    try:
+        async with ClientSession() as sess:
+            async with sess.get(best_url, headers=headers) as resp:
+                if resp.status == 200:
+                    mpls = await resp.text()
+                    duration = sum(
+                        float(ln.split(":")[1].split(",")[0])
+                        for ln in mpls.splitlines()
+                        if ln.startswith("#EXTINF:")
+                    )
+    except Exception:
+        pass
+
+    # Seed filesize_approx for each variant using duration × bitrate
+    if duration > 0:
+        for fmt in formats:
+            tbr = fmt.get("tbr") or best_tbr
+            if tbr:
+                fmt["filesize_approx"] = int(duration * tbr * 1000 / 8)
+
+    return formats, duration
+
+
 async def _mdisk(link, name):
     key = link.split("/")[-1]
     async with ClientSession() as session:
@@ -609,24 +726,28 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             # Minimal info_dict — protocol "m3u8" (not "m3u8_native") so
             # yt-dlp selects FFmpegFD; external_downloader="ffmpeg" in opts
             # overrides even that and guarantees ffmpeg handles all CDN I/O.
+            # Parse m3u8 master playlist for quality variants + size estimation
+            _lulu_formats, _lulu_duration = await _parse_luluvdo_m3u8(
+                stream_url, _lulu_http_headers
+            )
+            _lulu_filesize = 0
+            if _lulu_duration and _lulu_formats:
+                # Use best-quality format bitrate for top-level size hint
+                best_fmt = max(_lulu_formats, key=lambda f: f.get("tbr") or 0)
+                if best_fmt.get("tbr"):
+                    _lulu_filesize = int(_lulu_duration * best_fmt["tbr"] * 1000 / 8)
+
             _lulu_info_dict = {
                 "id": "luluvdo",
                 "title": name or "luluvdo_video",
-                "webpage_url": link,
-                "original_url": link,
+                "webpage_url": stream_url,
+                "original_url": stream_url,
                 "extractor": "generic",
                 "extractor_key": "Generic",
                 "http_headers": _lulu_http_headers,
-                "formats": [
-                    {
-                        "format_id": "hls-best",
-                        "url": link,
-                        "ext": "mp4",
-                        "protocol": "m3u8",       # → FFmpegFD (not HlsFD)
-                        "quality": 1,
-                        "http_headers": _lulu_http_headers,
-                    }
-                ],
+                "formats": _lulu_formats,
+                "filesize_approx": _lulu_filesize or None,
+                "duration": _lulu_duration or None,
             }
             options = {"usenetrc": True, "cookiefile": "cookies.txt"}
         except DirectDownloadLinkException as e:
@@ -698,12 +819,36 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             "ffmpeg_i": ["-headers", _ffmpeg_hdr],
         }
         ydl_opts["http_headers"] = _lulu_http_headers
+
+        # Quality selection — show buttons when multiple variants are available
+        _lulu_fmts = _lulu_info_dict.get("formats", [])
+        _lulu_sel_qual = "best"
+        if len(_lulu_fmts) > 1:
+            _lulu_qual_str = await YtSelection(client, message).get_quality(_lulu_info_dict)
+            if _lulu_qual_str is None:
+                return  # user cancelled
+            # qual string is e.g. "hls-720p+ba/b[height=?720]" — extract format_id
+            _sel_fmt_id = _lulu_qual_str.split("+")[0].strip()
+            _sel_fmt = next(
+                (f for f in _lulu_fmts if f["format_id"] == _sel_fmt_id), None
+            )
+            if _sel_fmt:
+                # Narrow info_dict to exactly the chosen variant so yt-dlp can't
+                # silently fall back to a different quality
+                _lulu_info_dict["formats"] = [_sel_fmt]
+                _lulu_info_dict["filesize_approx"] = (
+                    _sel_fmt.get("filesize_approx") or _lulu_info_dict.get("filesize_approx")
+                )
+                _lulu_sel_qual = _sel_fmt["format_id"]
+            else:
+                _lulu_sel_qual = _lulu_qual_str
+
         __run_multi()
         await delete_links(message)
-        LOGGER.info(f"luluvdo: process_ie_result+ffmpeg → {link[:80]}…")
+        LOGGER.info(f"luluvdo: process_ie_result+ffmpeg → {link[:80]}… qual={_lulu_sel_qual}")
         ydl = YoutubeDLHelper(listener)
         await ydl.add_download(
-            link, path, _lulu_title, "bestvideo+bestaudio/best",
+            link, path, _lulu_title, _lulu_sel_qual,
             False, ydl_opts, info_dict=_lulu_info_dict,
         )
         return
