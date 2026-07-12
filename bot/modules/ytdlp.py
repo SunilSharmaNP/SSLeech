@@ -568,20 +568,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         name, link = await _mdisk(link, name)
 
     # ── luluvdo.com / lulustream.com ────────────────────────────────────────────
-    # yt-dlp has no built-in extractor for luluvdo. We resolve the m3u8 URL
-    # in Python, then pass it directly to yt-dlp with browser-like headers.
+    # yt-dlp has NO extractor for luluvdo. The m3u8 URL is CDN-protected:
+    # ANY yt-dlp extract_info call on it triggers "Downloading webpage" which
+    # always gets HTTP 403 from tnmr.org regardless of headers — the CDN
+    # blocks Python urllib requests at the TLS/UA level.
     #
-    # CDN (tnmr.org) requires:
-    #   1. Browser-like User-Agent  (yt-dlp's default UA gets a 403)
-    #   2. Referer: https://luluvdo.com/
-    #   3. Origin:  https://luluvdo.com
-    #
-    # Strategy: force external_downloader=ffmpeg so ALL HTTP requests (m3u8
-    # manifest fetch, quality playlist fetch, segment downloads) go through
-    # ffmpeg's own HTTP client with -headers.  yt-dlp's HlsFD (m3u8_native)
-    # does NOT reliably propagate format-level headers to every sub-request,
-    # causing the CDN to return 403 for segment/playlist fetches.
+    # Solution: skip extract_info entirely → build a minimal synthetic info_dict
+    # → call process_ie_result with external_downloader=ffmpeg so ffmpeg (not
+    # yt-dlp's HTTP client) makes every CDN request with proper -headers.
     _is_luluvdo = False
+    _lulu_info_dict = None
 
     if any(h in link for h in ("luluvdo.com", "lulustream.com")):
         _is_luluvdo = True
@@ -589,7 +585,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             resolved = await sync_to_async(direct_link_generator, link)
             if isinstance(resolved, tuple):
                 stream_url, ref_header = resolved
-                # ref_header format: "Referer: https://luluvdo.com/"
                 ref_val = ref_header.split(": ", 1)[-1]
             else:
                 stream_url, ref_val = resolved, "https://luluvdo.com/"
@@ -598,31 +593,40 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             from urllib.parse import urlparse as _up
             _parsed = _up(ref_val)
             _origin = f"{_parsed.scheme}://{_parsed.netloc}"
-            # ffmpeg -headers requires CRLF between headers + trailing CRLF
+            # ffmpeg -headers value: CRLF-separated, trailing CRLF required
             _ffmpeg_hdr = (
                 f"Referer: {ref_val}\r\n"
                 f"Origin: {_origin}\r\n"
                 f"User-Agent: {_dlg_user_agent}\r\n"
             )
-            options = {
-                "usenetrc": True,
-                "cookiefile": "cookies.txt",
-                # http_headers → used by yt-dlp's urllib for extractMetaData
-                # (fetching the m3u8 manifest to identify it as HLS).
-                "http_headers": {
-                    "Referer": ref_val,
-                    "Origin": _origin,
-                    "User-Agent": _dlg_user_agent,
-                },
-                # Force ffmpeg for all segment/playlist downloads so headers
-                # are applied reliably via ffmpeg's own -headers flag.
-                "external_downloader": "ffmpeg",
-                "external_downloader_args": {
-                    # "ffmpeg_i" args are placed before each -i in the ffmpeg
-                    # command, scoping the headers to the input stream URL.
-                    "ffmpeg_i": ["-headers", _ffmpeg_hdr],
-                },
+            _lulu_http_headers = {
+                "Referer": ref_val,
+                "Origin": _origin,
+                "User-Agent": _dlg_user_agent,
             }
+            # Minimal info_dict — protocol "m3u8" (not "m3u8_native") so
+            # yt-dlp selects FFmpegFD; external_downloader="ffmpeg" in opts
+            # overrides even that and guarantees ffmpeg handles all CDN I/O.
+            _lulu_info_dict = {
+                "id": "luluvdo",
+                "title": name or "luluvdo_video",
+                "webpage_url": link,
+                "original_url": link,
+                "extractor": "generic",
+                "extractor_key": "Generic",
+                "http_headers": _lulu_http_headers,
+                "formats": [
+                    {
+                        "format_id": "hls-best",
+                        "url": link,
+                        "ext": "mp4",
+                        "protocol": "m3u8",       # → FFmpegFD (not HlsFD)
+                        "quality": 1,
+                        "http_headers": _lulu_http_headers,
+                    }
+                ],
+            }
+            options = {"usenetrc": True, "cookiefile": "cookies.txt"}
         except DirectDownloadLinkException as e:
             await sendMessage(message, f"{tag} {e}")
             await delete_links(message)
@@ -678,14 +682,29 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
         options["playlist_items"] = "0"
 
-    # ── luluvdo: inject ffmpeg downloader into ydl_opts so add_download uses it ─
-    # options dict (used for extract_info) already has external_downloader set.
-    # ydl_opts is what gets passed to add_download → __set_options → self.opts,
-    # so we must mirror the ffmpeg settings there too.
-    if _is_luluvdo:
-        ydl_opts["external_downloader"] = options.get("external_downloader", "ffmpeg")
-        ydl_opts["external_downloader_args"] = options.get("external_downloader_args", {})
-        ydl_opts["http_headers"] = options.get("http_headers", {})
+    # ── luluvdo: skip extract_info entirely, use process_ie_result via info_dict ─
+    # extract_info on the m3u8 URL always 403s ("Downloading webpage" phase).
+    # We bypass it: inject external_downloader=ffmpeg into ydl_opts so that
+    # YoutubeDLHelper.__download_direct → process_ie_result uses FFmpegFD.
+    # FFmpegFD invokes ffmpeg with -headers, letting ffmpeg fetch the HLS
+    # manifest and every segment with proper Referer/Origin/User-Agent.
+    if _is_luluvdo and _lulu_info_dict is not None:
+        _lulu_title = name or _lulu_info_dict.get("title", "luluvdo_video")
+        # Guarantee ffmpeg is the downloader regardless of protocol in info_dict
+        ydl_opts["external_downloader"] = "ffmpeg"
+        ydl_opts["external_downloader_args"] = {
+            "ffmpeg_i": ["-headers", _ffmpeg_hdr],
+        }
+        ydl_opts["http_headers"] = _lulu_http_headers
+        __run_multi()
+        await delete_links(message)
+        LOGGER.info(f"luluvdo: process_ie_result+ffmpeg → {link[:80]}…")
+        ydl = YoutubeDLHelper(listener)
+        await ydl.add_download(
+            link, path, _lulu_title, "bestvideo+bestaudio/best",
+            False, ydl_opts, info_dict=_lulu_info_dict,
+        )
+        return
     # ──────────────────────────────────────────────────────────────────────────
 
     try:
