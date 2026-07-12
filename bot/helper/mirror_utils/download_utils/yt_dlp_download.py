@@ -290,7 +290,18 @@ class YoutubeDLHelper:
                 or "luluvdo_video"
             )
             self.__ext = ".mp4"
-            self.__size = info_dict.get("filesize") or info_dict.get("filesize_approx") or 0
+            # Try to get size from top-level, then from the first (selected) format
+            _fmts = info_dict.get("formats") or []
+            _fmt_size = (
+                (_fmts[0].get("filesize") or _fmts[0].get("filesize_approx") or 0)
+                if _fmts else 0
+            )
+            self.__size = (
+                info_dict.get("filesize")
+                or info_dict.get("filesize_approx")
+                or _fmt_size
+                or 0
+            )
             # inject outtmpl so the file lands in the right place
             self.opts["outtmpl"] = {
                 "default": f"{path}/{self.name}.%(ext)s",
