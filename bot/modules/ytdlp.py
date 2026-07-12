@@ -328,7 +328,9 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     except Exception:
         multi = 0
 
-    select = args["-s"] or args["-select"]
+    # FIX: quality buttons ON by default — user was expecting this behaviour
+    # -s / -select still works; -ns / -noselect skips the quality menu
+    select = True
     isBulk = args["-b"] or args["-bulk"]
     opt = args["-opt"] or args["-options"]
     folder_name = args["-m"] or args["-sd"] or args["-samedir"]
