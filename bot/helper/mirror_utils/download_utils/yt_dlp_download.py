@@ -114,23 +114,28 @@ class YoutubeDLHelper:
             if self.is_playlist:
                 self.__last_downloaded = 0
         elif d["status"] == "downloading":
-            self.__download_speed = d["speed"]
+            # FIX: d["speed"] is None at start or on some hosters — use .get() with fallback
+            self.__download_speed = d.get("speed") or 0
             if self.is_playlist:
-                downloadedBytes = d["downloaded_bytes"]
+                downloadedBytes = d.get("downloaded_bytes") or 0
                 chunk_size = downloadedBytes - self.__last_downloaded
                 self.__last_downloaded = downloadedBytes
                 self.__downloaded_bytes += chunk_size
             else:
-                if d.get("total_bytes"):
-                    self.__size = d["total_bytes"]
-                elif d.get("total_bytes_estimate"):
-                    self.__size = d["total_bytes_estimate"]
-                self.__downloaded_bytes = d["downloaded_bytes"]
-                self.__eta = d.get("eta", "-") or "-"
-            try:
-                self.__progress = (self.__downloaded_bytes / self.__size) * 100
-            except Exception:
-                pass
+                # FIX: some sites (luluvdo etc.) never send total_bytes — try both fields
+                total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+                if total:
+                    self.__size = total
+                self.__downloaded_bytes = d.get("downloaded_bytes") or 0
+                # FIX: eta can be None — handle gracefully
+                eta = d.get("eta")
+                self.__eta = eta if eta is not None else "-"
+            # FIX: only compute progress when size is known to avoid stuck-at-0%
+            if self.__size > 0:
+                try:
+                    self.__progress = (self.__downloaded_bytes / self.__size) * 100
+                except Exception:
+                    pass
 
     async def __onDownloadStart(self, from_queue=False):
         async with download_dict_lock:
