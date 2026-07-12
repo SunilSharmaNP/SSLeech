@@ -42,15 +42,26 @@ class YtDlpDownloadStatus:
         return f"{round(self.__obj.progress, 2)}%"
 
     def speed(self):
-        return f"{get_readable_file_size(self.__obj.download_speed)}/s"
+        spd = self.__obj.download_speed
+        # FIX: download_speed is 0 at start or on hosters that don't report speed
+        if not spd:
+            return "0 B/s"
+        return f"{get_readable_file_size(spd)}/s"
 
     def eta(self):
         if self.__obj.eta != "-":
-            return get_readable_time(self.__obj.eta)
+            try:
+                return get_readable_time(int(self.__obj.eta))
+            except Exception:
+                pass
+        # FIX: fallback ETA calculation — guard against zero speed crash
         try:
-            seconds = (
-                self.__obj.size - self.processed_raw()
-            ) / self.__obj.download_speed
+            spd = self.__obj.download_speed
+            if not spd:
+                return "-"
+            seconds = (self.__obj.size - self.processed_raw()) / spd
+            if seconds <= 0:
+                return "-"
             return get_readable_time(seconds)
         except Exception:
             return "-"
