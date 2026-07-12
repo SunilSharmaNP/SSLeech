@@ -571,6 +571,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     # HLS m3u8 stream embedded in packed (obfuscated) JS. We resolve the real
     # stream URL in pure Python here, then hand the m3u8 to yt-dlp which handles
     # HLS natively via its GenericIE / HlsIE extractor.
+    _lulu_headers = None  # will be merged into ydl_opts below if set
     if any(h in link for h in ("luluvdo.com", "lulustream.com")):
         try:
             resolved = await sync_to_async(direct_link_generator, link)
@@ -582,11 +583,21 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 stream_url, ref_val = resolved, "https://luluvdo.com/"
             LOGGER.info(f"luluvdo resolved → {stream_url[:80]}…")
             link = stream_url
-            # Pre-seed options so Referer is sent for the m3u8 request
+            # CDN (tnmr.org) requires both Referer AND Origin headers.
+            # Origin is derived from the Referer domain (strip path/query).
+            from urllib.parse import urlparse as _up
+            _origin = ref_val.rstrip("/")
+            _parsed = _up(ref_val)
+            _origin = f"{_parsed.scheme}://{_parsed.netloc}"
+            _lulu_headers = {
+                "Referer": ref_val,
+                "Origin": _origin,
+            }
+            # Pre-seed options so headers are sent during extract_info stage
             options = {
                 "usenetrc": True,
                 "cookiefile": "cookies.txt",
-                "http_headers": {"Referer": ref_val},
+                "http_headers": _lulu_headers,
             }
         except DirectDownloadLinkException as e:
             await sendMessage(message, f"{tag} {e}")
@@ -665,6 +676,14 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     LOGGER.info(f"Downloading with YT-DLP: {link}")
     playlist = "entries" in result
     ydl = YoutubeDLHelper(listener)
+    # ── luluvdo: inject CDN headers into ydl_opts for the actual download ──────
+    # extract_info() above already used options{http_headers}, but add_download()
+    # receives ydl_opts (or opt string) separately — so we must merge here too.
+    if _lulu_headers:
+        if not isinstance(ydl_opts, dict):
+            ydl_opts = {}
+        ydl_opts["http_headers"] = _lulu_headers
+    # ──────────────────────────────────────────────────────────────────────────
     await ydl.add_download(link, path, name, qual, playlist, ydl_opts or opt)
 
 
