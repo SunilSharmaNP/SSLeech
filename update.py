@@ -142,15 +142,25 @@ def _run_update(upstream_repo, upstream_branch):
 
 def _update_packages():
     _LOGGER.info("Checking packages against requirements.txt ...")
-    # --upgrade-strategy only-if-needed  →  pip skips packages already satisfying
-    # the pinned constraint; no unnecessary upgrades of base-image packages.
-    # -U / --upgrade is intentionally OMITTED so that on each restart only truly
-    # new or version-changed deps are installed, keeping restarts fast.
-    ret = scall(
-        "pip install -r requirements.txt -q --no-warn-script-location "
-        "--upgrade-strategy only-if-needed",
-        shell=True,
-    )
+    # Prefer the base-image venv pip (/wzvenv/bin/pip) over system pip.
+    # System pip on Python 3.14 in the wzmlx Docker image rejects installs with
+    # PEP 668 "externally-managed-environment" error unless --break-system-packages
+    # is passed. The venv at /wzvenv is always writable and the correct target.
+    if path.exists("/wzvenv/bin/pip"):
+        pip_cmd = (
+            "/wzvenv/bin/pip install -r requirements.txt -q "
+            "--no-warn-script-location "
+            "--upgrade-strategy only-if-needed"
+        )
+    else:
+        # Fallback for non-wzmlx images / local dev
+        pip_cmd = (
+            "pip install -r requirements.txt -q "
+            "--no-warn-script-location "
+            "--upgrade-strategy only-if-needed "
+            "--break-system-packages"
+        )
+    ret = scall(pip_cmd, shell=True)
     if ret == 0:
         _LOGGER.info("Successfully Updated all the Packages !")
     else:
