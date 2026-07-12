@@ -23,7 +23,7 @@ psutil
 pybase64
 pycountry
 pymongo
-pyrotgfork==2.2.23
+wzgram
 python-dotenv
 python-magic
 qbittorrent-api
