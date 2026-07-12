@@ -663,23 +663,47 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
         options["playlist_items"] = "0"
 
-    # ── luluvdo: skip extract_info (CDN blocks yt-dlp UA) — build a minimal ──
-    # synthetic result and go straight to download with best quality.
+    # ── luluvdo: bypass yt-dlp extractor entirely via process_ie_result ─────────
+    # yt-dlp's generic extractor fetches the URL as a "webpage" to identify its
+    # type — this step always 403s on CDN-protected HLS streams (tnmr.org).
+    # The fix: build a pre-validated info dict with protocol='m3u8_native' and
+    # format-level http_headers, then let YoutubeDLHelper.add_download call
+    # process_ie_result directly (which hands the URL straight to FFmpegFD).
+    # ffmpeg then fetches the manifest + segments with its own -headers flag,
+    # never triggering yt-dlp's extractor or its "Downloading webpage" phase.
     if _is_luluvdo:
         __run_multi()
-        result = {"id": link, "title": name or "luluvdo_video", "ext": "mp4"}
-        # honour user-supplied format; fall back to "best"
-        if not qual and "format" in options:
-            qual = options["format"]
-        if not qual:
-            qual = "bestvideo+bestaudio/best"
+        _title = name or "luluvdo_video"
+        # Build yt-dlp info dict: single format, m3u8_native → FFmpegFD
+        _lulu_info_dict = {
+            "id": "luluvdo",
+            "title": _title,
+            "webpage_url": link,
+            "original_url": link,
+            "extractor": "generic",
+            "extractor_key": "Generic",
+            "formats": [
+                {
+                    "format_id": "hls-best",
+                    "url": link,
+                    "ext": "mp4",
+                    "protocol": "m3u8_native",   # use FFmpegFD, not yt-dlp's HlsFD
+                    "quality": 1,
+                    "http_headers": _lulu_headers,  # format-level → passed as ffmpeg -headers
+                }
+            ],
+            "http_headers": _lulu_headers,
+        }
         await delete_links(message)
-        LOGGER.info(f"Downloading luluvdo HLS with YT-DLP: {link}")
+        LOGGER.info(f"Downloading luluvdo HLS via process_ie_result: {link[:80]}…")
         if not isinstance(ydl_opts, dict):
             ydl_opts = {}
         ydl_opts["http_headers"] = _lulu_headers
         ydl = YoutubeDLHelper(listener)
-        await ydl.add_download(link, path, name, qual, False, ydl_opts or opt)
+        await ydl.add_download(
+            link, path, _title, "bestvideo+bestaudio/best",
+            False, ydl_opts, info_dict=_lulu_info_dict
+        )
         return
     # ──────────────────────────────────────────────────────────────────────────
 
