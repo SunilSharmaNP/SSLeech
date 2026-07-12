@@ -306,6 +306,15 @@ USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
 if len(USER_SESSION_STRING) != 0:
     log_info("Creating client from USER_SESSION_STRING")
     try:
+        # Remove stale/corrupt SQLite session file so Pyrogram creates a fresh one.
+        # On Heroku, osexecl-based restarts can leave a half-written .session file
+        # that causes "sqlite3.OperationalError: no such table: version" on next boot.
+        _user_session_file = ospath.join(getcwd(), "user.session")
+        if ospath.exists(_user_session_file):
+            try:
+                osremove(_user_session_file)
+            except Exception:
+                pass
         user = wztgClient(
             "user",
             TELEGRAM_API,
@@ -1002,6 +1011,13 @@ if not DISABLE_TORRENTS:
         log_error(f"qBittorrent not ready at startup (will retry on first use): {_qb_err}")
 
 log_info("Creating client from BOT_TOKEN")
+# Same guard as for user client — delete stale/corrupt bot.session before starting.
+_bot_session_file = ospath.join(getcwd(), "bot.session")
+if ospath.exists(_bot_session_file):
+    try:
+        osremove(_bot_session_file)
+    except Exception:
+        pass
 bot = wztgClient(
     "bot",
     TELEGRAM_API,
