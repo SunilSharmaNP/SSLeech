@@ -568,19 +568,20 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         name, link = await _mdisk(link, name)
 
     # ── luluvdo.com / lulustream.com ────────────────────────────────────────────
-    # yt-dlp has no built-in extractor for luluvdo. The video is served as an
-    # HLS m3u8 stream embedded in packed (obfuscated) JS. We resolve the real
-    # stream URL in pure Python here, then hand the m3u8 to yt-dlp.
+    # yt-dlp has no built-in extractor for luluvdo. We resolve the m3u8 URL
+    # in Python, then pass it directly to yt-dlp with browser-like headers.
     #
     # CDN (tnmr.org) requires:
     #   1. Browser-like User-Agent  (yt-dlp's default UA gets a 403)
     #   2. Referer: https://luluvdo.com/
     #   3. Origin:  https://luluvdo.com
     #
-    # We also skip extract_info for luluvdo (it would 403 too) and jump
-    # straight to download with a synthetic result dict.
-    _lulu_headers = None   # set below when luluvdo link detected
-    _is_luluvdo = False    # flag to skip extract_info
+    # Strategy: force external_downloader=ffmpeg so ALL HTTP requests (m3u8
+    # manifest fetch, quality playlist fetch, segment downloads) go through
+    # ffmpeg's own HTTP client with -headers.  yt-dlp's HlsFD (m3u8_native)
+    # does NOT reliably propagate format-level headers to every sub-request,
+    # causing the CDN to return 403 for segment/playlist fetches.
+    _is_luluvdo = False
 
     if any(h in link for h in ("luluvdo.com", "lulustream.com")):
         _is_luluvdo = True
@@ -597,16 +598,30 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             from urllib.parse import urlparse as _up
             _parsed = _up(ref_val)
             _origin = f"{_parsed.scheme}://{_parsed.netloc}"
-            _lulu_headers = {
-                "Referer": ref_val,
-                "Origin": _origin,
-                # Browser UA — yt-dlp's default "yt-dlp/..." UA is blocked by CDN
-                "User-Agent": _dlg_user_agent,
-            }
+            # ffmpeg -headers requires CRLF between headers + trailing CRLF
+            _ffmpeg_hdr = (
+                f"Referer: {ref_val}\r\n"
+                f"Origin: {_origin}\r\n"
+                f"User-Agent: {_dlg_user_agent}\r\n"
+            )
             options = {
                 "usenetrc": True,
                 "cookiefile": "cookies.txt",
-                "http_headers": _lulu_headers,
+                # http_headers → used by yt-dlp's urllib for extractMetaData
+                # (fetching the m3u8 manifest to identify it as HLS).
+                "http_headers": {
+                    "Referer": ref_val,
+                    "Origin": _origin,
+                    "User-Agent": _dlg_user_agent,
+                },
+                # Force ffmpeg for all segment/playlist downloads so headers
+                # are applied reliably via ffmpeg's own -headers flag.
+                "external_downloader": "ffmpeg",
+                "external_downloader_args": {
+                    # "ffmpeg_i" args are placed before each -i in the ffmpeg
+                    # command, scoping the headers to the input stream URL.
+                    "ffmpeg_i": ["-headers", _ffmpeg_hdr],
+                },
             }
         except DirectDownloadLinkException as e:
             await sendMessage(message, f"{tag} {e}")
@@ -663,48 +678,14 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
         options["playlist_items"] = "0"
 
-    # ── luluvdo: bypass yt-dlp extractor entirely via process_ie_result ─────────
-    # yt-dlp's generic extractor fetches the URL as a "webpage" to identify its
-    # type — this step always 403s on CDN-protected HLS streams (tnmr.org).
-    # The fix: build a pre-validated info dict with protocol='m3u8_native' and
-    # format-level http_headers, then let YoutubeDLHelper.add_download call
-    # process_ie_result directly (which hands the URL straight to FFmpegFD).
-    # ffmpeg then fetches the manifest + segments with its own -headers flag,
-    # never triggering yt-dlp's extractor or its "Downloading webpage" phase.
+    # ── luluvdo: inject ffmpeg downloader into ydl_opts so add_download uses it ─
+    # options dict (used for extract_info) already has external_downloader set.
+    # ydl_opts is what gets passed to add_download → __set_options → self.opts,
+    # so we must mirror the ffmpeg settings there too.
     if _is_luluvdo:
-        __run_multi()
-        _title = name or "luluvdo_video"
-        # Build yt-dlp info dict: single format, m3u8_native → FFmpegFD
-        _lulu_info_dict = {
-            "id": "luluvdo",
-            "title": _title,
-            "webpage_url": link,
-            "original_url": link,
-            "extractor": "generic",
-            "extractor_key": "Generic",
-            "formats": [
-                {
-                    "format_id": "hls-best",
-                    "url": link,
-                    "ext": "mp4",
-                    "protocol": "m3u8_native",   # use FFmpegFD, not yt-dlp's HlsFD
-                    "quality": 1,
-                    "http_headers": _lulu_headers,  # format-level → passed as ffmpeg -headers
-                }
-            ],
-            "http_headers": _lulu_headers,
-        }
-        await delete_links(message)
-        LOGGER.info(f"Downloading luluvdo HLS via process_ie_result: {link[:80]}…")
-        if not isinstance(ydl_opts, dict):
-            ydl_opts = {}
-        ydl_opts["http_headers"] = _lulu_headers
-        ydl = YoutubeDLHelper(listener)
-        await ydl.add_download(
-            link, path, _title, "bestvideo+bestaudio/best",
-            False, ydl_opts, info_dict=_lulu_info_dict
-        )
-        return
+        ydl_opts["external_downloader"] = options.get("external_downloader", "ffmpeg")
+        ydl_opts["external_downloader_args"] = options.get("external_downloader_args", {})
+        ydl_opts["http_headers"] = options.get("http_headers", {})
     # ──────────────────────────────────────────────────────────────────────────
 
     try:
