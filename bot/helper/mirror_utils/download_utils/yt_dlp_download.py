@@ -207,7 +207,32 @@ class YoutubeDLHelper:
         except ValueError:
             self.__onDownloadError("Download Stopped by User!")
 
-    async def add_download(self, link, path, name, qual, playlist, options):
+    def __download_direct(self, info_dict, path):
+        """
+        Download using a pre-built yt-dlp info dict, bypassing all extractors.
+
+        Used for sites like luluvdo.com where yt-dlp's generic extractor
+        triggers a 403 from the CDN during its 'Downloading webpage' phase.
+        With process_ie_result the extractor phase is skipped entirely;
+        yt-dlp hands the format dict directly to FFmpegFD which fetches the
+        HLS manifest and segments using ffmpeg's -headers flag — so the CDN
+        only ever sees a plain ffmpeg request with browser-like headers.
+        """
+        try:
+            with YoutubeDL(self.opts) as ydl:
+                try:
+                    ydl.process_ie_result(info_dict, download=True)
+                except DownloadError as e:
+                    if not self.__is_cancelled:
+                        self.__onDownloadError(str(e))
+                    return
+            if self.__is_cancelled:
+                raise ValueError
+            async_to_sync(self.__listener.onDownloadComplete)
+        except ValueError:
+            self.__onDownloadError("Download Stopped by User!")
+
+    async def add_download(self, link, path, name, qual, playlist, options, info_dict=None):
         if playlist:
             self.opts["ignoreerrors"] = True
             self.is_playlist = True
@@ -247,6 +272,58 @@ class YoutubeDLHelper:
 
         if options:
             self.__set_options(options)
+
+        # ── info_dict fast-path (luluvdo / CDN-protected HLS streams) ───────────
+        # When a pre-built info_dict is supplied we skip extractMetaData entirely
+        # (which would 403 on CDN-protected streams) and jump straight to the
+        # __download_direct path which calls process_ie_result.  Name and size
+        # are seeded from the info_dict so the rest of add_download works normally.
+        if info_dict is not None:
+            self.name = (
+                name
+                or info_dict.get("title")
+                or "luluvdo_video"
+            )
+            self.__ext = ".mp4"
+            self.__size = info_dict.get("filesize") or info_dict.get("filesize_approx") or 0
+            # inject outtmpl so the file lands in the right place
+            self.opts["outtmpl"] = {
+                "default": f"{path}/{self.name}.%(ext)s",
+                "thumbnail": f"{path}/yt-dlp-thumb/{self.name}.%(ext)s",
+            }
+            # keep thumbnail only when asked
+            if not self.__listener.isLeech or self.keep_thumb:
+                pass
+            else:
+                self.opts["writethumbnail"] = False
+
+            msg, button = await stop_duplicate_check(self.name, self.__listener)
+            if msg:
+                await self.__listener.onDownloadError(msg, button)
+                return
+
+            added_to_queue, event = await is_queued(self.__listener.uid)
+            if added_to_queue:
+                LOGGER.info(f"Added to Queue/Download: {self.name}")
+                async with download_dict_lock:
+                    download_dict[self.__listener.uid] = QueueStatus(
+                        self.name, self.__size, self.__gid, self.__listener, "dl"
+                    )
+                await event.wait()
+                async with download_dict_lock:
+                    if self.__listener.uid not in download_dict:
+                        return
+                LOGGER.info(f"Start Queued luluvdo Download: {self.name}")
+                await self.__onDownloadStart(True)
+            else:
+                LOGGER.info(f"Direct HLS Download (process_ie_result): {self.name}")
+
+            async with queue_dict_lock:
+                non_queued_dl.add(self.__listener.uid)
+
+            await sync_to_async(self.__download_direct, info_dict, path)
+            return
+        # ── end info_dict fast-path ──────────────────────────────────────────────
 
         await sync_to_async(self.extractMetaData, link, name)
         if self.__is_cancelled:
