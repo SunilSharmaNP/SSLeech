@@ -146,20 +146,18 @@ def _update_packages():
     # System pip on Python 3.14 in the wzmlx Docker image rejects installs with
     # PEP 668 "externally-managed-environment" error unless --break-system-packages
     # is passed. The venv at /wzvenv is always writable and the correct target.
-    if path.exists("/wzvenv/bin/pip"):
-        pip_cmd = (
-            "/wzvenv/bin/pip install -r requirements.txt -q "
-            "--no-warn-script-location "
-            "--upgrade-strategy only-if-needed"
-        )
-    else:
-        # Fallback for non-wzmlx images / local dev
-        pip_cmd = (
-            "pip install -r requirements.txt -q "
-            "--no-warn-script-location "
-            "--upgrade-strategy only-if-needed "
-            "--break-system-packages"
-        )
+    # Detect the correct pip: prefer venv pips, fall back to system pip.
+    # /wzvenv is the base-image venv on some wzmlx builds; other builds ship
+    # packages differently. --break-system-packages is the safe fallback for
+    # PEP-668 "externally-managed-environment" environments (Python 3.12+).
+    _pip_candidates = ["/wzvenv/bin/pip", "/usr/local/bin/pip", "pip3", "pip"]
+    _pip_bin = next((p for p in _pip_candidates if path.exists(p)), "pip")
+    pip_cmd = (
+        f"{_pip_bin} install -r requirements.txt -q "
+        "--no-warn-script-location "
+        "--upgrade-strategy only-if-needed "
+        "--break-system-packages"
+    )
     ret = scall(pip_cmd, shell=True)
     if ret == 0:
         _LOGGER.info("Successfully Updated all the Packages !")
