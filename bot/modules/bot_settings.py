@@ -1494,20 +1494,27 @@ async def edit_bot_settings(client, query):
         await query.answer()
         filename = data[2].rsplit(".zip", 1)[0]
         _upstream_branch = config_dict.get('UPSTREAM_BRANCH', 'master')
+        # FIX: set git identity before commit — container has no global git config
+        _git_cfg = (
+            'git config user.email "botsettings@wzml.bot" '
+            '&& git config user.name "BotSettings"'
+        )
         if await aiopath.exists(filename):
             await (
                 await create_subprocess_shell(
-                    f"git add -f {filename} \
-                                                   && git commit -sm botsettings -q \
-                                                   && git push origin {_upstream_branch} -qf"
+                    f"{_git_cfg} "
+                    f"&& git add -f {filename} "
+                    f"&& git commit -sm 'botsettings' -q "
+                    f"&& git push origin {_upstream_branch} -qf"
                 )
             ).wait()
         else:
             await (
                 await create_subprocess_shell(
-                    f"git rm -r --cached {filename} \
-                                                   && git commit -sm botsettings -q \
-                                                   && git push origin {_upstream_branch} -qf"
+                    f"{_git_cfg} "
+                    f"&& git rm -r --cached {filename} "
+                    f"&& git commit -sm 'botsettings' -q "
+                    f"&& git push origin {_upstream_branch} -qf"
                 )
             ).wait()
         await deleteMessage(message)
