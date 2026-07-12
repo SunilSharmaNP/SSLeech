@@ -37,6 +37,7 @@ from bot.helper.ext_utils.bot_utils import (
 from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
 from bot.helper.mirror_utils.download_utils.direct_link_generator import (
     direct_link_generator,
+    user_agent as _dlg_user_agent,
 )
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.mirror_utils.rclone_utils.list import RcloneList
@@ -569,10 +570,20 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     # ── luluvdo.com / lulustream.com ────────────────────────────────────────────
     # yt-dlp has no built-in extractor for luluvdo. The video is served as an
     # HLS m3u8 stream embedded in packed (obfuscated) JS. We resolve the real
-    # stream URL in pure Python here, then hand the m3u8 to yt-dlp which handles
-    # HLS natively via its GenericIE / HlsIE extractor.
-    _lulu_headers = None  # will be merged into ydl_opts below if set
+    # stream URL in pure Python here, then hand the m3u8 to yt-dlp.
+    #
+    # CDN (tnmr.org) requires:
+    #   1. Browser-like User-Agent  (yt-dlp's default UA gets a 403)
+    #   2. Referer: https://luluvdo.com/
+    #   3. Origin:  https://luluvdo.com
+    #
+    # We also skip extract_info for luluvdo (it would 403 too) and jump
+    # straight to download with a synthetic result dict.
+    _lulu_headers = None   # set below when luluvdo link detected
+    _is_luluvdo = False    # flag to skip extract_info
+
     if any(h in link for h in ("luluvdo.com", "lulustream.com")):
+        _is_luluvdo = True
         try:
             resolved = await sync_to_async(direct_link_generator, link)
             if isinstance(resolved, tuple):
@@ -583,17 +594,15 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 stream_url, ref_val = resolved, "https://luluvdo.com/"
             LOGGER.info(f"luluvdo resolved → {stream_url[:80]}…")
             link = stream_url
-            # CDN (tnmr.org) requires both Referer AND Origin headers.
-            # Origin is derived from the Referer domain (strip path/query).
             from urllib.parse import urlparse as _up
-            _origin = ref_val.rstrip("/")
             _parsed = _up(ref_val)
             _origin = f"{_parsed.scheme}://{_parsed.netloc}"
             _lulu_headers = {
                 "Referer": ref_val,
                 "Origin": _origin,
+                # Browser UA — yt-dlp's default "yt-dlp/..." UA is blocked by CDN
+                "User-Agent": _dlg_user_agent,
             }
-            # Pre-seed options so headers are sent during extract_info stage
             options = {
                 "usenetrc": True,
                 "cookiefile": "cookies.txt",
@@ -654,6 +663,26 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
         options["playlist_items"] = "0"
 
+    # ── luluvdo: skip extract_info (CDN blocks yt-dlp UA) — build a minimal ──
+    # synthetic result and go straight to download with best quality.
+    if _is_luluvdo:
+        __run_multi()
+        result = {"id": link, "title": name or "luluvdo_video", "ext": "mp4"}
+        # honour user-supplied format; fall back to "best"
+        if not qual and "format" in options:
+            qual = options["format"]
+        if not qual:
+            qual = "bestvideo+bestaudio/best"
+        await delete_links(message)
+        LOGGER.info(f"Downloading luluvdo HLS with YT-DLP: {link}")
+        if not isinstance(ydl_opts, dict):
+            ydl_opts = {}
+        ydl_opts["http_headers"] = _lulu_headers
+        ydl = YoutubeDLHelper(listener)
+        await ydl.add_download(link, path, name, qual, False, ydl_opts or opt)
+        return
+    # ──────────────────────────────────────────────────────────────────────────
+
     try:
         result = await sync_to_async(extract_info, link, options)
     except Exception as e:
@@ -676,14 +705,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     LOGGER.info(f"Downloading with YT-DLP: {link}")
     playlist = "entries" in result
     ydl = YoutubeDLHelper(listener)
-    # ── luluvdo: inject CDN headers into ydl_opts for the actual download ──────
-    # extract_info() above already used options{http_headers}, but add_download()
-    # receives ydl_opts (or opt string) separately — so we must merge here too.
-    if _lulu_headers:
-        if not isinstance(ydl_opts, dict):
-            ydl_opts = {}
-        ydl_opts["http_headers"] = _lulu_headers
-    # ──────────────────────────────────────────────────────────────────────────
     await ydl.add_download(link, path, name, qual, playlist, ydl_opts or opt)
 
 
