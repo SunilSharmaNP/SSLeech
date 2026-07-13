@@ -573,6 +573,16 @@ DISABLE_DRIVE_LINK = DISABLE_DRIVE_LINK.lower() == "true"
 DISABLE_TORRENTS = environ.get("DISABLE_TORRENTS", "")
 DISABLE_TORRENTS = DISABLE_TORRENTS.lower() == "true"
 
+# FAST_TG_DOWNLOAD: stream Telegram media through a local, loopback-only
+# HTTP direct-link server (see bot/helper/mirror_utils/download_utils/tg_stream_server.py,
+# adapted from fyaz05/FileToLink) and hand that link to aria2c instead of
+# Pyrogram's single-stream download_media(). aria2c can then open multiple
+# parallel range requests against the same file, which is faster than one
+# serial MTProto stream. Defaults to enabled; set FAST_TG_DOWNLOAD=False to
+# fall back to the classic direct download_media() path.
+FAST_TG_DOWNLOAD = environ.get("FAST_TG_DOWNLOAD", "True")
+FAST_TG_DOWNLOAD = FAST_TG_DOWNLOAD.lower() != "false"
+
 DISABLE_LEECH = environ.get("DISABLE_LEECH", "")
 DISABLE_LEECH = DISABLE_LEECH.lower() == "true"
 
@@ -742,6 +752,7 @@ config_dict = {
     "SPIDY_API_KEY": SPIDY_API_KEY,
     "DELETE_LINKS": DELETE_LINKS,
     "DEFAULT_UPLOAD": DEFAULT_UPLOAD,
+    "FAST_TG_DOWNLOAD": FAST_TG_DOWNLOAD,
     "DOWNLOAD_DIR": DOWNLOAD_DIR,
     "STORAGE_THRESHOLD": STORAGE_THRESHOLD,
     "TORRENT_LIMIT": TORRENT_LIMIT,
