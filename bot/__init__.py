@@ -1068,6 +1068,10 @@ scheduler = AsyncIOScheduler(timezone=str(get_localzone()), event_loop=bot_loop)
 # gives real extra bandwidth instead of throttling on one session.
 EXTRA_BOT_CLIENTS = []
 _ADDITIONAL_BOT_TOKENS = environ.get("ADDITIONAL_BOT_TOKENS", "")
+# Registered in config_dict too so it shows up (and is editable) in
+# /botsettings -> Config Variables — editing it there just needs a restart
+# to actually spin up/tear down the extra sessions in EXTRA_BOT_CLIENTS.
+config_dict["ADDITIONAL_BOT_TOKENS"] = _ADDITIONAL_BOT_TOKENS
 if _ADDITIONAL_BOT_TOKENS.strip():
     for _idx, _tok in enumerate(
         t.strip() for t in _ADDITIONAL_BOT_TOKENS.split(",") if t.strip()
