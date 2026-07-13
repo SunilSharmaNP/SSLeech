@@ -120,7 +120,7 @@ def get_readable_file_size(size_in_bytes):
         size_in_bytes /= 1024
         index += 1
     return (
-        f"{size_in_bytes:.2f}{SIZE_UNITS[index]}" if index > 0 else f"{size_in_bytes}B"
+        f"{size_in_bytes:.1f}{SIZE_UNITS[index]}" if index > 0 else f"{size_in_bytes}B"
     )
 
 
@@ -304,10 +304,9 @@ def get_readable_message():
                 "BAR",
                 Bar=f"{get_progress_bar_string(download.progress())} {download.progress()}",
             )
-            _strip = lambda s: re_sub(r'\.\d+', '', str(s))
             msg += BotTheme(
                 "PROCESSED",
-                Processed=f"{_strip(download.processed_bytes())} of {_strip(download.size())}",
+                Processed=f"{download.processed_bytes()} of {download.size()}",
             )
             msg += BotTheme("STATUS", Status=download.status(), Url=msg_link)
             msg += BotTheme("SPEED", Speed=download.speed())
