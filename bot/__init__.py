@@ -1041,3 +1041,34 @@ bot = wztgClient(
 # bot.loop is deprecated in Python 3.10+ and removed in 3.14
 bot_name = bot.me.username
 scheduler = AsyncIOScheduler(timezone=str(get_localzone()), event_loop=bot_loop)
+
+# Optional extra bot tokens (comma-separated) purely for parallel Telegram
+# sessions in the fast TG-to-link download path (tg_stream_server.py): each
+# token is its own MTProto session, so splitting byte-ranges across them
+# gives real extra bandwidth instead of throttling on one session.
+EXTRA_BOT_CLIENTS = []
+_ADDITIONAL_BOT_TOKENS = environ.get("ADDITIONAL_BOT_TOKENS", "")
+if _ADDITIONAL_BOT_TOKENS.strip():
+    for _idx, _tok in enumerate(
+        t.strip() for t in _ADDITIONAL_BOT_TOKENS.split(",") if t.strip()
+    ):
+        try:
+            _extra_session_file = ospath.join(getcwd(), f"extra_bot_{_idx}.session")
+            if ospath.exists(_extra_session_file):
+                try:
+                    osremove(_extra_session_file)
+                except Exception:
+                    pass
+            _extra_client = wztgClient(
+                f"extra_bot_{_idx}",
+                TELEGRAM_API,
+                TELEGRAM_HASH,
+                bot_token=_tok,
+                in_memory=True,
+                no_updates=True,
+                parse_mode=enums.ParseMode.HTML,
+            ).start()
+            EXTRA_BOT_CLIENTS.append(_extra_client)
+            log_info(f"Extra bot session started for fast downloads: extra_bot_{_idx}")
+        except Exception as e:
+            log_error(f"Failed starting extra bot token #{_idx}: {e}")
