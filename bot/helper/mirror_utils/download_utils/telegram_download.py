@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 from logging import getLogger, ERROR
 from time import time
-from os import open as osopen, close as osclose, O_CREAT, O_WRONLY, pwrite, ftruncate
+from os import (
+    open as osopen,
+    close as osclose,
+    O_CREAT,
+    O_WRONLY,
+    pwrite,
+    ftruncate,
+    makedirs,
+)
+from os.path import dirname
 from asyncio import Lock, gather, to_thread
 from pyrogram import Client
 from aiohttp import ClientSession, ClientTimeout
@@ -118,6 +127,9 @@ class TelegramDownloadHelper:
         num_conn = max(1, min(16, file_size // (4 * 1024 * 1024) or 1))
         part = file_size // num_conn
 
+        parent_dir = dirname(target_path)
+        if parent_dir:
+            makedirs(parent_dir, exist_ok=True)
         fd = osopen(target_path, O_CREAT | O_WRONLY)
         progress_lock = Lock()
 
