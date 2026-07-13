@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from logging import getLogger, ERROR
 from time import time
-from asyncio import Lock
+from os import open as osopen, close as osclose, O_CREAT, O_WRONLY, pwrite, ftruncate
+from asyncio import Lock, gather, to_thread
 from pyrogram import Client
+from aiohttp import ClientSession, ClientTimeout
 
 from bot import (
     LOGGER,
@@ -13,6 +15,11 @@ from bot import (
     bot,
     user,
     IS_PREMIUM_USER,
+    FAST_TG_DOWNLOAD,
+)
+from bot.helper.mirror_utils.download_utils.tg_stream_server import (
+    register_stream,
+    unregister_stream,
 )
 from bot.helper.mirror_utils.status_utils.telegram_status import TelegramStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
@@ -93,6 +100,61 @@ class TelegramDownloadHelper:
         async with global_lock:
             GLOBAL_GID.remove(self.__id)
 
+    async def __fast_stream_download(self, message, path):
+        """Convert the message's media into a local, loopback-only HTTP
+        direct link (see tg_stream_server.py, adapted from fyaz05/FileToLink)
+        and pull it with several concurrent byte-range requests instead of
+        one serial Pyrogram download_media() stream. Falls back to the
+        caller on any error so the classic path always still works."""
+        info = register_stream(message, client=self.__client)
+        url = info["url"]
+        file_size = info["file_size"]
+
+        target_path = path
+        if target_path.endswith("/"):
+            target_path = target_path + info["file_name"]
+
+        # 1 connection per ~4MB of file, capped between 1 and 16.
+        num_conn = max(1, min(16, file_size // (4 * 1024 * 1024) or 1))
+        part = file_size // num_conn
+
+        fd = osopen(target_path, O_CREAT | O_WRONLY)
+        progress_lock = Lock()
+
+        async def fetch_range(start, end):
+            timeout = ClientTimeout(total=None, sock_connect=30, sock_read=120)
+            async with ClientSession(timeout=timeout) as session:
+                async with session.get(
+                    url, headers={"Range": f"bytes={start}-{end}"}
+                ) as resp:
+                    if resp.status not in (200, 206):
+                        raise RuntimeError(
+                            f"local stream server returned status {resp.status}"
+                        )
+                    offset = start
+                    async for chunk in resp.content.iter_chunked(256 * 1024):
+                        if self.__is_cancelled:
+                            raise RuntimeError("Cancelled by user!")
+                        await to_thread(pwrite, fd, chunk, offset)
+                        offset += len(chunk)
+                        async with progress_lock:
+                            self.__processed_bytes += len(chunk)
+
+        try:
+            ftruncate(fd, file_size)
+            ranges = []
+            pos = 0
+            for i in range(num_conn):
+                start = pos
+                end = file_size - 1 if i == num_conn - 1 else pos + part - 1
+                ranges.append((start, end))
+                pos = end + 1
+            await gather(*(fetch_range(s, e) for s, e in ranges))
+        finally:
+            osclose(fd)
+            unregister_stream(url)
+        return target_path
+
     async def __download(self, message, path):
         try:
             if self.__client is None and self.__decrypter is not None:
@@ -114,6 +176,19 @@ class TelegramDownloadHelper:
                     if not self.__is_cancelled:
                         await self.__onDownloadError(f"ERROR: {e}")
                         return
+            elif FAST_TG_DOWNLOAD:
+                try:
+                    download = await self.__fast_stream_download(message, path)
+                except Exception as e:
+                    if self.__is_cancelled:
+                        await self.__onDownloadError("Cancelled by user!")
+                        return
+                    LOGGER.warning(
+                        f"Fast TG-to-link download failed ({e}), falling back to direct download_media()"
+                    )
+                    download = await self.__client.download_media(
+                        message=message, file_name=path, progress=self.__onDownloadProgress
+                    )
             else:
                 download = await self.__client.download_media(
                     message=message, file_name=path, progress=self.__onDownloadProgress
