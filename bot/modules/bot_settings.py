@@ -87,6 +87,7 @@ bool_vars = [
     "EQUAL_SPLITS",
     "DISABLE_DRIVE_LINK",
     "DISABLE_TORRENTS",
+    "FAST_TG_DOWNLOAD",
     "DISABLE_LEECH",
     "DISABLE_BULK",
     "DISABLE_MULTI",
@@ -489,6 +490,23 @@ async def load_config():
     DISABLE_TORRENTS = environ.get("DISABLE_TORRENTS", "")
     DISABLE_TORRENTS = DISABLE_TORRENTS.lower() == "true"
 
+    FAST_TG_DOWNLOAD = environ.get("FAST_TG_DOWNLOAD", "")
+    FAST_TG_DOWNLOAD = (
+        config_dict.get("FAST_TG_DOWNLOAD", True)
+        if len(FAST_TG_DOWNLOAD) == 0
+        else FAST_TG_DOWNLOAD.lower() == "true"
+    )
+
+    ADDITIONAL_BOT_TOKENS = environ.get("ADDITIONAL_BOT_TOKENS", "")
+    if len(ADDITIONAL_BOT_TOKENS) == 0:
+        ADDITIONAL_BOT_TOKENS = config_dict.get("ADDITIONAL_BOT_TOKENS", "")
+
+    BIN_CHANNEL = environ.get("BIN_CHANNEL", "")
+    if len(BIN_CHANNEL) == 0:
+        BIN_CHANNEL = config_dict.get("BIN_CHANNEL", "")
+    else:
+        BIN_CHANNEL = int(BIN_CHANNEL)
+
     DISABLE_LEECH = environ.get("DISABLE_LEECH", "")
     DISABLE_LEECH = DISABLE_LEECH.lower() == "true"
 
@@ -726,6 +744,9 @@ async def load_config():
             "BOT_PM": BOT_PM,
             "DISABLE_DRIVE_LINK": DISABLE_DRIVE_LINK,
             "DISABLE_TORRENTS": DISABLE_TORRENTS,
+            "FAST_TG_DOWNLOAD": FAST_TG_DOWNLOAD,
+            "ADDITIONAL_BOT_TOKENS": ADDITIONAL_BOT_TOKENS,
+            "BIN_CHANNEL": BIN_CHANNEL,
             "DISABLE_LEECH": DISABLE_LEECH,
             "DISABLE_BULK": DISABLE_BULK,
             "DISABLE_MULTI": DISABLE_MULTI,
@@ -906,6 +927,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
             "UPSTREAM_REPO",
             "UPSTREAM_BRANCH",
             "GITHUB_TOKEN",
+            "ADDITIONAL_BOT_TOKENS",
         ]:
             msg += "<b>Note:</b> Restart required for this edit to take effect!\n\n"
         elif edit_mode and key == "CMD_SUFFIX":
@@ -946,7 +968,7 @@ async def edit_variable(_, message, pre_message, key):
     if key == "DOWNLOAD_DIR":
         if not value.endswith("/"):
             value += "/"
-    elif key == "LINKS_LOG_ID":
+    elif key in ["LINKS_LOG_ID", "BIN_CHANNEL"]:
         value = int(value)
     elif key == "STATUS_UPDATE_INTERVAL":
         value = int(value)
