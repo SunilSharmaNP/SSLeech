@@ -25,6 +25,7 @@ from bot import (
     user,
     IS_PREMIUM_USER,
     FAST_TG_DOWNLOAD,
+    EXTRA_BOT_CLIENTS,
 )
 from bot.helper.mirror_utils.download_utils.tg_stream_server import (
     register_stream,
@@ -109,22 +110,41 @@ class TelegramDownloadHelper:
         async with global_lock:
             GLOBAL_GID.remove(self.__id)
 
+    def __available_sessions(self):
+        """Distinct, already-connected Telegram sessions we can pull from in
+        parallel. Splitting byte-ranges across the SAME session doesn't help
+        (Telegram throttles per-session bandwidth), so real speedup only
+        comes from genuinely separate sessions: the bot session plus, if
+        configured, the premium user session."""
+        sessions = []
+        seen = set()
+        for c in (self.__client, bot, user, *EXTRA_BOT_CLIENTS):
+            if c and not isinstance(c, str) and id(c) not in seen:
+                sessions.append(c)
+                seen.add(id(c))
+        return sessions
+
     async def __fast_stream_download(self, message, path):
-        """Convert the message's media into a local, loopback-only HTTP
-        direct link (see tg_stream_server.py, adapted from fyaz05/FileToLink)
-        and pull it with several concurrent byte-range requests instead of
-        one serial Pyrogram download_media() stream. Falls back to the
-        caller on any error so the classic path always still works."""
-        info = register_stream(message, client=self.__client)
-        url = info["url"]
-        file_size = info["file_size"]
+        """Convert the message's media into local, loopback-only HTTP
+        direct links (see tg_stream_server.py, adapted from fyaz05/FileToLink)
+        — one per distinct Telegram session available (bot / premium user) —
+        and pull them with several concurrent byte-range requests, spread
+        round-robin across those sessions, instead of one serial Pyrogram
+        download_media() stream. Falls back to the caller on any error so
+        the classic path always still works."""
+        sessions = self.__available_sessions()
+        entries = [register_stream(message, client=c) for c in sessions]
+        urls = [e["url"] for e in entries]
+        file_size = entries[0]["file_size"]
+        file_name = entries[0]["file_name"]
 
         target_path = path
         if target_path.endswith("/"):
-            target_path = target_path + info["file_name"]
+            target_path = target_path + file_name
 
-        # 1 connection per ~4MB of file, capped between 1 and 16.
-        num_conn = max(1, min(16, file_size // (4 * 1024 * 1024) or 1))
+        # ~1 connection per ~4MB of file, capped between len(sessions) and 16,
+        # so each session gets several ranges to keep it saturated.
+        num_conn = max(len(sessions), min(16, file_size // (4 * 1024 * 1024) or 1))
         part = file_size // num_conn
 
         parent_dir = dirname(target_path)
@@ -133,7 +153,7 @@ class TelegramDownloadHelper:
         fd = osopen(target_path, O_CREAT | O_WRONLY)
         progress_lock = Lock()
 
-        async def fetch_range(start, end):
+        async def fetch_range(start, end, url):
             timeout = ClientTimeout(total=None, sock_connect=30, sock_read=120)
             async with ClientSession(timeout=timeout) as session:
                 async with session.get(
@@ -161,10 +181,16 @@ class TelegramDownloadHelper:
                 end = file_size - 1 if i == num_conn - 1 else pos + part - 1
                 ranges.append((start, end))
                 pos = end + 1
-            await gather(*(fetch_range(s, e) for s, e in ranges))
+            await gather(
+                *(
+                    fetch_range(s, e, urls[i % len(urls)])
+                    for i, (s, e) in enumerate(ranges)
+                )
+            )
         finally:
             osclose(fd)
-            unregister_stream(url)
+            for url in urls:
+                unregister_stream(url)
         return target_path
 
     async def __download(self, message, path):
