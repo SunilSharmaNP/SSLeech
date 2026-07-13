@@ -60,6 +60,7 @@ from .helper.telegram_helper.message_utils import (
 from .helper.telegram_helper.filters import CustomFilters
 from .helper.telegram_helper.button_build import ButtonMaker
 from .helper.listeners.aria2_listener import start_aria2_listener
+from .helper.mirror_utils.download_utils.tg_stream_server import start_stream_server
 from .helper.themes import BotTheme
 from .modules import (
     authorize,
@@ -454,6 +455,11 @@ async def main():
         set_commands(bot),
         log_check(),
     )
+    if config_dict.get("FAST_TG_DOWNLOAD", True):
+        try:
+            await start_stream_server()
+        except Exception as e:
+            LOGGER.error(f"Failed to start local TG-to-link stream server: {e}")
     await sync_to_async(start_aria2_listener, wait=False)
     bot.loop.create_task(search_images())
 
