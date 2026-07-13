@@ -583,6 +583,25 @@ DISABLE_TORRENTS = DISABLE_TORRENTS.lower() == "true"
 FAST_TG_DOWNLOAD = environ.get("FAST_TG_DOWNLOAD", "True")
 FAST_TG_DOWNLOAD = FAST_TG_DOWNLOAD.lower() != "false"
 
+# BIN_CHANNEL: an optional private channel where the main bot, the premium
+# user session, and every ADDITIONAL_BOT_TOKENS bot are added as admins.
+# A Telegram file_reference is only valid for the session that fetched it —
+# it can't be shared across sessions. So for FAST_TG_DOWNLOAD to use more
+# than one session on an arbitrary source chat (which only the main
+# bot/user is usually a member of), the main session first copies the
+# message into BIN_CHANNEL; every other session then independently
+# resolves its own copy from there (since they're all members of
+# BIN_CHANNEL by setup), giving each a valid file_reference of its own.
+# Leave empty to skip this and only use whichever sessions already happen
+# to have direct access to the source chat.
+BIN_CHANNEL = environ.get("BIN_CHANNEL", "")
+if BIN_CHANNEL:
+    try:
+        BIN_CHANNEL = int(BIN_CHANNEL)
+    except ValueError:
+        log_error(f"BIN_CHANNEL must be a numeric chat id, got: {BIN_CHANNEL!r}")
+        BIN_CHANNEL = ""
+
 DISABLE_LEECH = environ.get("DISABLE_LEECH", "")
 DISABLE_LEECH = DISABLE_LEECH.lower() == "true"
 
@@ -753,6 +772,7 @@ config_dict = {
     "DELETE_LINKS": DELETE_LINKS,
     "DEFAULT_UPLOAD": DEFAULT_UPLOAD,
     "FAST_TG_DOWNLOAD": FAST_TG_DOWNLOAD,
+    "BIN_CHANNEL": BIN_CHANNEL,
     "DOWNLOAD_DIR": DOWNLOAD_DIR,
     "STORAGE_THRESHOLD": STORAGE_THRESHOLD,
     "TORRENT_LIMIT": TORRENT_LIMIT,
