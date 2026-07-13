@@ -11,7 +11,7 @@ from os import (
     makedirs,
 )
 from os.path import dirname
-from asyncio import Lock, gather, to_thread
+from asyncio import Lock, gather, to_thread, ensure_future
 from pyrogram import Client
 from aiohttp import ClientSession, ClientTimeout
 
@@ -26,6 +26,7 @@ from bot import (
     IS_PREMIUM_USER,
     FAST_TG_DOWNLOAD,
     EXTRA_BOT_CLIENTS,
+    BIN_CHANNEL,
 )
 from bot.helper.mirror_utils.download_utils.tg_stream_server import (
     register_stream,
@@ -124,16 +125,81 @@ class TelegramDownloadHelper:
                 seen.add(id(c))
         return sessions
 
+    async def __copy_to_bin_channel(self, message):
+        """A file_reference is only valid for the session that fetched it,
+        so extra sessions can't share the source message unless they're
+        also members of that exact chat. If BIN_CHANNEL is configured (all
+        fast-download sessions added there as admins), copy the message
+        there once via the session that already has access — every other
+        session can then independently resolve ITS own valid copy from
+        BIN_CHANNEL instead. Returns the copied Message, or None if
+        BIN_CHANNEL isn't set or the copy fails (caller falls back to
+        resolving against the original source chat)."""
+        if not BIN_CHANNEL:
+            return None
+        try:
+            return await self.__client.copy_message(
+                chat_id=BIN_CHANNEL,
+                from_chat_id=message.chat.id,
+                message_id=message.id,
+            )
+        except Exception as e:
+            LOGGER.warning(
+                f"BIN_CHANNEL copy failed ({e}); fast download will only use "
+                "sessions that already have direct access to the source chat"
+            )
+            return None
+
     async def __fast_stream_download(self, message, path):
         """Convert the message's media into local, loopback-only HTTP
         direct links (see tg_stream_server.py, adapted from fyaz05/FileToLink)
-        — one per distinct Telegram session available (bot / premium user) —
-        and pull them with several concurrent byte-range requests, spread
-        round-robin across those sessions, instead of one serial Pyrogram
-        download_media() stream. Falls back to the caller on any error so
-        the classic path always still works."""
+        — one per distinct Telegram session available (bot / premium user /
+        extra bot tokens) — and pull them with several concurrent byte-range
+        requests, spread round-robin across those sessions, instead of one
+        serial Pyrogram download_media() stream. Falls back to the caller on
+        any error so the classic path always still works."""
         sessions = self.__available_sessions()
-        entries = [register_stream(message, client=c) for c in sessions]
+
+        bin_message = await self.__copy_to_bin_channel(message)
+        source_chat_id = bin_message.chat.id if bin_message else message.chat.id
+        source_message_id = bin_message.id if bin_message else message.id
+        base_message = bin_message or message
+
+        # A Telegram file_reference is only valid for the session that
+        # fetched it — it cannot be shared across bot/user/extra-token
+        # sessions. Each extra session must independently resolve its OWN
+        # copy of the message (from BIN_CHANNEL if we copied it there,
+        # otherwise from the original source chat, which only works if that
+        # session actually has access, e.g. is a member). Sessions that
+        # can't resolve it are silently skipped rather than erroring out.
+        entries = []
+        for c in sessions:
+            msg_for_client = base_message if c is self.__client else None
+            if msg_for_client is None:
+                try:
+                    resolved = await c.get_messages(source_chat_id, source_message_id)
+                except Exception:
+                    resolved = None
+                if not resolved or not (
+                    resolved.media and getattr(resolved, resolved.media.value, None)
+                ):
+                    continue
+                msg_for_client = resolved
+            try:
+                entries.append(register_stream(msg_for_client, client=c))
+            except Exception:
+                continue
+
+        if not entries:
+            if bin_message:
+                try:
+                    await self.__client.delete_messages(BIN_CHANNEL, bin_message.id)
+                except Exception:
+                    pass
+            raise RuntimeError(
+                "No Telegram session could resolve this message for fast streaming"
+            )
+
         urls = [e["url"] for e in entries]
         file_size = entries[0]["file_size"]
         file_name = entries[0]["file_name"]
@@ -142,9 +208,9 @@ class TelegramDownloadHelper:
         if target_path.endswith("/"):
             target_path = target_path + file_name
 
-        # ~1 connection per ~4MB of file, capped between len(sessions) and 16,
-        # so each session gets several ranges to keep it saturated.
-        num_conn = max(len(sessions), min(16, file_size // (4 * 1024 * 1024) or 1))
+        # ~1 connection per ~4MB of file, capped between len(entries) and 16,
+        # so each usable session gets several ranges to keep it saturated.
+        num_conn = max(len(entries), min(16, file_size // (4 * 1024 * 1024) or 1))
         part = file_size // num_conn
 
         parent_dir = dirname(target_path)
@@ -172,6 +238,7 @@ class TelegramDownloadHelper:
                         async with progress_lock:
                             self.__processed_bytes += len(chunk)
 
+        tasks = []
         try:
             ftruncate(fd, file_size)
             ranges = []
@@ -181,16 +248,29 @@ class TelegramDownloadHelper:
                 end = file_size - 1 if i == num_conn - 1 else pos + part - 1
                 ranges.append((start, end))
                 pos = end + 1
-            await gather(
-                *(
-                    fetch_range(s, e, urls[i % len(urls)])
-                    for i, (s, e) in enumerate(ranges)
-                )
-            )
+            tasks = [
+                ensure_future(fetch_range(s, e, urls[i % len(urls)]))
+                for i, (s, e) in enumerate(ranges)
+            ]
+            try:
+                await gather(*tasks)
+            except Exception:
+                # Stop the siblings immediately so none of them keep writing
+                # to `fd` after we close it in `finally` below.
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
+                await gather(*tasks, return_exceptions=True)
+                raise
         finally:
             osclose(fd)
             for url in urls:
                 unregister_stream(url)
+            if bin_message:
+                try:
+                    await self.__client.delete_messages(BIN_CHANNEL, bin_message.id)
+                except Exception:
+                    pass
         return target_path
 
     async def __download(self, message, path):
