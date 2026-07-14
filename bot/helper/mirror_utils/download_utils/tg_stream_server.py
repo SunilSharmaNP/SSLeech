@@ -22,8 +22,10 @@ source message.
 """
 
 import asyncio
+import json
 import re
 import secrets
+from os import path as ospath
 from typing import Any, Dict, Optional
 from urllib.parse import quote
 
@@ -35,9 +37,18 @@ from bot import bot as _default_client
 
 CHUNK_SIZE = 1024 * 1024  # Telegram CDN chunk size used by stream_media
 RANGE_REGEX = re.compile(r"^bytes=(?P<start>\d*)-(?P<end>\d*)$")
+PORT_FILE = "stream_port.txt"
+LINKS_FILE = "link_tokens.json"
 
 # token -> {"message": Message, "client": Client|None, "file_name", "file_size", "mime_type"}
 _registry: Dict[str, Dict[str, Any]] = {}
+
+# Public, long-lived /link tokens (survive restarts via LINKS_FILE):
+# token -> {"sessions": [(client, message), ...], "chat_id", "message_id",
+#           "source_chat_id", "source_message_id", "file_name", "file_size",
+#           "mime_type", "rr_index"}
+_link_registry: Dict[str, Dict[str, Any]] = {}
+
 _runner: Optional[web.AppRunner] = None
 _server_port: Optional[int] = None
 
@@ -128,6 +139,135 @@ def unregister_stream(url_or_token: str) -> None:
     _registry.pop(token, None)
 
 
+def _save_persisted_links() -> None:
+    try:
+        data = {
+            token: {
+                "chat_id": entry["chat_id"],
+                "message_id": entry["message_id"],
+                "source_chat_id": entry["source_chat_id"],
+                "source_message_id": entry["source_message_id"],
+                "file_name": entry["file_name"],
+                "file_size": entry["file_size"],
+                "mime_type": entry["mime_type"],
+            }
+            for token, entry in _link_registry.items()
+        }
+        with open(LINKS_FILE, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        LOGGER.warning(f"tg_stream_server: could not persist link tokens: {e}")
+
+
+async def _load_persisted_links() -> None:
+    if not ospath.exists(LINKS_FILE):
+        return
+    try:
+        with open(LINKS_FILE) as f:
+            data = json.load(f)
+    except Exception as e:
+        LOGGER.warning(f"tg_stream_server: could not read {LINKS_FILE}: {e}")
+        return
+
+    from bot.helper.ext_utils.multi_session import resolve_multi_sessions_by_id
+
+    restored = 0
+    for token, meta in data.items():
+        try:
+            entries = await resolve_multi_sessions_by_id(
+                meta["chat_id"], meta["message_id"]
+            )
+        except Exception:
+            entries = []
+        if not entries:
+            continue
+        _link_registry[token] = {
+            "sessions": entries,
+            "chat_id": meta["chat_id"],
+            "message_id": meta["message_id"],
+            "source_chat_id": meta.get("source_chat_id", meta["chat_id"]),
+            "source_message_id": meta.get("source_message_id", meta["message_id"]),
+            "file_name": meta["file_name"],
+            "file_size": meta["file_size"],
+            "mime_type": meta["mime_type"],
+            "rr_index": 0,
+        }
+        restored += 1
+    if restored:
+        LOGGER.info(f"tg_stream_server: restored {restored} persisted /link token(s)")
+
+
+def _link_public_url(token: str, file_name: str) -> str:
+    from bot import config_dict
+
+    base = (config_dict.get("BASE_URL") or "").rstrip("/")
+    path = f"/link/{token}/{quote(file_name, safe='')}"
+    return f"{base}{path}" if base else f"http://127.0.0.1:{_server_port}{path}"
+
+
+async def register_link(message, primary_client=None) -> Dict[str, Any]:
+    """Register a message for a PUBLIC, long-lived direct-download link
+    (used by /link{suffix}). Unlike register_stream(), this persists across
+    restarts and round-robins across every Telegram session that can
+    independently resolve the file (bot / premium user / extra bot tokens),
+    for real added throughput under concurrent range requests."""
+    from bot.helper.ext_utils.multi_session import resolve_multi_sessions
+
+    if _server_port is None:
+        raise RuntimeError(
+            "tg_stream_server is not running yet; call start_stream_server() at bot startup"
+        )
+
+    media = get_media(message)
+    if media is None:
+        raise ValueError("Message has no downloadable media")
+    file_size = getattr(media, "file_size", 0) or 0
+    if not file_size:
+        raise ValueError("Media has no known file size; cannot serve range requests")
+    file_name = getattr(media, "file_name", None) or f"tg_file_{message.id}"
+    mime_type = getattr(media, "mime_type", None) or "application/octet-stream"
+
+    for token, entry in _link_registry.items():
+        if (
+            entry.get("source_chat_id") == message.chat.id
+            and entry.get("source_message_id") == message.id
+        ):
+            return {
+                "url": _link_public_url(token, entry["file_name"]),
+                "file_name": entry["file_name"],
+                "file_size": entry["file_size"],
+                "mime_type": entry["mime_type"],
+            }
+
+    entries, bin_message = await resolve_multi_sessions(message, primary_client)
+    if not entries:
+        raise RuntimeError("No Telegram session could resolve this message for streaming")
+
+    resolved_chat_id = bin_message.chat.id if bin_message else message.chat.id
+    resolved_message_id = bin_message.id if bin_message else message.id
+
+    token = secrets.token_hex(8)
+    _link_registry[token] = {
+        "sessions": entries,
+        "chat_id": resolved_chat_id,
+        "message_id": resolved_message_id,
+        "source_chat_id": message.chat.id,
+        "source_message_id": message.id,
+        "file_name": file_name,
+        "file_size": file_size,
+        "mime_type": mime_type,
+        "rr_index": 0,
+    }
+    _save_persisted_links()
+
+    return {
+        "url": _link_public_url(token, file_name),
+        "file_name": file_name,
+        "file_size": file_size,
+        "mime_type": mime_type,
+    }
+
+
 def _parse_range(range_header: str, file_size: int):
     if not range_header:
         return 0, file_size - 1
@@ -151,40 +291,31 @@ def _parse_range(range_header: str, file_size: int):
     return start, end
 
 
-async def _handle_download(request: web.Request):
-    token = request.match_info["token"]
-    entry = _registry.get(token)
-    if not entry:
-        raise web.HTTPNotFound(text="Unknown or expired stream token")
-
-    file_size = entry["file_size"]
-    range_header = request.headers.get("Range", "")
+def _stream_headers(file_name, mime_type, file_size, range_header):
     start, end = _parse_range(range_header, file_size)
     content_length = end - start + 1
-
     headers = {
-        "Content-Type": entry["mime_type"],
+        "Content-Type": mime_type,
         "Content-Length": str(content_length),
-        "Content-Disposition": (
-            f"attachment; filename*=UTF-8''{quote(entry['file_name'], safe='')}"
-        ),
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(file_name, safe='')}",
         "Accept-Ranges": "bytes",
     }
     if range_header:
         headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
     status = 206 if range_header else 200
+    return start, content_length, headers, status
 
+
+async def _stream_body(request, client, message, start, content_length, headers, status):
     if request.method == "HEAD":
         return web.Response(status=status, headers=headers)
 
-    streamer = ByteStreamer(_resolve_client(entry["client"]))
+    streamer = ByteStreamer(client)
 
     async def body_gen():
         bytes_sent = 0
         bytes_to_skip = start % CHUNK_SIZE
-        async for chunk in streamer.stream_file(
-            entry["message"], offset=start, limit=content_length
-        ):
+        async for chunk in streamer.stream_file(message, offset=start, limit=content_length):
             if bytes_to_skip:
                 if len(chunk) <= bytes_to_skip:
                     bytes_to_skip -= len(chunk)
@@ -210,6 +341,39 @@ async def _handle_download(request: web.Request):
     return resp
 
 
+async def _handle_download(request: web.Request):
+    token = request.match_info["token"]
+    entry = _registry.get(token)
+    if not entry:
+        raise web.HTTPNotFound(text="Unknown or expired stream token")
+
+    range_header = request.headers.get("Range", "")
+    start, content_length, headers, status = _stream_headers(
+        entry["file_name"], entry["mime_type"], entry["file_size"], range_header
+    )
+    return await _stream_body(
+        request, _resolve_client(entry["client"]), entry["message"], start, content_length, headers, status
+    )
+
+
+async def _handle_link_download(request: web.Request):
+    token = request.match_info["token"]
+    entry = _link_registry.get(token)
+    if not entry:
+        raise web.HTTPNotFound(text="Unknown or expired link")
+
+    sessions = entry["sessions"]
+    idx = entry["rr_index"] % len(sessions)
+    entry["rr_index"] += 1
+    client, message = sessions[idx]
+
+    range_header = request.headers.get("Range", "")
+    start, content_length, headers, status = _stream_headers(
+        entry["file_name"], entry["mime_type"], entry["file_size"], range_header
+    )
+    return await _stream_body(request, client, message, start, content_length, headers, status)
+
+
 async def start_stream_server(preferred_port: int = 8199) -> int:
     """Idempotently start the loopback-only stream server. Returns the bound port."""
     global _runner, _server_port
@@ -219,6 +383,8 @@ async def start_stream_server(preferred_port: int = 8199) -> int:
     app = web.Application()
     app.router.add_route("GET", "/dl/{token}/{name}", _handle_download)
     app.router.add_route("HEAD", "/dl/{token}/{name}", _handle_download)
+    app.router.add_route("GET", "/link/{token}/{name}", _handle_link_download)
+    app.router.add_route("HEAD", "/link/{token}/{name}", _handle_link_download)
 
     runner = web.AppRunner(app)
     await runner.setup()
@@ -239,7 +405,19 @@ async def start_stream_server(preferred_port: int = 8199) -> int:
 
     _runner = runner
     _server_port = port
+    try:
+        with open(PORT_FILE, "w") as f:
+            f.write(str(port))
+    except Exception as e:
+        LOGGER.warning(f"tg_stream_server: could not write {PORT_FILE}: {e}")
+
     LOGGER.info(
         f"tg_stream_server: local TG-to-link server listening on 127.0.0.1:{port} (loopback only)"
     )
+
+    try:
+        await _load_persisted_links()
+    except Exception as e:
+        LOGGER.error(f"tg_stream_server: failed to restore persisted links: {e}")
+
     return port
