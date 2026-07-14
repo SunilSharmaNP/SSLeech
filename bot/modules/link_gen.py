@@ -11,6 +11,7 @@ from bot.helper.ext_utils.bot_utils import new_task, get_readable_file_size
 from bot.helper.mirror_utils.download_utils.tg_stream_server import (
     register_link,
     get_media,
+    BaseUrlNotSetError,
 )
 
 
@@ -28,6 +29,19 @@ async def link_cmd(client, message):
     status = await sendMessage(message, "<i>Generating Direct Link...</i>")
     try:
         result = await register_link(reply, primary_client=client)
+    except BaseUrlNotSetError as e:
+        LOGGER.error(f"Link Command: {e}")
+        await editMessage(
+            status,
+            "<b>❌ BASE_URL is not set!</b>\n\n"
+            "<i>A public /link URL can't be generated without it — the link would "
+            "only work on the server itself (127.0.0.1), not for you.</i>\n\n"
+            "<b>Fix:</b> Ask a sudo admin to open <code>/botsettings</code> → "
+            "<b>Config Variables</b> → <code>BASE_URL</code> and set it to this app's "
+            "public HTTPS URL (e.g. <code>https://your-app-name.herokuapp.com</code>), "
+            "then run /link again.",
+        )
+        return
     except Exception as e:
         LOGGER.error(f"Link Command: {e}")
         await editMessage(status, f"<b>❌ Could not generate link:</b> <i>{e}</i>")
