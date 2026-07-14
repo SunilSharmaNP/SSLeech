@@ -4,7 +4,12 @@ from re import search as re_search
 from aiofiles.os import remove as aioremove
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
-from pyrogram.errors import PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty
+from pyrogram.errors import (
+    PhotoInvalidDimensions,
+    WebpageCurlFailed,
+    MediaEmpty,
+    MediaCaptionTooLong,
+)
 
 from bot import bot, LOGGER, config_dict
 from bot.helper.telegram_helper.filters import CustomFilters
@@ -15,19 +20,58 @@ from bot.helper.ext_utils.spidy_api import fetch_spidy_assets
 from bot.helper.ext_utils.tmdb_api import fetch_tmdb_logo
 
 
-async def _send_hero_photo(chat_id, photo_url):
-    """Send the hero image as a plain, independent message — no reply/quote
-    to any earlier message — so it visually stacks right under the text
-    message like a normal consecutive bot message, instead of showing a
-    separate 'replying to ...' bubble."""
+async def _reply_photo_with_caption(message, photo, text):
+    """reply_photo with the caption drawn ABOVE the image (matches the
+    reference bot). Falls back to a normal caption-below-photo message if
+    the running Pyrogram build doesn't know the `show_caption_above_media`
+    kwarg yet — still a single message either way."""
     try:
-        await bot.send_photo(chat_id=chat_id, photo=photo_url, disable_notification=True)
+        return await message.reply_photo(
+            photo=photo,
+            caption=text,
+            show_caption_above_media=True,
+            disable_notification=True,
+        )
+    except TypeError:
+        return await message.reply_photo(
+            photo=photo,
+            caption=text,
+            disable_notification=True,
+        )
+
+
+async def _send_poster_message(message, text, hero_photo):
+    """Send the whole result — text + hero image — as ONE message (photo
+    with the formatted text as its caption), so it never shows up as a
+    separate/disconnected bubble like the old two-message approach did.
+    Returns None (instead of raising) only when the caption is too long
+    for a single message, so the caller can fall back to two messages
+    rather than silently dropping the link list."""
+    try:
+        return await _reply_photo_with_caption(message, hero_photo, text)
+    except MediaCaptionTooLong:
+        return None
     except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
         # TMDB/landscape URLs occasionally fail Telegram's direct-URL fetch
         # (bad dimensions, curl error, etc.) — download locally and resend
         # as a real photo instead of letting Telegram fall back to sending
         # it as a generic file/document (which shows a "289.5 KB ..." file
         # header instead of a clean photo).
+        des_dir = await download_image_url(hero_photo)
+        try:
+            return await _reply_photo_with_caption(message, des_dir, text)
+        except MediaCaptionTooLong:
+            return None
+        finally:
+            await aioremove(des_dir)
+
+
+async def _send_hero_photo(chat_id, photo_url):
+    """Send the hero image as a plain, independent message — used only as
+    the two-message fallback when the caption is too long for one message."""
+    try:
+        await bot.send_photo(chat_id=chat_id, photo=photo_url, disable_notification=True)
+    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
         des_dir = await download_image_url(photo_url)
         try:
             await bot.send_photo(chat_id=chat_id, photo=des_dir, disable_notification=True)
@@ -140,17 +184,19 @@ async def poster_cmd(_, message):
         hero_photo = logos[0]
 
     try:
-        # Sent as plain text (not a photo caption) so the full list of
-        # thumbnails/logos is never silently truncated by Telegram's
-        # 1024-char photo-caption limit — the hero image below is sent as
-        # its own independent message (no reply/quote), so it visually
-        # stacks right under this one like the reference bot's UI.
-        await sendMessage(message, text)
+        # Text + hero image are sent as ONE message (photo with the text as
+        # its caption) so they're always stuck together, matching the
+        # reference bot's single-bubble UI. Only if the caption is too long
+        # for Telegram's 1024-char limit do we fall back to two messages —
+        # still better than truncating/losing part of the link list.
+        sent = await _send_poster_message(message, text, hero_photo)
         await status.delete()
-        try:
-            await _send_hero_photo(message.chat.id, hero_photo)
-        except Exception as e:
-            LOGGER.error(f"Poster Command: Failed to send hero photo — {e}")
+        if sent is None:
+            await sendMessage(message, text)
+            try:
+                await _send_hero_photo(message.chat.id, hero_photo)
+            except Exception as e:
+                LOGGER.error(f"Poster Command: Failed to send hero photo — {e}")
     except Exception as e:
         LOGGER.error(f"Poster Command: Failed to send result — {e}")
         await editMessage(status, text)
