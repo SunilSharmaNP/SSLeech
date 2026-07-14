@@ -1,16 +1,38 @@
 #!/usr/bin/env python3
 from re import search as re_search
 
+from aiofiles.os import remove as aioremove
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
+from pyrogram.errors import PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty
 
 from bot import bot, LOGGER, config_dict
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage
-from bot.helper.ext_utils.bot_utils import new_task
+from bot.helper.ext_utils.bot_utils import new_task, download_image_url
 from bot.helper.ext_utils.spidy_api import fetch_spidy_assets
 from bot.helper.ext_utils.tmdb_api import fetch_tmdb_logo
+
+
+async def _send_hero_photo(chat_id, photo_url):
+    """Send the hero image as a plain, independent message — no reply/quote
+    to any earlier message — so it visually stacks right under the text
+    message like a normal consecutive bot message, instead of showing a
+    separate 'replying to ...' bubble."""
+    try:
+        await bot.send_photo(chat_id=chat_id, photo=photo_url, disable_notification=True)
+    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
+        # TMDB/landscape URLs occasionally fail Telegram's direct-URL fetch
+        # (bad dimensions, curl error, etc.) — download locally and resend
+        # as a real photo instead of letting Telegram fall back to sending
+        # it as a generic file/document (which shows a "289.5 KB ..." file
+        # header instead of a clean photo).
+        des_dir = await download_image_url(photo_url)
+        try:
+            await bot.send_photo(chat_id=chat_id, photo=des_dir, disable_notification=True)
+        finally:
+            await aioremove(des_dir)
 
 
 @new_task
@@ -106,7 +128,7 @@ async def poster_cmd(_, message):
         f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}\n"
         "</blockquote>\n"
         "<blockquote>"
-        "<emoji id=5445355530111437729>📤</emoji> <b><i>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ @SSBotsUpdates</i></b>"
+        "<emoji id=5445355530111437729>📤</emoji> <b><i>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ 𝐒𝐒𝐋ᴇᴇᴄʜ 𝐏ᴏsᴛᴇʀ</i></b>"
         "</blockquote>"
     )
 
@@ -120,15 +142,13 @@ async def poster_cmd(_, message):
     try:
         # Sent as plain text (not a photo caption) so the full list of
         # thumbnails/logos is never silently truncated by Telegram's
-        # 1024-char photo-caption limit — the hero image below is a
-        # separate, caption-less reply, matching the reference bot's UI.
-        sent = await sendMessage(message, text)
+        # 1024-char photo-caption limit — the hero image below is sent as
+        # its own independent message (no reply/quote), so it visually
+        # stacks right under this one like the reference bot's UI.
+        await sendMessage(message, text)
         await status.delete()
         try:
-            await sent.reply_photo(
-                photo=hero_photo,
-                disable_notification=True,
-            )
+            await _send_hero_photo(message.chat.id, hero_photo)
         except Exception as e:
             LOGGER.error(f"Poster Command: Failed to send hero photo — {e}")
     except Exception as e:
