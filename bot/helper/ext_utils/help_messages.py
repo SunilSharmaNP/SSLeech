@@ -385,7 +385,9 @@ help_string = [
 
 <b>Extras:</b>
 ┠ /{BotCommands.SpeedCommand[0]} or /{BotCommands.SpeedCommand[1]}: Check Speed in VPS/Server.
-┖ /{BotCommands.MediaInfoCommand[0]} or /{BotCommands.MediaInfoCommand[1]} [url/media]: Generate MediaInfo of Media or DL Urls
+┠ /{BotCommands.MediaInfoCommand[0]} or /{BotCommands.MediaInfoCommand[1]} [url/media]: Generate MediaInfo of Media or DL Urls
+┠ /{BotCommands.PosterCommand} [movie name] [year]: Fetch Movie/Show Posters via Spidy API.
+┖ /{BotCommands.LinkCommand} (reply to media): Generate a Direct Download Link.
 
 <b>Drive Search:</b>
 ┖ /{BotCommands.ListCommand} [query]: Search in Google Drive(s).
@@ -439,6 +441,8 @@ default_desp = {
     "FAST_TG_DOWNLOAD": "Stream Telegram media via a local direct-link server and pull it with parallel byte-range requests across every available session, instead of one serial download_media() stream. Falls back automatically on any error. Default True. Bool",
     "ADDITIONAL_BOT_TOKENS": "Optional, comma-separated extra bot tokens from @BotFather (e.g. 111:AAA,222:BBB). Each becomes its own session so FAST_TG_DOWNLOAD gets real extra bandwidth. Leave empty to only use the main bot + premium user session.",
     "BIN_CHANNEL": "Optional private channel ID (e.g. -1001234567890). Add the main bot, the premium user (if any), and every ADDITIONAL_BOT_TOKENS bot there as admins. FAST_TG_DOWNLOAD copies each leeched message here so every session can independently get a valid copy to stream.",
+    "TMDB_API_KEY": "Your TMDB (The Movie Database) API key, used only by /poster to fetch a transparent PNG clear logo for the movie/show (Spidy API has no logo asset at all). Get a free key at https://www.themoviedb.org/settings/api. Leave empty to disable the Logos Png section — /poster still works with landscape/portrait posters from Spidy without it.",
+    "SPIDY_API_KEY": "Your Spidy (poster-api.ispidy.com) API key, used by /poster to fetch landscape/portrait movie posters. A shared default key is already set; provide your own for higher rate limits.",
     "DAILY_MIRROR_LIMIT": "Total size upto which user can Mirror in one day. the default unit is GB. Int",
     "GDRIVE_LIMIT": "To limit the size of Google Drive folder/file link for leech, Zip, Unzip. the default unit is GB. Int",
     "DAILY_LEECH_LIMIT": "Total size upto which user can Leech in one day. the default unit is GB. Int",
