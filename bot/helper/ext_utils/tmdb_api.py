@@ -15,6 +15,29 @@ LOGGER = getLogger(__name__)
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/original"
 
+# TMDB's `include_image_language` filter has NO real "all languages"
+# wildcard — a bare "*" is silently ignored, so a short list like
+# "en,hi,null" only ever returns logos tagged with exactly those languages
+# and drops every other-language logo for the title (this is why a movie
+# could have a valid PNG logo on TMDB that still came back empty: it was
+# tagged e.g. "fr"/"ja"/etc., not "en"/"hi"/null). Backdrops mostly have no
+# language tag so they aren't affected the same way, which is why they
+# kept working while logos silently disappeared.
+# The only reliable workaround (used by most TMDB client libraries) is to
+# explicitly list every ISO 639-1 code TMDB recognizes, plus "null" for
+# untagged images, so nothing gets filtered out.
+_ISO_639_1_CODES = (
+    "aa,ab,ae,af,ak,am,an,ar,as,av,ay,az,ba,be,bg,bh,bi,bm,bn,bo,br,bs,ca,ce,"
+    "ch,co,cr,cs,cu,cv,cy,da,de,dv,dz,ee,el,en,eo,es,et,eu,fa,ff,fi,fj,fo,fr,"
+    "fy,ga,gd,gl,gn,gu,gv,ha,he,hi,ho,hr,ht,hu,hy,hz,ia,id,ie,ig,ii,ik,io,is,"
+    "it,iu,ja,jv,ka,kg,ki,kj,kk,kl,km,kn,ko,kr,ks,ku,kv,kw,ky,la,lb,lg,li,ln,"
+    "lo,lt,lu,lv,mg,mh,mi,mk,ml,mn,mr,ms,mt,my,na,nb,nd,ne,ng,nl,nn,no,nr,nv,"
+    "ny,oc,oj,om,or,os,pa,pi,pl,ps,pt,qu,rm,rn,ro,ru,rw,sa,sc,sd,se,sg,si,sk,"
+    "sl,sm,sn,so,sq,sr,ss,st,su,sv,sw,ta,te,tg,th,ti,tk,tl,tn,to,tr,ts,tt,tw,"
+    "ty,ug,uk,ur,uz,ve,vi,vo,wa,wo,xh,yi,yo,za,zh,zu"
+)
+LOGO_LANGUAGE_FILTER = f"null,{_ISO_639_1_CODES}"
+
 
 async def fetch_tmdb_assets(title, api_key, year=None, limit=15):
     """
@@ -129,7 +152,7 @@ async def _fetch_images(session, api_key, media_type, media_id):
         languages/no-language backdrops are included, same as TMDB itself
         lists them.
     """
-    params = {"api_key": api_key, "include_image_language": "en,hi,null,*"}
+    params = {"api_key": api_key, "include_image_language": LOGO_LANGUAGE_FILTER}
     async with session.get(
         f"{TMDB_API_BASE}/{media_type}/{media_id}/images",
         params=params,
@@ -141,6 +164,9 @@ async def _fetch_images(session, api_key, media_type, media_id):
         data = await resp.json()
 
     logos = data.get("logos", []) or []
+    LOGGER.info(f"TMDB API: images response has {len(logos)} logo entries, "
+                f"{len(data.get('backdrops', []) or [])} backdrop entries "
+                f"for {media_type}/{media_id}")
     png_logos = [l for l in logos if l.get("file_path", "").lower().endswith(".png")]
     logo_urls = _dedup_sorted_urls(png_logos)
 
