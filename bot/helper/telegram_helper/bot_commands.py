@@ -80,6 +80,8 @@ class _BotCommands:
         self.BtSelectCommand = f"btsel{suffix}"
         self.CategorySelect = f"ctsel{suffix}"
         self.SpeedCommand = [f"speedtest{suffix}", f"sp{suffix}"]
+        self.PosterCommand = f"poster{suffix}"
+        self.LinkCommand = f"link{suffix}"
 
         self.LoginCommand = "login"
         self.AddImageCommand = f"addimg{suffix}"
