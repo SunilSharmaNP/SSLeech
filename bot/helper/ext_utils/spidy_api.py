@@ -65,6 +65,84 @@ def parse_filename_for_search(filename):
     return title, year, season
 
 
+async def fetch_spidy_assets(title, api_key, year=None, season=None, limit=6):
+    """
+    Fetch ALL available poster assets (landscape + portrait) for a title from
+    Spidy API, for use by the /poster command.
+
+    Note: as of the live API, results only ever contain "landscape" and
+    (rarely) "poster" (portrait) keys — there is no logo/PNG asset in the
+    Spidy API response, so this never returns logos.
+
+    Returns a dict: {"title": str, "year": str|None, "landscape": [urls],
+    "poster": [urls]} or None on failure / no results.
+    """
+    if not api_key:
+        LOGGER.warning("Spidy API: No API key configured")
+        return None
+    if not title:
+        return None
+
+    params = {"api_key": api_key, "title": title}
+    if year:
+        params["year"] = year
+    if season:
+        params["season"] = season
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                SPIDY_API_BASE,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status == 401:
+                    LOGGER.error("Spidy API: Invalid API key (401)")
+                    return None
+                if resp.status == 404:
+                    return None
+                if resp.status == 429:
+                    LOGGER.warning("Spidy API: Rate limit hit (429)")
+                    return None
+                if resp.status != 200:
+                    LOGGER.warning(f"Spidy API: Unexpected status {resp.status}")
+                    return None
+                data = await resp.json()
+
+        results = data.get("results", [data]) if data.get("results") is not None else [data]
+        if not results:
+            return None
+
+        landscape_urls, poster_urls = [], []
+        resolved_title, resolved_year = title, year
+        for r in results:
+            if r.get("title"):
+                resolved_title = r["title"]
+            if r.get("year") and not resolved_year:
+                resolved_year = r["year"]
+            if r.get("landscape") and r["landscape"] not in landscape_urls:
+                landscape_urls.append(r["landscape"])
+            if r.get("poster") and r["poster"] not in poster_urls:
+                poster_urls.append(r["poster"])
+
+        if not landscape_urls and not poster_urls:
+            return None
+
+        return {
+            "title": resolved_title,
+            "year": resolved_year,
+            "landscape": landscape_urls[:limit],
+            "poster": poster_urls[:limit],
+        }
+
+    except aiohttp.ClientConnectorError as e:
+        LOGGER.error(f"Spidy API: Connection error — {e}")
+        return None
+    except Exception as e:
+        LOGGER.error(f"Spidy API: Unexpected error fetching assets for '{title}': {e}", exc_info=True)
+        return None
+
+
 async def fetch_spidy_poster(filename, api_key):
     """
     Fetch a landscape poster from Spidy API using the leech filename.
