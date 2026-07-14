@@ -44,15 +44,18 @@ async def poster_cmd(_, message):
         assets = None
 
     tmdb_key = config_dict.get("TMDB_API_KEY", "")
-    logo = None
+    tmdb_result = None
     if tmdb_key:
         try:
-            logo = await fetch_tmdb_logo(title, tmdb_key, year=year)
+            tmdb_result = await fetch_tmdb_logo(title, tmdb_key, year=year)
         except Exception as e:
             LOGGER.error(f"Poster Command: TMDB API error for '{title}': {e}")
-            logo = None
+            tmdb_result = None
 
-    if not assets and not logo:
+    # ALL PNG clear logos TMDB has (every language) — not just one.
+    logos = tmdb_result["logos"] if tmdb_result else []
+
+    if not assets and not logos:
         await editMessage(
             status,
             f"<b>❌ 𝐍ᴏ 𝐏ᴏsᴛᴇʀs 𝐅ᴏᴜɴᴅ ғᴏʀ:</b> <i>{title}{f' ({year})' if year else ''}</i>",
@@ -60,45 +63,74 @@ async def poster_cmd(_, message):
         return
 
     if not assets:
-        assets = {"title": logo["title"], "year": logo["year"], "landscape": [], "poster": []}
+        assets = {
+            "title": tmdb_result["title"],
+            "year": tmdb_result["year"],
+            "landscape": [],
+            "poster": [],
+        }
 
     tag = message.from_user.mention
     display_title = assets["title"]
     if assets.get("year"):
         display_title += f" ({assets['year']})"
-    text = f"<b>🎬 𝐌ᴏᴠɪᴇ:</b> <code>{display_title}</code>\n\n"
+
+    text = (
+        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b>\n"
+        f"<blockquote>{display_title}</blockquote>\n\n"
+    )
 
     if assets["landscape"]:
-        text += "<b>•𝐄ɴɢʟɪsʜ 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n"
+        text += "<b><emoji id=5334544901428229844>🖼</emoji> 𝐄ɴɢʟɪsʜ 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n<blockquote>"
         for i, url in enumerate(assets["landscape"], 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
-        text += "\n"
+        text += "</blockquote>\n\n"
+
+    # Only added when TMDB actually has PNG clear logo(s) for this title —
+    # never a placeholder/broken link when none is found. Every language
+    # TMDB has a logo for is listed, matching how other bots present it.
+    if logos:
+        text += "<b><emoji id=5427168083074628963>🎨</emoji> 𝐋ᴏɢᴏs 𝐏ɴɢ:</b>\n<blockquote>"
+        for i, url in enumerate(logos, 1):
+            text += f"{i}. <a href='{url}'>Click Here</a>\n"
+        text += "</blockquote>\n\n"
 
     if assets["poster"]:
-        text += "<b>•𝐏ᴏʀᴛʀᴀɪᴛ 𝐏ᴏsᴛᴇʀs:</b>\n"
+        text += "<b><emoji id=5190806721286657692>📸</emoji> 𝐏ᴏʀᴛʀᴀɪᴛ 𝐏ᴏsᴛᴇʀs:</b>\n"
         for i, url in enumerate(assets["poster"], 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
         text += "\n"
 
-    # Only added when TMDB actually has a PNG clear logo for this title —
-    # never a placeholder/broken link when none is found.
-    if logo:
-        text += "<b>•𝐋ᴏɢᴏs 𝐏ɴɢ:</b>\n"
-        text += f"1. <a href='{logo['url']}'>Click Here</a>\n\n"
-
-    text += f"<b>Requested By:</b> {tag}\n<i>Powered By SSLeech Poster</i>"
+    text += (
+        "<blockquote>"
+        f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}\n"
+        "<emoji id=5445355530111437729>📤</emoji> <b><i>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ 𝐒𝐒𝐋ᴇᴇᴄʜ 𝐏ᴏsᴛᴇʀ</i></b>"
+        "</blockquote>"
+    )
 
     if assets["landscape"]:
-        photo = assets["landscape"][0]
+        hero_photo = assets["landscape"][0]
     elif assets["poster"]:
-        photo = assets["poster"][0]
+        hero_photo = assets["poster"][0]
     else:
-        photo = logo["url"]
+        hero_photo = logos[0]
+
     try:
-        await sendMessage(message, text, photo=photo)
+        # Sent as plain text (not a photo caption) so the full list of
+        # thumbnails/logos is never silently truncated by Telegram's
+        # 1024-char photo-caption limit — the hero image below is a
+        # separate, caption-less reply, matching the reference bot's UI.
+        sent = await sendMessage(message, text)
         await status.delete()
+        try:
+            await sent.reply_photo(
+                photo=hero_photo,
+                disable_notification=True,
+            )
+        except Exception as e:
+            LOGGER.error(f"Poster Command: Failed to send hero photo — {e}")
     except Exception as e:
-        LOGGER.error(f"Poster Command: Failed to send photo — {e}")
+        LOGGER.error(f"Poster Command: Failed to send result — {e}")
         await editMessage(status, text)
 
 
