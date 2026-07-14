@@ -76,24 +76,24 @@ async def poster_cmd(_, message):
         display_title += f" ({assets['year']})"
 
     text = (
-        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b>\n"
+        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b>"
         f"<blockquote>{display_title}</blockquote>\n\n"
     )
 
     if assets["landscape"]:
-        text += "<b><emoji id=5334544901428229844>🖼</emoji> 𝐄ɴɢʟɪsʜ 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n<blockquote>"
+        text += "<b><emoji id=5334544901428229844>🖼</emoji> 𝐄ɴɢʟɪsʜ 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n<blockquote expandable>"
         for i, url in enumerate(assets["landscape"], 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
-        text += "</blockquote>\n\n"
+        text += "</blockquote>\n"
 
     # Only added when TMDB actually has PNG clear logo(s) for this title —
     # never a placeholder/broken link when none is found. Every language
     # TMDB has a logo for is listed, matching how other bots present it.
     if logos:
-        text += "<b><emoji id=5427168083074628963>🎨</emoji> 𝐋ᴏɢᴏs 𝐏ɴɢ:</b>\n<blockquote>"
+        text += "<b><emoji id=5427168083074628963>🎨</emoji> 𝐋ᴏɢᴏs 𝐏ɴɢ:</b>\n<blockquote expandable>"
         for i, url in enumerate(logos, 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
-        text += "</blockquote>\n\n"
+        text += "</blockquote>\n"
 
     if assets["poster"]:
         text += "<b><emoji id=5190806721286657692>📸</emoji> 𝐏ᴏʀᴛʀᴀɪᴛ 𝐏ᴏsᴛᴇʀs:</b>\n"
@@ -104,7 +104,9 @@ async def poster_cmd(_, message):
     text += (
         "<blockquote>"
         f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}\n"
-        "<emoji id=5445355530111437729>📤</emoji> <b><i>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ 𝐒𝐒𝐋ᴇᴇᴄʜ 𝐏ᴏsᴛᴇʀ</i></b>"
+        "</blockquote>\n"
+        "<blockquote>"
+        "<emoji id=5445355530111437729>📤</emoji> <b><i>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ @SSBotsUpdates</i></b>"
         "</blockquote>"
     )
 
