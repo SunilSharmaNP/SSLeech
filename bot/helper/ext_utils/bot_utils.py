@@ -979,6 +979,14 @@ async def set_commands(client):
                 f"or /{BotCommands.MediaInfoCommand[1]} Generate Mediainfo for Replied Media or DL links",
             ),
             BotCommand(
+                BotCommands.PosterCommand,
+                "[movie name] [year]: Fetch Movie/Show Posters via Spidy API",
+            ),
+            BotCommand(
+                BotCommands.LinkCommand,
+                "(reply to media): Generate a Direct Download Link",
+            ),
+            BotCommand(
                 BotCommands.StartMergeCommand[0],
                 f"or /{BotCommands.StartMergeCommand[1]} Open Video Merge Tool (enable in /us first)",
             ),
