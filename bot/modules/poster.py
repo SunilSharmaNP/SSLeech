@@ -174,7 +174,7 @@ async def poster_cmd(_, message):
 
     text = (
         "<blockquote>"
-        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b>"
+        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ :- </b>"
         f"{display_title}</blockquote>\n\n"
     )
 
