@@ -1,12 +1,68 @@
 from logging import getLogger, FileHandler, StreamHandler, INFO, basicConfig
+from os import path as ospath
 from time import sleep
+import requests
 from qbittorrentapi import NotFound404Error, Client as qbClient
 from aria2p import API as ariaAPI, Client as ariaClient
-from flask import Flask, request
+from flask import Flask, request, Response, stream_with_context
 
 from web.nodes import make_tree
 
 app = Flask(__name__)
+
+# tg_stream_server.py (the main bot process) is an internal, loopback-only
+# aiohttp server that streams Telegram media. It runs in a SEPARATE process
+# from this Flask app (started via gunicorn), so it can't be reached in
+# memory — instead this route reverse-proxies public /link/<token>/<name>
+# requests to it over localhost HTTP, forwarding Range headers so download
+# managers can still open parallel range requests.
+STREAM_PORT_FILE = "stream_port.txt"
+
+
+def _stream_server_port():
+    try:
+        with open(STREAM_PORT_FILE) as f:
+            return int(f.read().strip())
+    except Exception:
+        return None
+
+
+@app.route("/link/<token>/<path:name>", methods=["GET", "HEAD"])
+def proxy_link(token, name):
+    port = _stream_server_port()
+    if not port:
+        return "Stream server not ready, try again shortly.", 503
+
+    upstream_url = f"http://127.0.0.1:{port}/link/{token}/{name}"
+    headers = {}
+    if "Range" in request.headers:
+        headers["Range"] = request.headers["Range"]
+
+    try:
+        upstream = requests.request(
+            request.method,
+            upstream_url,
+            headers=headers,
+            stream=True,
+            timeout=(10, 120),
+        )
+    except requests.exceptions.RequestException as e:
+        LOGGER.error(f"proxy_link: upstream request failed — {e}")
+        return "Stream server unreachable.", 502
+
+    excluded = {"content-encoding", "transfer-encoding", "connection"}
+    resp_headers = [
+        (k, v) for k, v in upstream.raw.headers.items() if k.lower() not in excluded
+    ]
+
+    if request.method == "HEAD":
+        return Response(status=upstream.status_code, headers=resp_headers)
+
+    return Response(
+        stream_with_context(upstream.iter_content(chunk_size=256 * 1024)),
+        status=upstream.status_code,
+        headers=resp_headers,
+    )
 
 aria2 = ariaAPI(ariaClient(host="http://localhost", port=6800, secret=""))
 
