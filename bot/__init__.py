@@ -702,6 +702,11 @@ FILELION_API = environ.get("FILELION_API", "")
 if len(FILELION_API) == 0:
     FILELION_API = ""
 SPIDY_API_KEY = environ.get("SPIDY_API_KEY", "spidy_ws4es4tlvnr")
+# Used only by /poster to fetch a transparent PNG clear logo (TMDB has no
+# poster/landscape images worth using — Spidy already covers those; TMDB is
+# only for the logo, which Spidy's API doesn't provide at all). Free key:
+# https://www.themoviedb.org/settings/api
+TMDB_API_KEY = environ.get("TMDB_API_KEY", "")
 
 
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", "")
@@ -769,6 +774,7 @@ config_dict = {
     "DEBRID_LINK_API": DEBRID_LINK_API,
     "FILELION_API": FILELION_API,
     "SPIDY_API_KEY": SPIDY_API_KEY,
+    "TMDB_API_KEY": TMDB_API_KEY,
     "DELETE_LINKS": DELETE_LINKS,
     "DEFAULT_UPLOAD": DEFAULT_UPLOAD,
     "FAST_TG_DOWNLOAD": FAST_TG_DOWNLOAD,
@@ -930,7 +936,7 @@ _heroku_port = environ.get("PORT", "")
 if BASE_URL or _heroku_port:
     _bind_port = _heroku_port if _heroku_port else str(BASE_URL_PORT)
     Popen(
-        f"gunicorn web.wserver:app --bind 0.0.0.0:{_bind_port} --workers 1 --timeout 120",
+        f"gunicorn web.wserver:app --bind 0.0.0.0:{_bind_port} --workers 1 --worker-class gthread --threads 8 --timeout 120",
         shell=True,
     )
     Popen("python3 cron_boot.py", shell=True)
