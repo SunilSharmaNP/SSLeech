@@ -175,8 +175,9 @@ async def poster_cmd(_, message):
         display_title += f" ({assets['year']})"
 
     text = (
+        "<blockquote>"
         "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b>"
-        f"<blockquote>{display_title}</blockquote>\n\n"
+        f"{display_title}</blockquote>\n\n"
     )
 
     if assets["landscape"]:
@@ -204,9 +205,6 @@ async def poster_cmd(_, message):
         "<blockquote>"
         f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}\n"
         "</blockquote>\n"
-        "<blockquote>"
-        "<emoji id=5445355530111437729>📤</emoji> <b><i>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ 𝐒𝐒𝐋ᴇᴇᴄʜ 𝐏ᴏsᴛᴇʀ</i></b>"
-        "</blockquote>"
     )
 
     if assets["landscape"]:
