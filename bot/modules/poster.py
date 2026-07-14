@@ -25,7 +25,7 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage
 from bot.helper.ext_utils.bot_utils import new_task, download_image_url
 from bot.helper.ext_utils.spidy_api import fetch_spidy_assets
-from bot.helper.ext_utils.tmdb_api import fetch_tmdb_logo
+from bot.helper.ext_utils.tmdb_api import fetch_tmdb_assets
 
 
 async def _reply_photo_with_caption(message, photo, text):
@@ -144,15 +144,23 @@ async def poster_cmd(_, message):
     tmdb_result = None
     if tmdb_key:
         try:
-            tmdb_result = await fetch_tmdb_logo(title, tmdb_key, year=year)
+            tmdb_result = await fetch_tmdb_assets(title, tmdb_key, year=year)
         except Exception as e:
             LOGGER.error(f"Poster Command: TMDB API error for '{title}': {e}")
             tmdb_result = None
+    else:
+        LOGGER.warning(
+            "Poster Command: TMDB_API_KEY is not configured — Logos Png and "
+            "RAW Landscape sections will be empty until it is set."
+        )
 
     # ALL PNG clear logos TMDB has (every language) — not just one.
     logos = tmdb_result["logos"] if tmdb_result else []
+    # TMDB's raw, text-free backdrop shots — a different asset type than
+    # Spidy's landscape image, and usually several of them per title.
+    tmdb_backdrops = tmdb_result["backdrops"] if tmdb_result else []
 
-    if not assets and not logos:
+    if not assets and not logos and not tmdb_backdrops:
         await editMessage(
             status,
             f"<b>❌ 𝐍ᴏ 𝐏ᴏsᴛᴇʀs 𝐅ᴏᴜɴᴅ ғᴏʀ:</b> <i>{title}{f' ({year})' if year else ''}</i>",
@@ -167,6 +175,14 @@ async def poster_cmd(_, message):
             "poster": [],
         }
 
+    # RAW Landscape: TMDB backdrops first (usually several, no text burned
+    # in), then any Spidy landscape not already covered by TMDB — never
+    # dropping Spidy's pick when TMDB has nothing for this title.
+    raw_landscape = list(tmdb_backdrops)
+    for url in assets["landscape"]:
+        if url not in raw_landscape:
+            raw_landscape.append(url)
+
     tag = message.from_user.mention
     display_title = assets["title"]
     if assets.get("year"):
@@ -174,13 +190,13 @@ async def poster_cmd(_, message):
 
     text = (
         "<blockquote>"
-        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ :- </b>"
+        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b>"
         f"{display_title}</blockquote>\n\n"
     )
 
-    if assets["landscape"]:
-        text += "<b><emoji id=5334544901428229844>🖼</emoji> 𝐄ɴɢʟɪsʜ 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n<blockquote expandable>"
-        for i, url in enumerate(assets["landscape"], 1):
+    if raw_landscape:
+        text += "<b><emoji id=5334544901428229844>🖼</emoji> 𝐑𝐀𝐖 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n<blockquote expandable>"
+        for i, url in enumerate(raw_landscape, 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
         text += "</blockquote>\n"
 
@@ -201,12 +217,12 @@ async def poster_cmd(_, message):
 
     text += (
         "<blockquote>"
-        f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ :- </b> {tag}"
+        f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}"
         "</blockquote>\n"
     )
 
-    if assets["landscape"]:
-        hero_photo = assets["landscape"][0]
+    if raw_landscape:
+        hero_photo = raw_landscape[0]
     elif assets["poster"]:
         hero_photo = assets["poster"][0]
     else:
