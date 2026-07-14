@@ -197,12 +197,28 @@ async def _load_persisted_links() -> None:
         LOGGER.info(f"tg_stream_server: restored {restored} persisted /link token(s)")
 
 
+class BaseUrlNotSetError(RuntimeError):
+    """Raised when a PUBLIC /link URL is requested but BASE_URL is not configured.
+
+    A loopback (127.0.0.1) URL is useless to an end user — it only resolves
+    inside the dyno/container itself — so we must never hand one out as a
+    "working" link. Instead this forces the caller to surface an actionable
+    error telling the admin to set BASE_URL.
+    """
+
+
 def _link_public_url(token: str, file_name: str) -> str:
     from bot import config_dict
 
     base = (config_dict.get("BASE_URL") or "").rstrip("/")
+    if not base:
+        raise BaseUrlNotSetError(
+            "BASE_URL is not set, so a public /link URL cannot be generated. "
+            "Set BASE_URL in /botsettings (Config Variables) to your app's public "
+            "HTTPS URL, e.g. https://your-app-name.herokuapp.com — then try /link again."
+        )
     path = f"/link/{token}/{quote(file_name, safe='')}"
-    return f"{base}{path}" if base else f"http://127.0.0.1:{_server_port}{path}"
+    return f"{base}{path}"
 
 
 async def register_link(message, primary_client=None) -> Dict[str, Any]:
