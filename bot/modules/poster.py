@@ -175,11 +175,12 @@ async def poster_cmd(_, message):
             "poster": [],
         }
 
-    # RAW Landscape: TMDB backdrops first (usually several, no text burned
-    # in), then any Spidy landscape not already covered by TMDB — never
-    # dropping Spidy's pick when TMDB has nothing for this title.
-    raw_landscape = list(tmdb_backdrops)
-    for url in assets["landscape"]:
+    # RAW Landscape: Spidy's own landscape pick stays first (so it keeps
+    # being the hero photo like before — never silently displaced), then
+    # TMDB's backdrops are appended as bonus extra raw shots, skipping any
+    # duplicate URL.
+    raw_landscape = list(assets["landscape"])
+    for url in tmdb_backdrops:
         if url not in raw_landscape:
             raw_landscape.append(url)
 
