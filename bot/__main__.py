@@ -85,6 +85,8 @@ from .modules import (
     broadcast,
     category_select,
     merge,
+    poster,
+    link_gen,
 )
 
 
@@ -455,11 +457,12 @@ async def main():
         set_commands(bot),
         log_check(),
     )
-    if config_dict.get("FAST_TG_DOWNLOAD", True):
-        try:
-            await start_stream_server()
-        except Exception as e:
-            LOGGER.error(f"Failed to start local TG-to-link stream server: {e}")
+    # Always started: powers both the internal fast-download path (when
+    # FAST_TG_DOWNLOAD is enabled) and the public /link{suffix} command.
+    try:
+        await start_stream_server()
+    except Exception as e:
+        LOGGER.error(f"Failed to start local TG-to-link stream server: {e}")
     await sync_to_async(start_aria2_listener, wait=False)
     bot.loop.create_task(search_images())
 
