@@ -177,53 +177,41 @@ async def poster_cmd(_, message):
     # ── Build message text ────────────────────────────────────────────────
     text = (
         "<blockquote>"
-        "<b><emoji id=5424818078833715060>🎬</emoji> 𝐌ᴏᴠɪᴇ:</b> "
-        f"{display_title}</blockquote>\n\n"
+        f"<b>🎬 𝐌ᴏᴠɪᴇ:</b> {display_title}"
+        "</blockquote>\n\n"
     )
 
     # Section 1 — Landscape Poster (Spidy, logo overlaid)
     if landscape_poster:
-        text += (
-            "<b><emoji id=5334544901428229844>🖼</emoji> 𝐋ᴀɴᴅsᴄᴀᴘᴇ 𝐏ᴏsᴛᴇʀ:</b>\n"
-            "<blockquote expandable>"
-        )
+        text += "<b>🖼 𝐋ᴀɴᴅsᴄᴀᴘᴇ 𝐏ᴏsᴛᴇʀ:</b>\n<blockquote expandable>"
         for i, url in enumerate(landscape_poster, 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
         text += "</blockquote>\n"
 
     # Section 2 — RAW Landscape (TMDB, no logo)
     if raw_landscape:
-        text += (
-            "<b><emoji id=5431815140394923086>🌄</emoji> 𝐑𝐀𝐖 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n"
-            "<blockquote expandable>"
-        )
+        text += "<b>🌄 𝐑𝐀𝐖 𝐋ᴀɴᴅsᴄᴀᴘᴇ:</b>\n<blockquote expandable>"
         for i, url in enumerate(raw_landscape, 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
         text += "</blockquote>\n"
 
     # Section 3 — Logos Png
     if logos:
-        text += (
-            "<b><emoji id=5427168083074628963>🎨</emoji> 𝐋ᴏɢᴏs 𝐏ɴɢ:</b>\n"
-            "<blockquote expandable>"
-        )
+        text += "<b>🎨 𝐋ᴏɢᴏs 𝐏ɴɢ:</b>\n<blockquote expandable>"
         for i, url in enumerate(logos, 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
         text += "</blockquote>\n"
 
     # Section 4 — Portrait Poster (TMDB + Spidy)
     if portrait_posters:
-        text += (
-            "<b><emoji id=5190806721286657692>📸</emoji> 𝐏ᴏʀᴛʀᴀɪᴛ 𝐏ᴏsᴛᴇʀ:</b>\n"
-            "<blockquote expandable>"
-        )
+        text += "<b>📸 𝐏ᴏʀᴛʀᴀɪᴛ 𝐏ᴏsᴛᴇʀ:</b>\n<blockquote expandable>"
         for i, url in enumerate(portrait_posters, 1):
             text += f"{i}. <a href='{url}'>Click Here</a>\n"
         text += "</blockquote>\n"
 
     text += (
         "<blockquote>"
-        f"<emoji id=5217822164362739968>👑</emoji> <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}"
+        f"👑 <b>𝐑ᴇQᴜᴇsᴛᴇᴅ 𝐁ʏ:</b> {tag}"
         "</blockquote>\n"
     )
 
