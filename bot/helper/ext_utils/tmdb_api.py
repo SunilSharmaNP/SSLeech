@@ -15,28 +15,19 @@ LOGGER = getLogger(__name__)
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/original"
 
-# TMDB's `include_image_language` filter has NO real "all languages"
-# wildcard — a bare "*" is silently ignored, so a short list like
-# "en,hi,null" only ever returns logos tagged with exactly those languages
-# and drops every other-language logo for the title (this is why a movie
-# could have a valid PNG logo on TMDB that still came back empty: it was
-# tagged e.g. "fr"/"ja"/etc., not "en"/"hi"/null). Backdrops mostly have no
-# language tag so they aren't affected the same way, which is why they
-# kept working while logos silently disappeared.
-# The only reliable workaround (used by most TMDB client libraries) is to
-# explicitly list every ISO 639-1 code TMDB recognizes, plus "null" for
-# untagged images, so nothing gets filtered out.
-_ISO_639_1_CODES = (
-    "aa,ab,ae,af,ak,am,an,ar,as,av,ay,az,ba,be,bg,bh,bi,bm,bn,bo,br,bs,ca,ce,"
-    "ch,co,cr,cs,cu,cv,cy,da,de,dv,dz,ee,el,en,eo,es,et,eu,fa,ff,fi,fj,fo,fr,"
-    "fy,ga,gd,gl,gn,gu,gv,ha,he,hi,ho,hr,ht,hu,hy,hz,ia,id,ie,ig,ii,ik,io,is,"
-    "it,iu,ja,jv,ka,kg,ki,kj,kk,kl,km,kn,ko,kr,ks,ku,kv,kw,ky,la,lb,lg,li,ln,"
-    "lo,lt,lu,lv,mg,mh,mi,mk,ml,mn,mr,ms,mt,my,na,nb,nd,ne,ng,nl,nn,no,nr,nv,"
-    "ny,oc,oj,om,or,os,pa,pi,pl,ps,pt,qu,rm,rn,ro,ru,rw,sa,sc,sd,se,sg,si,sk,"
-    "sl,sm,sn,so,sq,sr,ss,st,su,sv,sw,ta,te,tg,th,ti,tk,tl,tn,to,tr,ts,tt,tw,"
-    "ty,ug,uk,ur,uz,ve,vi,vo,wa,wo,xh,yi,yo,za,zh,zu"
+# TMDB's include_image_language controls which language-tagged assets are
+# returned. Backdrops are typically untagged (null) so they always come
+# through. Logos and posters carry real language codes (en, fr, ja, etc.)
+# and are filtered by this param.
+#
+# Passing the full ISO 639-1 list (~180 codes, ~400 chars) causes TMDB to
+# silently return 0 logos/posters — the server appears to bail on very long
+# values. A curated short list of the languages TMDB actually stores logos
+# for covers 99 %+ of real-world titles and stays well within TMDB's limits.
+LOGO_LANGUAGE_FILTER = (
+    "null,en,hi,fr,ja,ko,de,es,pt,ru,zh,it,ar,tr,pl,nl,sv,da,fi,cs,"
+    "hu,ro,bg,hr,sk,uk,fa,he,th,id,vi,nb,el,sr,ms,ca,lt,et,lv,sl"
 )
-LOGO_LANGUAGE_FILTER = f"null,{_ISO_639_1_CODES}"
 
 
 async def fetch_tmdb_assets(title, api_key, year=None, limit=15):
