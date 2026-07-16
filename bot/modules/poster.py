@@ -9,6 +9,7 @@ from pyrogram.errors import (
     WebpageCurlFailed,
     MediaEmpty,
     MediaCaptionTooLong,
+    DocumentInvalid,
 )
 
 try:
@@ -51,7 +52,8 @@ async def _send_poster_message(message, text, hero_photo):
         return await _reply_photo_with_caption(message, hero_photo, text)
     except MediaCaptionTooLong:
         return None
-    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
+    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty, DocumentInvalid):
+        # URL-based send occasionally fails — download locally and retry.
         des_dir = await download_image_url(hero_photo)
         try:
             return await _reply_photo_with_caption(message, des_dir, text)
@@ -65,7 +67,7 @@ async def _send_hero_photo(chat_id, photo_url):
     """Send hero image as a standalone message — two-message fallback only."""
     try:
         await bot.send_photo(chat_id=chat_id, photo=photo_url, disable_notification=True)
-    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty):
+    except (PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty, DocumentInvalid):
         des_dir = await download_image_url(photo_url)
         try:
             await bot.send_photo(chat_id=chat_id, photo=des_dir, disable_notification=True)
