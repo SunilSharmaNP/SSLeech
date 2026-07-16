@@ -42,18 +42,15 @@ LOGO_LANGUAGE_FILTER = f"null,{_ISO_639_1_CODES}"
 async def fetch_tmdb_assets(title, api_key, year=None, limit=15):
     """
     Search TMDB for `title` (movie or TV show) and return:
-      - ALL of its PNG clear logos (every language TMDB has one for —
-        English, Hindi, native script, etc.), not just a single "best" pick.
-      - ALL of its raw backdrop/landscape images (the plain widescreen
-        scene shots TMDB stores, with no title text burned in) — this is
-        the "RAW Landscape" section other poster bots show, and it's a
-        completely different TMDB asset type than Spidy's single
-        landscape image.
+      - logos    : PNG/SVG clear logos (every language TMDB has).
+      - backdrops: Raw widescreen scene shots with no title text burned in
+                   ("RAW Landscape" — different from Spidy's landscape which
+                   already has the movie logo overlaid).
+      - posters  : Portrait poster images from TMDB.
 
-    Returns {"logos": [url, ...], "backdrops": [url, ...], "title": str,
-    "year": str|None} or None if TMDB has no result at all for the title.
-    `logos`/`backdrops` can independently be empty lists if TMDB simply
-    doesn't have that asset type for this title (never a placeholder).
+    Returns {"logos": [...], "backdrops": [...], "posters": [...],
+    "title": str, "year": str|None} or None if nothing found.
+    Each list can be empty if TMDB has no asset of that type for this title.
     """
     if not api_key:
         LOGGER.warning("TMDB API: No API key configured")
@@ -69,13 +66,14 @@ async def fetch_tmdb_assets(title, api_key, year=None, limit=15):
             if not media_id:
                 return None
 
-            logo_urls, backdrop_urls = await _fetch_images(
+            logo_urls, backdrop_urls, poster_urls = await _fetch_images(
                 session, api_key, media_type, media_id
             )
 
             return {
                 "logos": logo_urls[:limit],
                 "backdrops": backdrop_urls[:limit],
+                "posters": poster_urls[:limit],
                 "title": resolved_title,
                 "year": resolved_year,
             }
@@ -142,15 +140,12 @@ def _dedup_sorted_urls(images):
 
 
 async def _fetch_images(session, api_key, media_type, media_id):
-    """Return (logo_urls, backdrop_urls) for this title in one TMDB call:
-      - logos: PNG clear logos across all languages (English, Hindi,
-        native-script, no-language, etc.) — TMDB logos are also sometimes
-        SVG-only, those are skipped since Telegram can't render them.
-      - backdrops: raw widescreen scene shots with no text overlay — TMDB
-        stores these separately from logos/posters, and it's what "RAW
-        Landscape" sections in other poster bots are built from. All
-        languages/no-language backdrops are included, same as TMDB itself
-        lists them.
+    """Return (logo_urls, backdrop_urls, poster_urls) for this title in one
+    TMDB call:
+      - logos   : PNG/SVG clear logos across all languages. Both formats
+                  accepted — TMDB stores many logos exclusively as SVG.
+      - backdrops: raw widescreen shots with no title text (RAW Landscape).
+      - posters : portrait poster images (all languages).
     """
     params = {"api_key": api_key, "include_image_language": LOGO_LANGUAGE_FILTER}
     async with session.get(
@@ -160,17 +155,29 @@ async def _fetch_images(session, api_key, media_type, media_id):
     ) as resp:
         if resp.status != 200:
             LOGGER.warning(f"TMDB API: Unexpected images status {resp.status}")
-            return [], []
+            return [], [], []
         data = await resp.json()
 
     logos = data.get("logos", []) or []
-    LOGGER.info(f"TMDB API: images response has {len(logos)} logo entries, "
-                f"{len(data.get('backdrops', []) or [])} backdrop entries "
-                f"for {media_type}/{media_id}")
-    png_logos = [l for l in logos if l.get("file_path", "").lower().endswith(".png")]
-    logo_urls = _dedup_sorted_urls(png_logos)
-
     backdrops = data.get("backdrops", []) or []
-    backdrop_urls = _dedup_sorted_urls(backdrops)
+    posters = data.get("posters", []) or []
+    LOGGER.info(
+        f"TMDB API: images response — {len(logos)} logos, "
+        f"{len(backdrops)} backdrops, {len(posters)} posters "
+        f"for {media_type}/{media_id}"
+    )
 
-    return logo_urls, backdrop_urls
+    # Accept both .png AND .svg — TMDB itself says SVGs are preferred and
+    # many titles only have SVG logos (no PNG variant). Both formats work
+    # fine as clickable links in Telegram. Filtering to .png only was
+    # silently dropping every SVG-only logo.
+    valid_logo_exts = (".png", ".svg")
+    filtered_logos = [
+        l for l in logos
+        if l.get("file_path", "").lower().endswith(valid_logo_exts)
+    ]
+    logo_urls = _dedup_sorted_urls(filtered_logos)
+    backdrop_urls = _dedup_sorted_urls(backdrops)
+    poster_urls = _dedup_sorted_urls(posters)
+
+    return logo_urls, backdrop_urls, poster_urls
