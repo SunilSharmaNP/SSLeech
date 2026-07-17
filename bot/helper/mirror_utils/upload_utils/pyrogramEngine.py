@@ -706,6 +706,8 @@ class TgUploader:
             self.__thumb = None
         thumb = self.__thumb
         self.__is_corrupted = False
+        key = ""  # BUG FIX: initialize key to avoid UnboundLocalError in except block
+                  # if an exception occurs before key = "documents"/"videos"/etc.
         try:
             is_video, is_audio, is_image = await get_document_type(self.__up_path)
 
@@ -826,7 +828,9 @@ class TgUploader:
                 )
                 
                 if self.__current_cover and await aiopath.exists(self.__current_cover):
-                    await self.__set_video_cover(nrml_media, self.__current_cover, cap_mono, buttons)
+                    # BUG FIX: 'buttons' was incorrectly passed as 4th positional arg
+                    # (caption_entities). Must use keyword arg so it maps to 'buttons' param.
+                    await self.__set_video_cover(nrml_media, self.__current_cover, cap_mono, buttons=buttons)
                 
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
                     try:
