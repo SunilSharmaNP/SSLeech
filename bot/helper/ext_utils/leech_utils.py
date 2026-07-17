@@ -176,7 +176,14 @@ async def get_audio_thumb(audio_file):
         "copy",
         des_dir,
     ]
-    status = await create_subprocess_exec(*cmd, stderr=PIPE)
+    try:
+        status = await create_subprocess_exec(*cmd, stderr=PIPE)
+    except FileNotFoundError:
+        LOGGER.error(
+            f"Audio thumb failed: binary '{BinConfig.FFMPEG_NAME}' not found. "
+            f"Check Dockerfile symlink. Name: {audio_file}"
+        )
+        return None
     await status.wait()
     if status.returncode != 0 or not await aiopath.exists(des_dir):
         err = (await status.stderr.read()).decode().strip()
@@ -227,7 +234,20 @@ async def take_ss(video_file, duration=None, total=1, gen_ss=False):
             return (task, await task.wait(), eq_thumb)
 
     tasks = [extract_ss(eq_thumb) for eq_thumb in range(1, total + 1)]
-    status = await gather(*tasks)
+    try:
+        status = await gather(*tasks)
+    except FileNotFoundError:
+        LOGGER.error(
+            f"take_ss failed: binary '{BinConfig.FFMPEG_NAME}' not found. "
+            f"Check Dockerfile symlink — likely 'ln -sf /usr/bin/ffmpeg' path is wrong. "
+            f"File: {video_file}"
+        )
+        await aiormtree(des_dir)
+        return None
+    except Exception as e:
+        LOGGER.error(f"take_ss unexpected error: {e}. File: {video_file}")
+        await aiormtree(des_dir)
+        return None
 
     for task, rtype, eq_thumb in status:
         if rtype != 0 or not await aiopath.exists(
