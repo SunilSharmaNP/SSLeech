@@ -17,11 +17,25 @@ asyncio.set_event_loop(bot_loop)
 setdefaulttimeout(600)
 
 # ── Binary Name Config (Heroku Ban Bypass) ───────────────────────────────────
+# Aliases are created as symlinks in Dockerfile. If the symlink is missing/broken
+# (e.g. base image moved the binary), we fall back to the real binary name so
+# ffmpeg/rclone/aria2c still work without requiring a Docker rebuild.
+import shutil as _shutil
+
+def _resolve(alias: str, *fallbacks: str) -> str:
+    """Return alias if it exists on PATH, else the first fallback that exists."""
+    if _shutil.which(alias):
+        return alias
+    for fb in fallbacks:
+        if _shutil.which(fb):
+            return fb
+    return alias  # last resort – keep alias so error messages name the intended binary
+
 class BinConfig:
-    ARIA2_NAME   = "blitzfetcher"   # actual: aria2c
-    QBIT_NAME    = "stormtorrent"   # actual: qbittorrent-nox
-    FFMPEG_NAME  = "mediaforge"     # actual: ffmpeg
-    RCLONE_NAME  = "ghostdrive"     # actual: rclone
+    ARIA2_NAME   = _resolve("blitzfetcher",   "aria2c")
+    QBIT_NAME    = _resolve("stormtorrent",   "qbittorrent-nox")
+    FFMPEG_NAME  = _resolve("mediaforge",     "ffmpeg")
+    RCLONE_NAME  = _resolve("ghostdrive",     "rclone")
 # ─────────────────────────────────────────────────────────────────────────────
 
 
