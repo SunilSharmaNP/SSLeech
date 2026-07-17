@@ -748,6 +748,8 @@ class TgUploader:
                 if self.__is_cancelled:
                     return
                 buttons = await self.__buttons(self.__up_path, is_video)
+                # FIX: removed invalid 'disable_content_type_detection' parameter
+                # That is a Telegram Bot API param, not valid in Pyrogram MTProto
                 nrml_media = await self.__client.send_document(
                     chat_id=self.__sent_msg.chat.id,
                     reply_to_message_id=self.__sent_msg.id,
@@ -755,7 +757,6 @@ class TgUploader:
                     thumb=thumb,
                     caption=cap_mono,
                     force_document=True,
-                    disable_content_type_detection=False,
                     disable_notification=True,
                     progress=self.__upload_progress,
                     reply_markup=buttons,
