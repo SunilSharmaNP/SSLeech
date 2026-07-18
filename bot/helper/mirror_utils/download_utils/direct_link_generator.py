@@ -2479,31 +2479,36 @@ def luluvdo(url):
     """
     try:
         origin = "https://" + (urlparse(url).hostname or "luluvdo.com")
-        # luluvdo.com is behind Cloudflare. Plain Python requests without
-        # full browser headers get a 403. Must send Accept / Accept-Language /
-        # Sec-Fetch-* so Cloudflare passes the request as a real browser.
+        # luluvdo.com is behind Cloudflare.
+        # Plain requests.Session() gets 403 because Cloudflare inspects the
+        # TLS/JA3 fingerprint and HTTP headers — Python's ssl library produces
+        # a fingerprint that Cloudflare recognises as a bot.
+        #
+        # Fix priority:
+        #   1. curl_cffi with impersonate="chrome" — spoofs Chrome's exact TLS
+        #      handshake (JA3/JA4) so Cloudflare can't distinguish from a real
+        #      browser.  Best option; available when yt-dlp[curl-cffi] is in
+        #      requirements.txt.
+        #   2. cloudscraper — executes Cloudflare's JS challenge in Python.
+        #      Good fallback when curl_cffi is absent.
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/125.0.0.0 Safari/537.36"
-            ),
             "Referer": origin + "/",
             "Accept": (
                 "text/html,application/xhtml+xml,application/xml;"
                 "q=0.9,image/avif,image/webp,*/*;q=0.8"
             ),
             "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
             "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
             "Cache-Control": "max-age=0",
         }
-        with Session() as session:
-            res = session.get(url, headers=headers, timeout=15)
+        if CurlSession is not None:
+            # curl_cffi — best Cloudflare bypass (TLS fingerprint spoofing)
+            with CurlSession(impersonate="chrome") as curl_sess:
+                res = curl_sess.get(url, headers=headers, timeout=15)
+        else:
+            # cloudscraper — JS-challenge bypass fallback
+            scraper = create_scraper()
+            res = scraper.get(url, headers=headers, timeout=15)
         if res.status_code != 200:
             raise DirectDownloadLinkException(
                 f"ERROR: luluvdo HTTP {res.status_code} for {url}"
