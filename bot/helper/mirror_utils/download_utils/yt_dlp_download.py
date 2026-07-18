@@ -216,107 +216,39 @@ class YoutubeDLHelper:
 
     def __download_direct(self, info_dict, path):
         """
-        Download an HLS stream by calling ffmpeg DIRECTLY as a subprocess.
+        Download CDN-protected HLS using yt-dlp + curl_cffi Chrome impersonation.
 
-        Why not process_ie_result + external_downloader="ffmpeg"?
-        yt-dlp FFmpegFD does NOT reliably forward http_headers to ffmpeg
-        across all yt-dlp versions — result: ffmpeg hits the CDN without
-        Referer/Origin headers and gets HTTP 403.
+        Previous approach (ffmpeg subprocess) got HTTP 403 from tnmr.org CDN because
+        ffmpeg's OpenSSL TLS fingerprint (JA3) is blocked by the CDN's bot detection.
 
-        Fix: skip yt-dlp for the download step entirely. We already have the
-        m3u8 URL and required headers in info_dict, so call ffmpeg directly
-        with explicit -headers so the CDN always receives them.
+        Fix: use yt-dlp's own m3u8 downloader with impersonate="chrome" so that
+        curl_cffi sends Chrome's exact TLS handshake for ALL requests — the master
+        m3u8, variant playlists, and every segment.  The extractor phase is skipped
+        because we pass a pre-built info_dict; process_ie_result jumps straight to
+        the download phase where impersonation takes effect.
         """
-        import shutil
-        import subprocess
-
-        # Resolve URL and headers from info_dict
-        fmts = info_dict.get("formats") or []
-        http_headers = info_dict.get("http_headers") or {}
-
-        if fmts:
-            # Quality was pre-selected in ytdlp.py; formats list has 1 entry
-            fmt = fmts[0]
-            m3u8_url = fmt.get("url") or info_dict.get("webpage_url")
-            http_headers = fmt.get("http_headers") or http_headers
-        else:
-            m3u8_url = (
-                info_dict.get("url")
-                or info_dict.get("webpage_url")
-                or info_dict.get("original_url")
-            )
-
-        if not m3u8_url:
-            self.__onDownloadError("luluvdo: no stream URL found in info_dict")
-            return
-
-        # Resolve ffmpeg binary
-        ffmpeg_bin = (
-            shutil.which(BinConfig.FFMPEG_NAME)
-            or shutil.which("ffmpeg")
-            or BinConfig.FFMPEG_NAME
-        )
-
-        # Build -headers string: "Key: Value\r\n" for every header
-        # ffmpeg requires CRLF between headers and a trailing CRLF
-        header_str = "".join(f"{k}: {v}\r\n" for k, v in http_headers.items())
-
-        # Output path (outtmpl was set in add_download)
-        output_file = ospath.join(path, f"{self.name}.mp4")
-
-        cmd = [
-            ffmpeg_bin,
-            "-y",                        # overwrite without prompting
-            "-hide_banner",
-            "-loglevel", "warning",      # suppress noise; keep warnings/errors
-            "-headers", header_str,      # applied to EVERY request (m3u8 + segments)
-            "-i", m3u8_url,
-            "-c", "copy",                # stream copy - no re-encode
-            "-movflags", "+faststart",   # MP4 faststart
-            output_file,
-        ]
-
-        LOGGER.info(
-            f"luluvdo direct ffmpeg: headers={list(http_headers.keys())} "
-            f"url={m3u8_url[:70]}... output={output_file}"
-        )
+        # Build a clean opts dict: remove any external_downloader=ffmpeg that
+        # may have been set in earlier attempts; let yt-dlp pick its own downloader.
+        opts = {k: v for k, v in self.opts.items()}
+        opts.pop("external_downloader", None)
+        opts.pop("external_downloader_args", None)
+        # impersonate="chrome" → curl_cffi handles ALL HTTP including HLS segments
+        if "impersonate" not in opts:
+            opts["impersonate"] = "chrome"
 
         try:
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            self.__downloading = True
-            _, stderr_b = proc.communicate()  # blocks until ffmpeg finishes
-            rc = proc.returncode
-        except FileNotFoundError:
-            self.__onDownloadError(
-                f"ffmpeg not found: '{ffmpeg_bin}'. "
-                "Check BinConfig / Dockerfile symlinks."
-            )
-            return
-        except Exception as exc:
-            self.__onDownloadError(f"ffmpeg subprocess error: {exc}")
-            return
-
-        if self.__is_cancelled:
-            try:
-                proc.kill()
-            except Exception:
-                pass
+            with YoutubeDL(opts) as ydl:
+                try:
+                    ydl.process_ie_result(info_dict, download=True)
+                except DownloadError as e:
+                    if not self.__is_cancelled:
+                        self.__onDownloadError(str(e))
+                    return
+            if self.__is_cancelled:
+                raise ValueError
+            async_to_sync(self.__listener.onDownloadComplete)
+        except ValueError:
             self.__onDownloadError("Download Stopped by User!")
-            return
-
-        if rc != 0:
-            stderr_txt = stderr_b.decode("utf-8", errors="ignore").strip()
-            tail = stderr_txt[-600:] if stderr_txt else "(no stderr output)"
-            LOGGER.error(f"luluvdo ffmpeg exit {rc}:\n{tail}")
-            self.__onDownloadError(f"ffmpeg exited with code {rc}: {tail[-200:]}")
-            return
-
-        async_to_sync(self.__listener.onDownloadComplete)
-
 
     async def add_download(self, link, path, name, qual, playlist, options, info_dict=None):
         if playlist:
