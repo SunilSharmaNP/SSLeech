@@ -2479,9 +2479,28 @@ def luluvdo(url):
     """
     try:
         origin = "https://" + (urlparse(url).hostname or "luluvdo.com")
+        # luluvdo.com is behind Cloudflare. Plain Python requests without
+        # full browser headers get a 403. Must send Accept / Accept-Language /
+        # Sec-Fetch-* so Cloudflare passes the request as a real browser.
         headers = {
-            "User-Agent": user_agent,
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/125.0.0.0 Safari/537.36"
+            ),
             "Referer": origin + "/",
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;"
+                "q=0.9,image/avif,image/webp,*/*;q=0.8"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
         }
         with Session() as session:
             res = session.get(url, headers=headers, timeout=15)
