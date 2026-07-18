@@ -813,11 +813,13 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     # manifest and every segment with proper Referer/Origin/User-Agent.
     if _is_luluvdo and _lulu_info_dict is not None:
         _lulu_title = name or _lulu_info_dict.get("title", "luluvdo_video")
-        # Guarantee ffmpeg is the downloader regardless of protocol in info_dict
-        ydl_opts["external_downloader"] = "ffmpeg"
-        ydl_opts["external_downloader_args"] = {
-            "ffmpeg_i": ["-headers", _ffmpeg_hdr],
-        }
+        # FIX: ffmpeg uses OpenSSL TLS fingerprint which tnmr.org CDN blocks (JA3 check).
+        # curl_cffi with impersonate="chrome" sends Chrome's exact TLS handshake for
+        # ALL requests (m3u8 manifest + every segment) — CDN can't distinguish from browser.
+        # yt-dlp[curl-cffi] is in requirements.txt so this is always available.
+        ydl_opts.pop("external_downloader", None)
+        ydl_opts.pop("external_downloader_args", None)
+        ydl_opts["impersonate"] = "chrome"
         ydl_opts["http_headers"] = _lulu_http_headers
 
         # Quality selection — show buttons when multiple variants are available
@@ -845,7 +847,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
         __run_multi()
         await delete_links(message)
-        LOGGER.info(f"luluvdo: process_ie_result+ffmpeg → {link[:80]}… qual={_lulu_sel_qual}")
+        LOGGER.info(f"luluvdo: process_ie_result+curl_cffi(chrome) → {link[:80]}… qual={_lulu_sel_qual}")
         ydl = YoutubeDLHelper(listener)
         await ydl.add_download(
             link, path, _lulu_title, _lulu_sel_qual,
@@ -903,3 +905,4 @@ bot.add_handler(
         & ~CustomFilters.blacklisted,
     )
 )
+
