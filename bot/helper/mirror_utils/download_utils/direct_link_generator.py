@@ -3,7 +3,10 @@ from os import path as ospath, listdir
 from secrets import token_hex
 from logging import getLogger
 from yt_dlp import YoutubeDL, DownloadError
-from yt_dlp.networking.impersonate import ImpersonateTarget
+try:
+    from yt_dlp.networking.impersonate import ImpersonateTarget
+except ImportError:
+    ImpersonateTarget = None
 from re import search as re_search
 
 from bot import download_dict_lock, download_dict, non_queued_dl, queue_dict_lock
@@ -235,7 +238,7 @@ class YoutubeDLHelper:
         opts.pop("external_downloader_args", None)
         # impersonate="chrome" → curl_cffi handles ALL HTTP including HLS segments
         if "impersonate" not in opts:
-            opts["impersonate"] = ImpersonateTarget("chrome")
+            opts["impersonate"] = ImpersonateTarget("chrome") if ImpersonateTarget is not None else "chrome"
 
         try:
             with YoutubeDL(opts) as ydl:
