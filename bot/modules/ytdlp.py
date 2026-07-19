@@ -5,6 +5,10 @@ from asyncio import sleep, wait_for, Event, wrap_future
 from aiohttp import ClientSession
 from aiofiles.os import path as aiopath
 from yt_dlp import YoutubeDL
+try:
+    from yt_dlp.networking.impersonate import ImpersonateTarget
+except ImportError:
+    ImpersonateTarget = None
 from functools import partial
 from time import time
 
@@ -819,7 +823,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         # yt-dlp[curl-cffi] is in requirements.txt so this is always available.
         ydl_opts.pop("external_downloader", None)
         ydl_opts.pop("external_downloader_args", None)
-        ydl_opts["impersonate"] = "chrome"
+        ydl_opts["impersonate"] = ImpersonateTarget("chrome") if ImpersonateTarget is not None else "chrome"
         ydl_opts["http_headers"] = _lulu_http_headers
 
         # Quality selection — show buttons when multiple variants are available
