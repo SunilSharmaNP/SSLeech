@@ -66,8 +66,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
  && rm -rf /var/lib/apt/lists/*
 
-# ── 2. rclone (latest stable via official installer) ─────────
-RUN curl -fsSL https://rclone.org/install.sh | bash \
+# ── 2. rclone (latest stable — direct binary download) ───────
+#    Using direct binary instead of install.sh (more reliable in CI)
+RUN ARCH=$(dpkg --print-architecture) \
+ && case "$ARCH" in \
+      amd64) RC_ARCH="amd64" ;; \
+      arm64) RC_ARCH="arm64" ;; \
+      armhf) RC_ARCH="arm-v7" ;; \
+      *)     echo "Unsupported arch: $ARCH" && exit 1 ;; \
+    esac \
+ && RC_VERSION=$(curl -fsSL "https://api.github.com/repos/rclone/rclone/releases/latest" \
+      | grep '"tag_name"' | head -1 | cut -d'"' -f4) \
+ && echo "Installing rclone ${RC_VERSION} for ${RC_ARCH}" \
+ && curl -fsSL "https://github.com/rclone/rclone/releases/download/${RC_VERSION}/rclone-${RC_VERSION}-linux-${RC_ARCH}.zip" \
+      -o /tmp/rclone.zip \
+ && unzip -q /tmp/rclone.zip -d /tmp/rclone-tmp \
+ && mv /tmp/rclone-tmp/rclone-*/rclone /usr/local/bin/rclone \
+ && chmod +x /usr/local/bin/rclone \
+ && rm -rf /tmp/rclone.zip /tmp/rclone-tmp \
  && rclone version
 
 # ── 3. qBittorrent-nox static binary ─────────────────────────
