@@ -314,14 +314,19 @@ def wztgClient(*args, **kwargs):
     return tgClient(*args, **kwargs)
 
 
-def _compat_start(client):
+def _compat_start(client, timeout=None):
     """Start a Pyrogram client compatible with both:
     - PyroTGFork: start() is sync (returns self directly)
     - Kurigram / vanilla Pyrogram: start() is async (must be awaited)
+    Optional timeout (seconds) applies only to async start().
     """
     import asyncio as _asyncio
     if _asyncio.iscoroutinefunction(client.start):
-        return bot_loop.run_until_complete(client.start())
+        async def _run():
+            if timeout:
+                return await _asyncio.wait_for(client.start(), timeout=timeout)
+            return await client.start()
+        return bot_loop.run_until_complete(_run())
     return client.start()
 
 
@@ -347,8 +352,17 @@ if len(USER_SESSION_STRING) != 0:
             session_string=USER_SESSION_STRING,
             parse_mode=enums.ParseMode.HTML,
             no_updates=True,
-        ))
+        ), timeout=30)
         IS_PREMIUM_USER = user.me.is_premium
+    except asyncio.TimeoutError:
+        log_error(
+            "USER_SESSION_STRING client timed out after 30s.\n"
+            "  Possible causes:\n"
+            "  1. Session string was generated with a different library (PyroTGFork vs Kurigram) — regenerate it\n"
+            "  2. Telegram DC unreachable / network issue on Heroku\n"
+            "Continuing without user session."
+        )
+        user = ""
     except Exception as e:
         log_error(f"Failed making client from USER_SESSION_STRING : {e}")
         user = ""
