@@ -75,9 +75,7 @@ class YoutubeDLHelper:
             "overwrites": True,
             "writethumbnail": True,
             "trim_file_name": 220,
-            # BUG FIX: /bin/ was hardcoded but ffmpeg lives at /usr/bin/ or /usr/local/bin/
-            # Use shutil.which() to find the actual binary path at runtime.
-            "ffmpeg_location": __import__("shutil").which(BinConfig.FFMPEG_NAME) or __import__("shutil").which("ffmpeg") or BinConfig.FFMPEG_NAME,
+            "ffmpeg_location": f"/bin/{BinConfig.FFMPEG_NAME}",
             "fragment_retries": 10,
             "retries": 10,
             "retry_sleep_functions": {
@@ -216,28 +214,17 @@ class YoutubeDLHelper:
 
     def __download_direct(self, info_dict, path):
         """
-        Download CDN-protected HLS using yt-dlp + curl_cffi Chrome impersonation.
+        Download using a pre-built yt-dlp info dict, bypassing all extractors.
 
-        Previous approach (ffmpeg subprocess) got HTTP 403 from tnmr.org CDN because
-        ffmpeg's OpenSSL TLS fingerprint (JA3) is blocked by the CDN's bot detection.
-
-        Fix: use yt-dlp's own m3u8 downloader with impersonate="chrome" so that
-        curl_cffi sends Chrome's exact TLS handshake for ALL requests — the master
-        m3u8, variant playlists, and every segment.  The extractor phase is skipped
-        because we pass a pre-built info_dict; process_ie_result jumps straight to
-        the download phase where impersonation takes effect.
+        Used for sites like luluvdo.com where yt-dlp's generic extractor
+        triggers a 403 from the CDN during its 'Downloading webpage' phase.
+        With process_ie_result the extractor phase is skipped entirely;
+        yt-dlp hands the format dict directly to FFmpegFD which fetches the
+        HLS manifest and segments using ffmpeg's -headers flag — so the CDN
+        only ever sees a plain ffmpeg request with browser-like headers.
         """
-        # Build a clean opts dict: remove any external_downloader=ffmpeg that
-        # may have been set in earlier attempts; let yt-dlp pick its own downloader.
-        opts = {k: v for k, v in self.opts.items()}
-        opts.pop("external_downloader", None)
-        opts.pop("external_downloader_args", None)
-        # impersonate="chrome" → curl_cffi handles ALL HTTP including HLS segments
-        if "impersonate" not in opts:
-            opts["impersonate"] = "chrome"
-
         try:
-            with YoutubeDL(opts) as ydl:
+            with YoutubeDL(self.opts) as ydl:
                 try:
                     ydl.process_ie_result(info_dict, download=True)
                 except DownloadError as e:
