@@ -1,7 +1,7 @@
 aiohttp[speedups]
 aiofiles
 aioshutil
-anytree==2.8.0
+anytree==2.13.0
 imdbinfo
 apscheduler
 aria2p
@@ -9,7 +9,6 @@ asyncio
 beautifulsoup4
 lxml
 cloudscraper
-cryptography
 dnspython
 flask
 gevent
@@ -44,4 +43,3 @@ google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
 langcodes
-language-data
