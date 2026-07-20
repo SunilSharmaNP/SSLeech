@@ -66,20 +66,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
  && rm -rf /var/lib/apt/lists/*
 
-# ── 2. rclone (stable fixed version — most reliable in CI) ───
-RUN ARCH=$(dpkg --print-architecture) \
- && case "$ARCH" in \
-      amd64) RC_ARCH="amd64" ;; \
-      arm64) RC_ARCH="arm64" ;; \
-      armhf) RC_ARCH="arm-v7" ;; \
-      *)     echo "Unsupported arch: $ARCH" && exit 1 ;; \
-    esac \
- && curl -fsSL "https://downloads.rclone.org/rclone-current-linux-${RC_ARCH}.zip" \
-      -o /tmp/rclone.zip \
- && unzip -q /tmp/rclone.zip -d /tmp/rclone-tmp \
- && mv /tmp/rclone-tmp/rclone-*/rclone /usr/local/bin/rclone \
- && chmod +x /usr/local/bin/rclone \
- && rm -rf /tmp/rclone.zip /tmp/rclone-tmp \
+# ── 2. rclone (via apt — simplest & most reliable in CI) ─────
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends rclone \
+ && rm -rf /var/lib/apt/lists/* \
  && rclone version
 
 # ── 3. qBittorrent-nox static binary ─────────────────────────
