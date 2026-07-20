@@ -314,6 +314,17 @@ def wztgClient(*args, **kwargs):
     return tgClient(*args, **kwargs)
 
 
+def _compat_start(client):
+    """Start a Pyrogram client compatible with both:
+    - PyroTGFork: start() is sync (returns self directly)
+    - Kurigram / vanilla Pyrogram: start() is async (must be awaited)
+    """
+    import asyncio as _asyncio
+    if _asyncio.iscoroutinefunction(client.start):
+        return bot_loop.run_until_complete(client.start())
+    return client.start()
+
+
 IS_PREMIUM_USER = False
 user = ""
 USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
@@ -329,14 +340,14 @@ if len(USER_SESSION_STRING) != 0:
                 osremove(_user_session_file)
             except Exception:
                 pass
-        user = wztgClient(
+        user = _compat_start(wztgClient(
             "user",
             TELEGRAM_API,
             TELEGRAM_HASH,
             session_string=USER_SESSION_STRING,
             parse_mode=enums.ParseMode.HTML,
             no_updates=True,
-        ).start()
+        ))
         IS_PREMIUM_USER = user.me.is_premium
     except Exception as e:
         log_error(f"Failed making client from USER_SESSION_STRING : {e}")
@@ -1069,14 +1080,14 @@ if ospath.exists(_bot_session_file):
         osremove(_bot_session_file)
     except Exception:
         pass
-bot = wztgClient(
+bot = _compat_start(wztgClient(
     "bot",
     TELEGRAM_API,
     TELEGRAM_HASH,
     bot_token=BOT_TOKEN,
     workers=min(32, cpu_no + 4),
     parse_mode=enums.ParseMode.HTML,
-).start()
+))
 # bot_loop is already set at module top (wzv3 style) — do NOT use bot.loop
 # bot.loop is deprecated in Python 3.10+ and removed in 3.14
 bot_name = bot.me.username
@@ -1103,7 +1114,7 @@ if _ADDITIONAL_BOT_TOKENS.strip():
                     osremove(_extra_session_file)
                 except Exception:
                     pass
-            _extra_client = wztgClient(
+            _extra_client = _compat_start(wztgClient(
                 f"extra_bot_{_idx}",
                 TELEGRAM_API,
                 TELEGRAM_HASH,
@@ -1111,7 +1122,7 @@ if _ADDITIONAL_BOT_TOKENS.strip():
                 in_memory=True,
                 no_updates=True,
                 parse_mode=enums.ParseMode.HTML,
-            ).start()
+            ))
             EXTRA_BOT_CLIENTS.append(_extra_client)
             log_info(f"Extra bot session started for fast downloads: extra_bot_{_idx}")
         except Exception as e:
