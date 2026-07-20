@@ -1,0 +1,227 @@
+# ============================================================
+#  SSLeech Base Image
+#  Repo   : https://github.com/SunilSharmaNP/SSLeech
+#  Branch : lp
+#
+#  Build : docker build -f Dockerfile.base -t sunilsharmanp/ssleech-base:latest .
+#  Push  : docker push sunilsharmanp/ssleech-base:latest
+#
+#  This base image is intentionally fat — it bakes in every
+#  binary the bot needs so the main Dockerfile only needs to
+#  COPY code + pip install requirements. Rebuild base only
+#  when you add/upgrade a system binary.
+# ============================================================
+
+FROM python:3.13-slim-bookworm
+
+# ── Labels ───────────────────────────────────────────────────
+LABEL maintainer="SunilSharmaNP"
+LABEL org.opencontainers.image.source="https://github.com/SunilSharmaNP/SSLeech"
+LABEL description="SSLeech base image — Python 3.13, ffmpeg, aria2c, rclone, qbittorrent-nox, 7z, mediainfo + Heroku bypass aliases"
+
+# ── Environment ───────────────────────────────────────────────
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Bot uses these names via BinConfig — symlinked below
+    ARIA2_NAME=blitzfetcher \
+    FFMPEG_NAME=mediaforge \
+    RCLONE_NAME=ghostdrive \
+    QBIT_NAME=stormtorrent
+
+# ── 1. System packages ────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # ── Core utils ─────────────────────────────────────────
+    curl wget ca-certificates gnupg lsb-release \
+    # ── Git — needed by update.py (git reset/pull on every start) ──
+    git \
+    # ── Build tools (some pip wheels need these) ───────────
+    gcc g++ make \
+    # ── Media ──────────────────────────────────────────────
+    ffmpeg \
+        # ffprobe is bundled inside ffmpeg package ↑
+    # ── Aria2c — direct + torrent downloads ────────────────
+    aria2 \
+    # ── 7zip — archive extract/compress + accounts.zip ─────
+    p7zip-full \
+    # ── MediaInfo — /mediainfo command ─────────────────────
+    mediainfo \
+    # ── file magic for python-magic ────────────────────────
+    libmagic1 \
+    # ── xattr — needed by xattr pip package ────────────────
+    attr libattr1-dev \
+    # ── GNU split — binary file splitting in leech_utils ───
+    coreutils \
+    # ── Process tools ──────────────────────────────────────
+    procps \
+    # ── zip/unzip — archive support ────────────────────────
+    unzip zip \
+    # ── pv — optional pipe progress ────────────────────────
+    pv \
+    # ── jq — JSON parsing in scripts ───────────────────────
+    jq \
+    # ── tzdata — timezone support ──────────────────────────
+    tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+# ── 2. rclone (latest stable via official installer) ─────────
+RUN curl -fsSL https://rclone.org/install.sh | bash \
+ && rclone version
+
+# ── 3. qBittorrent-nox static binary ─────────────────────────
+#    Using upstream static builds (no libc dependency)
+RUN ARCH=$(dpkg --print-architecture) \
+ && case "$ARCH" in \
+      amd64)  QB_URL="https://github.com/userdocs/qbittorrent-nox-static/releases/latest/download/x86_64-qbittorrent-nox" ;; \
+      arm64)  QB_URL="https://github.com/userdocs/qbittorrent-nox-static/releases/latest/download/aarch64-qbittorrent-nox" ;; \
+      armhf)  QB_URL="https://github.com/userdocs/qbittorrent-nox-static/releases/latest/download/armv7-qbittorrent-nox" ;; \
+      *)      echo "Unsupported arch: $ARCH" && exit 1 ;; \
+    esac \
+ && curl -fsSL "$QB_URL" -o /usr/local/bin/qbittorrent-nox \
+ && chmod +x /usr/local/bin/qbittorrent-nox \
+ && qbittorrent-nox --version
+
+# ── 4. Heroku Ban Bypass Symlinks ────────────────────────────
+#    Bot's BinConfig (bot/__init__.py) resolves these names first.
+#    Symlinks point to the real binaries so the OS finds them.
+#
+#    Real binary      →  Alias (bypass name)
+#    ─────────────────────────────────────────
+#    aria2c           →  blitzfetcher
+#    ffmpeg           →  mediaforge
+#    rclone           →  ghostdrive
+#    qbittorrent-nox  →  stormtorrent
+#
+RUN ARIA2C_PATH="$(which aria2c)" \
+ && FFMPEG_PATH="$(which ffmpeg)" \
+ && RCLONE_PATH="$(which rclone)" \
+ && QBIT_PATH="$(which qbittorrent-nox)" \
+ \
+ && ln -sf "$ARIA2C_PATH"  /usr/local/bin/blitzfetcher \
+ && ln -sf "$FFMPEG_PATH"  /usr/local/bin/mediaforge \
+ && ln -sf "$RCLONE_PATH"  /usr/local/bin/ghostdrive \
+ && ln -sf "$QBIT_PATH"    /usr/local/bin/stormtorrent \
+ \
+ # ── Verify all aliases resolve correctly ──
+ && echo "=== Alias Verification ===" \
+ && echo "blitzfetcher  → $(readlink -f $(which blitzfetcher))" \
+ && echo "mediaforge    → $(readlink -f $(which mediaforge))" \
+ && echo "ghostdrive    → $(readlink -f $(which ghostdrive))" \
+ && echo "stormtorrent  → $(readlink -f $(which stormtorrent))" \
+ && echo "=========================" \
+ \
+ # ── Quick smoke tests ──
+ && blitzfetcher  --version 2>&1 | head -1 \
+ && mediaforge    -version  2>&1 | head -1 \
+ && ghostdrive    version   2>&1 | head -1 \
+ && stormtorrent  --version 2>&1 | head -1
+
+# ── 5. Python base tooling upgrade ───────────────────────────
+RUN pip3 install --upgrade pip setuptools wheel
+
+# ── 6. Pre-install heavy/stable Python deps ──────────────────
+#    These change rarely — caching them here speeds up the main
+#    Dockerfile's pip install step. Bot-specific deps go in the
+#    main Dockerfile (they change often with upstream updates).
+RUN pip3 install --no-cache-dir \
+    # Async HTTP — core dep for almost everything
+    aiohttp[speedups] \
+    aiofiles \
+    aioshutil \
+    # Telegram framework
+    pyrofork==2.2.11 \
+    pytgcrypto \
+    # MongoDB
+    motor \
+    pymongo \
+    # Google APIs
+    google-auth \
+    google-auth-oauthlib \
+    google-auth-httplib2 \
+    google-api-python-client \
+    # Crypto / security
+    cryptography>=41.0.0 \
+    # yt-dlp with curl-cffi (CDN bypass needed by direct_link_generator.py)
+    "yt-dlp[default,curl-cffi]" \
+    # Event loop performance
+    uvloop \
+    # qBittorrent Python API
+    qbittorrent-api \
+    # aria2 Python API
+    aria2p \
+    # File utils
+    python-magic \
+    natsort \
+    pillow \
+    mutagen \
+    # HTTP
+    requests \
+    httpx \
+    cloudscraper \
+    # Scheduling
+    apscheduler \
+    # Misc
+    psutil \
+    pybase64 \
+    pycountry \
+    python-dotenv \
+    telegraph \
+    tenacity \
+    pytz \
+    tzlocal \
+    langcodes \
+    language-data \
+    anytree==2.8.0 \
+    beautifulsoup4 \
+    lxml \
+    flask \
+    gevent \
+    gunicorn \
+    dnspython \
+    speedtest-cli \
+    xattr \
+    imdbinfo \
+    uv
+
+# ── 7. python3 → python symlink (update.py uses pip3/python3) ─
+RUN ln -sf /usr/bin/python3 /usr/bin/python \
+ && ln -sf /usr/bin/pip3   /usr/bin/pip
+
+# ── 8. Runtime binary check script ───────────────────────────
+COPY <<'EOF' /usr/local/bin/check-bins.sh
+#!/bin/bash
+echo ""
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║         SSLeech Base Image — Binary Check            ║"
+echo "╠══════════════════════════════════════════════════════╣"
+printf "║  %-20s → %-28s║\n" "ALIAS" "REAL PATH"
+echo "╠══════════════════════════════════════════════════════╣"
+for entry in \
+    "blitzfetcher:aria2c" \
+    "mediaforge:ffmpeg" \
+    "ghostdrive:rclone" \
+    "stormtorrent:qbittorrent-nox"; do
+    alias="${entry%%:*}"
+    fallback="${entry##*:}"
+    resolved_path=$(which "$alias" 2>/dev/null || echo "MISSING")
+    real_path=$(readlink -f "$resolved_path" 2>/dev/null || echo "N/A")
+    printf "║  %-20s → %-28s║\n" "$alias" "$(basename $real_path)"
+done
+echo "╠══════════════════════════════════════════════════════╣"
+for binary in ffmpeg ffprobe aria2c rclone qbittorrent-nox 7z mediainfo python3 git; do
+    ver=$(command -v "$binary" > /dev/null 2>&1 && echo "✓ found" || echo "✗ MISSING")
+    printf "║  %-20s  %-30s║\n" "$binary" "$ver"
+done
+echo "╚══════════════════════════════════════════════════════╝"
+echo ""
+EOF
+RUN chmod +x /usr/local/bin/check-bins.sh
+
+# ── 9. Working directory ──────────────────────────────────────
+WORKDIR /usr/src/app
+RUN chmod 777 /usr/src/app
+
+# ── Default shell for debugging ───────────────────────────────
+CMD ["bash"]
