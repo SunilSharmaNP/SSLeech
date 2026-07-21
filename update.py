@@ -29,6 +29,12 @@ from subprocess import call as scall
 from subprocess import run as srun
 from sys import exit
 
+try:
+    from pymongo.server_api import ServerApi as _ServerApi
+    _MONGO_SERVER_API = _ServerApi("1")
+except ImportError:
+    _MONGO_SERVER_API = None
+
 getLogger("pymongo").setLevel(ERROR)
 _LOGGER = getLogger("update")
 
@@ -76,7 +82,10 @@ def _fetch_config_from_db(database_url, bot_id):
     try:
         from pymongo import MongoClient
 
-        conn = MongoClient(database_url, serverSelectionTimeoutMS=8000)
+        _kwargs = {"serverSelectionTimeoutMS": 8000}
+        if _MONGO_SERVER_API:
+            _kwargs["server_api"] = _MONGO_SERVER_API
+        conn = MongoClient(database_url, **_kwargs)
         doc = conn.wzmlx.settings.config.find_one({"_id": bot_id})
         conn.close()
         if doc:
@@ -227,8 +236,11 @@ def _update_packages():
     """
     from shutil import which
 
-    # UPGRADE_PACKAGES may have been loaded from MongoDB into os.environ above
-    upgrade = environ.get("UPGRADE_PACKAGES", "true").lower().strip()
+    # UPGRADE_PACKAGES or UPDATE_PKGS (alias) may be loaded from MongoDB/Heroku.
+    # Default = True so every restart pulls the latest lib versions from upstream.
+    upgrade = (
+        environ.get("UPGRADE_PACKAGES") or environ.get("UPDATE_PKGS") or "true"
+    ).lower().strip()
     force_upgrade = upgrade not in ("false", "0", "no")
 
     _LOGGER.info(
@@ -317,7 +329,7 @@ def main():
             "All required vars must be in Heroku config vars."
         )
 
-    upstream_branch = upstream_branch or "merge"
+    upstream_branch = upstream_branch or "ssleech-hk"
 
     # ── Step 3: Pull upstream code (gets updated requirements.txt) ────────────
     _run_update(upstream_repo, upstream_branch)
