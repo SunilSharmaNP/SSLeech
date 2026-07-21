@@ -56,11 +56,15 @@ def _get_essential(key):
     return ""
 
 
-def _fetch_upstream_from_db(database_url, bot_id):
+def _fetch_config_from_db(database_url, bot_id):
     """
-    Connect to MongoDB (synchronous pymongo) and return
-    (UPSTREAM_REPO, UPSTREAM_BRANCH) stored via botsettings.
-    Returns ("", "") on any error.
+    Connect to MongoDB and:
+      1. Inject ALL saved config vars into os.environ (Heroku vars take priority).
+      2. Return (UPSTREAM_REPO, UPSTREAM_BRANCH).
+
+    Doing this here means bot/__init__.py can find TELEGRAM_API, TELEGRAM_HASH,
+    OWNER_ID etc. in os.environ even if its own MongoDB call fails or the
+    deployConfig-change guard skips the load.
     """
     try:
         from pymongo import MongoClient
@@ -69,11 +73,20 @@ def _fetch_upstream_from_db(database_url, bot_id):
         doc = conn.wzmlx.settings.config.find_one({"_id": bot_id})
         conn.close()
         if doc:
-            repo = str(doc.get("UPSTREAM_REPO") or "").strip()
+            loaded = 0
+            for key, value in doc.items():
+                if key == "_id" or value is None:
+                    continue
+                # Heroku config vars already in environ take priority
+                if not environ.get(key):
+                    environ[key] = str(value)
+                    loaded += 1
+            _LOGGER.info(f"MongoDB: {loaded} config var(s) pre-loaded into environment.")
+            repo   = str(doc.get("UPSTREAM_REPO")   or "").strip()
             branch = str(doc.get("UPSTREAM_BRANCH") or "").strip()
             return repo, branch
     except Exception as e:
-        _LOGGER.warning(f"MongoDB: could not fetch upstream config — {e}")
+        _LOGGER.warning(f"MongoDB: could not load config — {e}")
     return "", ""
 
 
@@ -141,23 +154,41 @@ def _run_update(upstream_repo, upstream_branch):
 
 
 def _update_packages():
+    """
+    Install / upgrade packages from requirements.txt.
+
+    Priority:
+      1. uv  — fast Rust-based installer, present in newer base images.
+               Must use --system so it doesn't demand a venv.
+      2. /wzvenv/bin/pip  — virtualenv bundled in some base images.
+      3. System pip (pip3 / pip) via shutil.which — PEP-668 safe with
+               --break-system-packages on Python 3.12+.
+    """
+    from shutil import which
+
     _LOGGER.info("Checking packages against requirements.txt ...")
-    # Prefer the base-image venv pip (/wzvenv/bin/pip) over system pip.
-    # System pip on Python 3.14 in the wzmlx Docker image rejects installs with
-    # PEP 668 "externally-managed-environment" error unless --break-system-packages
-    # is passed. The venv at /wzvenv is always writable and the correct target.
-    # Detect the correct pip: prefer venv pips, fall back to system pip.
-    # /wzvenv is the base-image venv on some wzmlx builds; other builds ship
-    # packages differently. --break-system-packages is the safe fallback for
-    # PEP-668 "externally-managed-environment" environments (Python 3.12+).
-    _pip_candidates = ["/wzvenv/bin/pip", "/usr/local/bin/pip", "pip3", "pip"]
-    _pip_bin = next((p for p in _pip_candidates if path.exists(p)), "pip")
-    pip_cmd = (
-        f"{_pip_bin} install -r requirements.txt -q "
-        "--no-warn-script-location "
-        "--upgrade-strategy only-if-needed "
-        "--break-system-packages"
-    )
+
+    # ── 1. Try uv first (handles the 'No virtual environment found' error by
+    #        adding --system, which installs into the system Python) ──────────
+    uv_bin = which("uv")
+    if uv_bin:
+        pip_cmd = f"{uv_bin} pip install --system -r requirements.txt -q"
+        _LOGGER.info(f"Package installer: uv ({uv_bin})")
+    else:
+        # ── 2. Absolute-path venv pip (base image) ───────────────────────────
+        _pip_candidates = ["/wzvenv/bin/pip", "/usr/local/bin/pip"]
+        _pip_bin = next((p for p in _pip_candidates if path.exists(p)), None)
+        # ── 3. System pip via PATH ─────────────────────────────────────────────
+        if not _pip_bin:
+            _pip_bin = which("pip3") or which("pip") or "pip3"
+        pip_cmd = (
+            f"{_pip_bin} install -r requirements.txt -q "
+            "--no-warn-script-location "
+            "--upgrade-strategy only-if-needed "
+            "--break-system-packages"
+        )
+        _LOGGER.info(f"Package installer: pip ({_pip_bin})")
+
     ret = scall(pip_cmd, shell=True)
     if ret == 0:
         _LOGGER.info("Successfully Updated all the Packages !")
@@ -188,14 +219,13 @@ def main():
     upstream_repo = _get_essential("UPSTREAM_REPO")
     upstream_branch = _get_essential("UPSTREAM_BRANCH")
 
-    if database_url and (not upstream_repo or not upstream_branch):
-        db_repo, db_branch = _fetch_upstream_from_db(database_url, bot_id)
+    if database_url:
+        db_repo, db_branch = _fetch_config_from_db(database_url, bot_id)
         if db_repo and not upstream_repo:
             upstream_repo = db_repo
-            _LOGGER.info("MongoDB: UPSTREAM_REPO loaded from botsettings.")
+            _LOGGER.info("MongoDB: UPSTREAM_REPO loaded from database.")
         if db_branch and not upstream_branch:
             upstream_branch = db_branch
-        _LOGGER.info("MongoDB: startup config loaded.")
 
     upstream_branch = upstream_branch or "merge"
 
