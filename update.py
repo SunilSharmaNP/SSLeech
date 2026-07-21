@@ -235,23 +235,43 @@ def _update_packages():
         f"Updating packages (UPGRADE_PACKAGES={force_upgrade}) ..."
     )
 
-    uv_bin = which("uv")
-    if uv_bin:
-        upgrade_flag = "-U " if force_upgrade else ""
-        pip_cmd = f"{uv_bin} pip install --system {upgrade_flag}-r requirements.txt -q"
-        _LOGGER.info(f"Package installer: uv ({uv_bin})")
-    else:
-        _pip_candidates = ["/wzvenv/bin/pip", "/usr/local/bin/pip"]
-        _pip_bin = next((p for p in _pip_candidates if path.exists(p)), None)
-        if not _pip_bin:
-            _pip_bin = which("pip3") or which("pip") or "pip3"
+    # ── Installer selection ──────────────────────────────────────────────────
+    # Priority:
+    #   1. Activated venv pip (VIRTUAL_ENV is set — Heroku buildpack activates
+    #      one via start.sh). Using the venv's own pip avoids the
+    #      "uv: No virtual environment found" error that occurs when uv is
+    #      called with --system inside an already-activated venv.
+    #   2. uv --system (fast, used only when NOT inside a venv)
+    #   3. /wzvenv/bin/pip → pip3 → pip (fallback)
+
+    venv_dir = environ.get("VIRTUAL_ENV", "").strip()
+    venv_pip  = path.join(venv_dir, "bin", "pip") if venv_dir else ""
+
+    if venv_dir and path.exists(venv_pip):
         upgrade_flag = "--upgrade " if force_upgrade else ""
         pip_cmd = (
-            f"{_pip_bin} install {upgrade_flag}-r requirements.txt -q "
-            "--no-warn-script-location "
-            "--break-system-packages"
+            f"{venv_pip} install {upgrade_flag}-r requirements.txt -q "
+            "--no-warn-script-location"
         )
-        _LOGGER.info(f"Package installer: pip ({_pip_bin})")
+        _LOGGER.info(f"Package installer: venv pip ({venv_pip})")
+    else:
+        uv_bin = which("uv")
+        if uv_bin:
+            upgrade_flag = "-U " if force_upgrade else ""
+            pip_cmd = f"{uv_bin} pip install --system {upgrade_flag}-r requirements.txt -q"
+            _LOGGER.info(f"Package installer: uv ({uv_bin})")
+        else:
+            _pip_candidates = ["/wzvenv/bin/pip", "/usr/local/bin/pip"]
+            _pip_bin = next((p for p in _pip_candidates if path.exists(p)), None)
+            if not _pip_bin:
+                _pip_bin = which("pip3") or which("pip") or "pip3"
+            upgrade_flag = "--upgrade " if force_upgrade else ""
+            pip_cmd = (
+                f"{_pip_bin} install {upgrade_flag}-r requirements.txt -q "
+                "--no-warn-script-location "
+                "--break-system-packages"
+            )
+            _LOGGER.info(f"Package installer: pip ({_pip_bin})")
 
     ret = scall(pip_cmd, shell=True)
     if ret == 0:
