@@ -396,11 +396,17 @@ async def load_config():
 
     await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
     BASE_URL = environ.get("BASE_URL", "").rstrip("/")
-    if len(BASE_URL) == 0:
-        BASE_URL = ""
-    else:
+    if not BASE_URL:
+        # Auto-detect from Heroku runtime-dyno-metadata
+        _heroku_app = environ.get("HEROKU_APP_NAME", "").strip()
+        if _heroku_app:
+            BASE_URL = f"https://{_heroku_app}.herokuapp.com"
+            environ["BASE_URL"] = BASE_URL
+    _bind_port = environ.get("PORT") or str(BASE_URL_PORT)
+    if BASE_URL or environ.get("PORT"):
         await create_subprocess_shell(
-            f"gunicorn web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT} --worker-class gevent"
+            f"gunicorn web.wserver:app --bind 0.0.0.0:{_bind_port} "
+            "--workers 1 --worker-class gthread --threads 8 --timeout 120"
         )
 
     UPSTREAM_REPO = environ.get("UPSTREAM_REPO", "")
