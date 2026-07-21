@@ -530,9 +530,21 @@ BASE_URL_PORT = environ.get("PORT") or environ.get("BASE_URL_PORT", "")
 BASE_URL_PORT = 8080 if len(str(BASE_URL_PORT)) == 0 else int(BASE_URL_PORT)
 
 BASE_URL = environ.get("BASE_URL", "").rstrip("/")
-if len(BASE_URL) == 0:
-    log_warning("BASE_URL not provided!")
-    BASE_URL = ""
+if not BASE_URL:
+    # Auto-detect from Heroku runtime-dyno-metadata (enable once with:
+    #   heroku labs:enable runtime-dyno-metadata --app <your-app-name>)
+    _heroku_app = environ.get("HEROKU_APP_NAME", "").strip()
+    if _heroku_app:
+        BASE_URL = f"https://{_heroku_app}.herokuapp.com"
+        environ["BASE_URL"] = BASE_URL          # propagate into config_dict
+        log_info(f"BASE_URL auto-detected: {BASE_URL}")
+    else:
+        log_warning(
+            "BASE_URL not provided! "
+            "Set it via /botsettings, add BASE_URL to Heroku config vars, "
+            "or run: heroku labs:enable runtime-dyno-metadata --app <your-app>"
+        )
+        BASE_URL = ""
 
 UPSTREAM_REPO = environ.get("UPSTREAM_REPO", "")
 if len(UPSTREAM_REPO) == 0:
