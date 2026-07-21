@@ -23,6 +23,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot import (
     BinConfig,
     bot,
+    bot_loop,
     user,
     bot_name,
     config_dict,
@@ -525,7 +526,7 @@ async def stop_signals():
         await bot.stop()
 
 
-bot_run = bot.loop.run_until_complete
+bot_run = bot_loop.run_until_complete
 bot_run(main())
 bot_run(idle())
 bot_run(stop_signals())
