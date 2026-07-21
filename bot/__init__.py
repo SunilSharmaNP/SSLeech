@@ -49,6 +49,11 @@ from inspect import signature
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram import Client as tgClient, enums, utils as pyroutils
 from pymongo import MongoClient
+try:
+    from pymongo.server_api import ServerApi as _MongoServerApi
+    _MONGO_KWARGS = {"server_api": _MongoServerApi("1")}
+except ImportError:
+    _MONGO_KWARGS = {}
 from asyncio import Lock
 from dotenv import load_dotenv, dotenv_values
 from threading import Thread
@@ -165,7 +170,7 @@ if len(DATABASE_URL) == 0:
 
 if DATABASE_URL:
     try:
-        conn = MongoClient(DATABASE_URL, serverSelectionTimeoutMS=10000)
+        conn = MongoClient(DATABASE_URL, serverSelectionTimeoutMS=10000, **_MONGO_KWARGS)
         db = conn.wzmlx
         current_config = dict(dotenv_values("config.env"))
         old_config = db.settings.deployConfig.find_one({"_id": bot_id})
