@@ -123,8 +123,17 @@ non_queued_up = set()
 
 
 try:
-    if bool(environ.get("_____REMOVE_THIS_LINE_____")):
-        log_error("The README.md file there to be read! Exiting now!")
+    # This guard catches users who deployed config_sample.env directly without
+    # removing the placeholder line. update.py explicitly skips this key when
+    # writing config.env from MongoDB, so it will only be present if the user
+    # manually set it in Heroku config vars (i.e., a genuine misconfiguration).
+    _remove_sentinel = environ.get("_____REMOVE_THIS_LINE_____", "").strip().lower()
+    if _remove_sentinel in ("true", "1", "yes"):
+        log_error(
+            "'_____REMOVE_THIS_LINE_____' is set to True in your Heroku config vars!\n"
+            "  This sentinel means you deployed the sample config without editing it.\n"
+            "  Remove '_____REMOVE_THIS_LINE_____' from Heroku Settings → Config Vars."
+        )
         exit()
 except Exception:
     pass
@@ -141,10 +150,9 @@ BOT_TOKEN = environ.get("BOT_TOKEN", "")
 if len(BOT_TOKEN) == 0:
     log_error(
         "BOT_TOKEN variable is missing!\n"
-        "  Possible causes:\n"
-        "  1. BOT_TOKEN not set in config.env or Heroku config vars\n"
-        "  2. Upstream update overwrote config.env — set UPSTREAM_REPO and redeploy\n"
-        "  3. config.env has '_____REMOVE_THIS_LINE_____' still set\n"
+        "  BOT_TOKEN must be set in Heroku config vars (Settings → Config Vars).\n"
+        "  It is used to identify which MongoDB partition to load and cannot be\n"
+        "  auto-loaded from the database.\n"
         "Exiting now."
     )
     exit(1)
