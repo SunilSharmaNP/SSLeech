@@ -1267,10 +1267,13 @@ async def event_handler(client, query, pfunc, rfunc, document=False):
 
     async def event_filter(_, __, event):
         user = event.from_user or event.sender_chat
+        # Accept message from same chat OR from user's PM (so files sent in PM
+        # while settings were opened in a group are also captured)
+        user_id = query.from_user.id
         return bool(
-            user.id == query.from_user.id
-            and event.chat.id == chat_id
-            and (event.text or event.document and document)
+            user.id == user_id
+            and (event.chat.id == chat_id or event.chat.id == user_id)
+            and (event.text or (event.document and document))
         )
 
     handler = client.add_handler(
@@ -1534,7 +1537,7 @@ async def edit_bot_settings(client, query):
                     f"{_git_cfg} "
                     f"&& git add -f {filename} "
                     f"&& git commit -sm 'botsettings' -q "
-                    f"&& git push origin {_upstream_branch} -qf"
+                    f"&& git push origin HEAD:{_upstream_branch} -qf"
                 )
             ).wait()
         else:
@@ -1543,7 +1546,7 @@ async def edit_bot_settings(client, query):
                     f"{_git_cfg} "
                     f"&& git rm -r --cached {filename} "
                     f"&& git commit -sm 'botsettings' -q "
-                    f"&& git push origin {_upstream_branch} -qf"
+                    f"&& git push origin HEAD:{_upstream_branch} -qf"
                 )
             ).wait()
         await deleteMessage(message)
