@@ -138,6 +138,15 @@ def _write_config_env(db_doc):
         str_val = str(value).strip()
         if str_val in ("", "None"):
             continue
+        # Strip accidental surrounding quotes that may have been stored in
+        # MongoDB (e.g. '"-1002548007457"' instead of '-1002548007457').
+        # _write_config_env wraps each value in its own quotes, so double-
+        # quoting causes dotenv to leave a stray trailing quote after parsing.
+        if len(str_val) >= 2 and (
+            (str_val.startswith('"') and str_val.endswith('"'))
+            or (str_val.startswith("'") and str_val.endswith("'"))
+        ):
+            str_val = str_val[1:-1]
         # Escape any double-quotes inside the value
         str_val_escaped = str_val.replace('"', '\\"')
         lines.append(f'{key}="{str_val_escaped}"')
