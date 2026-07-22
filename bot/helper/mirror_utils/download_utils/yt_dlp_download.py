@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from os import path as ospath, listdir
+from shutil import which as _which
 from secrets import token_hex
 from logging import getLogger
 from yt_dlp import YoutubeDL, DownloadError
@@ -75,7 +76,7 @@ class YoutubeDLHelper:
             "overwrites": True,
             "writethumbnail": True,
             "trim_file_name": 220,
-            "ffmpeg_location": f"/bin/{BinConfig.FFMPEG_NAME}",
+            "ffmpeg_location": _which(BinConfig.FFMPEG_NAME) or f"/usr/local/bin/{BinConfig.FFMPEG_NAME}",
             "fragment_retries": 10,
             "retries": 10,
             "retry_sleep_functions": {
