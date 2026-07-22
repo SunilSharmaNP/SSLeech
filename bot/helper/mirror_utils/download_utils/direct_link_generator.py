@@ -2483,8 +2483,15 @@ def luluvdo(url):
             "User-Agent": user_agent,
             "Referer": origin + "/",
         }
-        with Session() as session:
-            res = session.get(url, headers=headers, timeout=15)
+        # luluvdo.com does TLS fingerprint (JA3) checks — plain requests.Session
+        # produces a Python/OpenSSL fingerprint that luluvdo blocks with 403.
+        # curl_cffi impersonates a real Chrome TLS handshake, bypassing the check.
+        if CurlSession is not None:
+            with CurlSession(impersonate="chrome") as session:
+                res = session.get(url, headers=headers, timeout=15)
+        else:
+            with Session() as session:
+                res = session.get(url, headers=headers, timeout=15)
         if res.status_code != 200:
             raise DirectDownloadLinkException(
                 f"ERROR: luluvdo HTTP {res.status_code} for {url}"
