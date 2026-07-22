@@ -277,38 +277,26 @@ if len(DOWNLOAD_DIR) == 0:
 elif not DOWNLOAD_DIR.endswith("/"):
     DOWNLOAD_DIR = f"{DOWNLOAD_DIR}/"
 
-def _clean_id(raw: str) -> str:
-    """Strip accidental surrounding/trailing quotes from a numeric ID string."""
-    return raw.strip().strip('"').strip("'")
-
-def _id_tokens(value: str) -> list:
-    """Split a space-separated ID string and drop inline comment tokens.
-    Tokens starting with '#' and everything after are treated as comments."""
-    tokens = []
-    for t in value.split():
-        if t.startswith("#"):
-            break  # rest is inline comment — stop here
-        tokens.append(t)
-    return tokens
-
 AUTHORIZED_CHATS = environ.get("AUTHORIZED_CHATS", "")
 if AUTHORIZED_CHATS:
-    for id_ in _id_tokens(AUTHORIZED_CHATS):
+    aid = AUTHORIZED_CHATS.split()
+    for id_ in aid:
         chat_id, *topic_ids = id_.split(":")
-        chat_id = int(_clean_id(chat_id))
+        chat_id = int(chat_id)
         user_data.setdefault(chat_id, {"is_auth": True})
         if topic_ids:
-            user_data[chat_id].setdefault("topic_ids", []).extend(map(lambda x: int(_clean_id(x)), topic_ids))
+            user_data[chat_id].setdefault("topic_ids", []).extend(map(int, topic_ids))
 
 SUDO_USERS = environ.get("SUDO_USERS", "")
 if len(SUDO_USERS) != 0:
-    for id_ in _id_tokens(SUDO_USERS):
-        user_data[int(_clean_id(id_))] = {"is_sudo": True}
+    aid = SUDO_USERS.split()
+    for id_ in aid:
+        user_data[int(id_.strip())] = {"is_sudo": True}
 
 BLACKLIST_USERS = environ.get("BLACKLIST_USERS", "")
 if len(BLACKLIST_USERS) != 0:
-    for id_ in _id_tokens(BLACKLIST_USERS):
-        user_data[int(_clean_id(id_))] = {"is_blacklist": True}
+    for id_ in BLACKLIST_USERS.split():
+        user_data[int(id_.strip())] = {"is_blacklist": True}
 
 EXTENSION_FILTER = environ.get("EXTENSION_FILTER", "")
 if len(EXTENSION_FILTER) > 0:
