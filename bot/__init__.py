@@ -281,10 +281,19 @@ def _clean_id(raw: str) -> str:
     """Strip accidental surrounding/trailing quotes from a numeric ID string."""
     return raw.strip().strip('"').strip("'")
 
+def _id_tokens(value: str) -> list:
+    """Split a space-separated ID string and drop inline comment tokens.
+    Tokens starting with '#' and everything after are treated as comments."""
+    tokens = []
+    for t in value.split():
+        if t.startswith("#"):
+            break  # rest is inline comment — stop here
+        tokens.append(t)
+    return tokens
+
 AUTHORIZED_CHATS = environ.get("AUTHORIZED_CHATS", "")
 if AUTHORIZED_CHATS:
-    aid = AUTHORIZED_CHATS.split()
-    for id_ in aid:
+    for id_ in _id_tokens(AUTHORIZED_CHATS):
         chat_id, *topic_ids = id_.split(":")
         chat_id = int(_clean_id(chat_id))
         user_data.setdefault(chat_id, {"is_auth": True})
@@ -293,13 +302,12 @@ if AUTHORIZED_CHATS:
 
 SUDO_USERS = environ.get("SUDO_USERS", "")
 if len(SUDO_USERS) != 0:
-    aid = SUDO_USERS.split()
-    for id_ in aid:
+    for id_ in _id_tokens(SUDO_USERS):
         user_data[int(_clean_id(id_))] = {"is_sudo": True}
 
 BLACKLIST_USERS = environ.get("BLACKLIST_USERS", "")
 if len(BLACKLIST_USERS) != 0:
-    for id_ in BLACKLIST_USERS.split():
+    for id_ in _id_tokens(BLACKLIST_USERS):
         user_data[int(_clean_id(id_))] = {"is_blacklist": True}
 
 EXTENSION_FILTER = environ.get("EXTENSION_FILTER", "")
