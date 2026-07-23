@@ -2497,6 +2497,22 @@ def luluvdo(url):
                 f"ERROR: luluvdo HTTP {res.status_code} for {url}"
             )
 
+        # Extract video title from page HTML (OG tag → <title> → fallback)
+        _page_title = None
+        try:
+            _soup = BeautifulSoup(res.text, "lxml")
+            _og = _soup.find("meta", property="og:title")
+            if _og and _og.get("content"):
+                _page_title = _og["content"].strip()
+            elif _soup.title and _soup.title.string:
+                # Strip site suffix e.g. " - luluvdo.com" or " | Lulustream"
+                _page_title = sub(r"\s*[-|]\s*(luluvdo|lulustream).*$", "",
+                                  _soup.title.string.strip(), flags=__import__("re").IGNORECASE).strip()
+            if not _page_title:
+                _page_title = None
+        except Exception:
+            _page_title = None
+
         decoded = _luluvdo_decode(res.text)
         if not decoded:
             raise DirectDownloadLinkException(
@@ -2511,7 +2527,7 @@ def luluvdo(url):
             )
 
         stream_url = m.group(1)
-        return (stream_url, f"Referer: {origin}/")
+        return (stream_url, f"Referer: {origin}/", _page_title)
     except DirectDownloadLinkException:
         raise
     except Exception as e:
