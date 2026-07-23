@@ -255,6 +255,145 @@ class YtSelection:
         await editMessage(self.__reply_to, msg, subbuttons)
 
 
+@new_task
+async def select_lulu_qual(_, query, obj):
+    """Callback handler for LuluQualitySelector buttons."""
+    data = query.data.split()
+    await query.answer()
+    if data[1] == "cancel":
+        await editMessage(query.message, "Task has been cancelled.")
+        obj.selected = None
+        obj.is_cancelled = True
+        obj.event.set()
+    else:
+        try:
+            obj.selected = obj.choices[int(data[1])]
+        except (ValueError, IndexError):
+            obj.selected = None
+        obj.event.set()
+
+
+class LuluQualitySelector:
+    """
+    Dedicated quality picker for luluvdo / lulustream videos.
+
+    Shows clean buttons built from the native HLS variants that
+    _parse_luluvdo_m3u8() found in the master playlist:
+        🎬 Original (Xp)   ← always = best available
+        1080p               ← only if a distinct 1080p stream exists
+        720p                ← only if a distinct 720p stream exists
+        480p                ← only if a distinct 480p stream exists
+        360p                ← only if a distinct 360p stream exists
+        ❌ Cancel
+
+    No ffmpeg re-encoding — selects the matching CDN stream, so
+    downloads are fast even on Heroku's limited CPU.
+    Returns the selected format dict, or None on cancel / timeout.
+    """
+
+    _TARGETS = [1080, 720, 480, 360]
+
+    def __init__(self, client, message):
+        self.__client = client
+        self.__message = message
+        self.__user_id = message.from_user.id
+        self.__time = time()
+        self.__timeout = 120
+        self.__reply_to = None
+        self.is_cancelled = False
+        self.selected = None   # chosen format dict
+        self.choices = []      # ordered list of format dicts shown as buttons
+        self.event = Event()
+
+    @new_thread
+    async def __event_handler(self):
+        pfunc = partial(select_lulu_qual, obj=self)
+        handler = self.__client.add_handler(
+            CallbackQueryHandler(
+                pfunc,
+                filters=regex("^lulq") & user(self.__user_id),
+            ),
+            group=-1,
+        )
+        try:
+            await wait_for(self.event.wait(), timeout=self.__timeout)
+        except Exception:
+            await editMessage(self.__reply_to, "⏱ Timed out. Task has been cancelled!")
+            self.selected = None
+            self.is_cancelled = True
+            self.event.set()
+        finally:
+            self.__client.remove_handler(*handler)
+
+    async def get_quality(self, formats):
+        """
+        formats : list of format dicts from _parse_luluvdo_m3u8 (any order).
+        Returns  : selected format dict, or None on cancel / timeout.
+        If only one format exists, returns it directly without showing buttons.
+        """
+        if not formats:
+            return None
+        if len(formats) == 1:
+            return formats[0]
+
+        future = self.__event_handler()
+
+        # Sort descending by height — best quality first
+        sorted_fmts = sorted(
+            formats, key=lambda f: f.get("height") or 0, reverse=True
+        )
+        best = sorted_fmts[0]
+
+        # Build deduplicated choice list
+        # Index 0 is always "Original" (= highest available)
+        seen_ids = {best["format_id"]}
+        choices = [best]
+
+        for target_h in self._TARGETS:
+            # Best stream at-or-below target height
+            candidates = [
+                f for f in sorted_fmts if (f.get("height") or 0) <= target_h
+            ]
+            if not candidates:
+                continue
+            pick = max(candidates, key=lambda f: f.get("height") or 0)
+            if pick["format_id"] not in seen_ids:
+                seen_ids.add(pick["format_id"])
+                choices.append(pick)
+
+        self.choices = choices
+
+        # Build inline buttons
+        buttons = ButtonMaker()
+        for idx, fmt in enumerate(choices):
+            h = fmt.get("height") or 0
+            size = fmt.get("filesize_approx") or 0
+            size_str = f" ({get_readable_file_size(size)})" if size else ""
+            if idx == 0:
+                label = (
+                    f"🎬 Original ({h}p){size_str}" if h
+                    else f"🎬 Original{size_str}"
+                )
+            else:
+                label = f"{h}p{size_str}" if h else f"Stream {idx}"
+            buttons.ibutton(label, f"lulq {idx}")
+
+        buttons.ibutton("❌ Cancel", "lulq cancel", "footer")
+        markup = buttons.build_menu(2)
+
+        elapsed = time() - self.__time
+        timeout_str = get_readable_time(self.__timeout - elapsed)
+        msg = (
+            "🎬 <b>Luluvdo — Choose Quality</b>\n"
+            f"⏱ Timeout: {timeout_str}"
+        )
+        self.__reply_to = await sendMessage(self.__message, msg, markup)
+        await wrap_future(future)
+        if not self.is_cancelled:
+            await deleteMessage(self.__reply_to)
+        return self.selected
+
+
 def extract_info(link, options):
     with YoutubeDL(options) as ydl:
         result = ydl.extract_info(link, download=False)
@@ -837,28 +976,19 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
         ydl_opts["http_headers"] = _lulu_http_headers
 
-        # Quality selection — show buttons when multiple variants are available
+        # Quality selection — show clean luluvdo quality buttons
         _lulu_fmts = _lulu_info_dict.get("formats", [])
         _lulu_sel_qual = "best"
-        if len(_lulu_fmts) > 1:
-            _lulu_qual_str = await YtSelection(client, message).get_quality(_lulu_info_dict)
-            if _lulu_qual_str is None:
-                return  # user cancelled
-            # qual string is e.g. "hls-720p+ba/b[height=?720]" — extract format_id
-            _sel_fmt_id = _lulu_qual_str.split("+")[0].strip()
-            _sel_fmt = next(
-                (f for f in _lulu_fmts if f["format_id"] == _sel_fmt_id), None
-            )
-            if _sel_fmt:
-                # Narrow info_dict to exactly the chosen variant so yt-dlp can't
-                # silently fall back to a different quality
-                _lulu_info_dict["formats"] = [_sel_fmt]
-                _lulu_info_dict["filesize_approx"] = (
-                    _sel_fmt.get("filesize_approx") or _lulu_info_dict.get("filesize_approx")
-                )
-                _lulu_sel_qual = _sel_fmt["format_id"]
-            else:
-                _lulu_sel_qual = _lulu_qual_str
+        _sel_fmt = await LuluQualitySelector(client, message).get_quality(_lulu_fmts)
+        if _sel_fmt is None:
+            return  # user cancelled / timed out
+        # Narrow info_dict to exactly the chosen variant so yt-dlp can't
+        # silently fall back to a different quality
+        _lulu_info_dict["formats"] = [_sel_fmt]
+        _lulu_info_dict["filesize_approx"] = (
+            _sel_fmt.get("filesize_approx") or _lulu_info_dict.get("filesize_approx")
+        )
+        _lulu_sel_qual = _sel_fmt["format_id"]
 
         __run_multi()
         await delete_links(message)
