@@ -5,6 +5,7 @@ from asyncio import sleep, wait_for, Event, wrap_future
 from aiohttp import ClientSession
 from aiofiles.os import path as aiopath
 from yt_dlp import YoutubeDL
+from yt_dlp.networking.impersonate import ImpersonateTarget
 from functools import partial
 from time import time
 
@@ -723,12 +724,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         _is_luluvdo = True
         try:
             resolved = await sync_to_async(direct_link_generator, link)
+            _lulu_page_title = None
             if isinstance(resolved, tuple):
-                stream_url, ref_header = resolved
+                if len(resolved) == 3:
+                    stream_url, ref_header, _lulu_page_title = resolved
+                else:
+                    stream_url, ref_header = resolved
                 ref_val = ref_header.split(": ", 1)[-1]
             else:
                 stream_url, ref_val = resolved, "https://luluvdo.com/"
-            LOGGER.info(f"luluvdo resolved → {stream_url[:80]}…")
+            LOGGER.info(f"luluvdo resolved → {stream_url[:80]}… title={_lulu_page_title!r}")
             link = stream_url
             from urllib.parse import urlparse as _up
             _parsed = _up(ref_val)
@@ -752,7 +757,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
             _lulu_info_dict = {
                 "id": "luluvdo",
-                "title": name or "luluvdo_video",
+                "title": name or _lulu_page_title or "luluvdo_video",
                 "webpage_url": stream_url,
                 "original_url": stream_url,
                 "extractor": "generic",
@@ -824,11 +829,12 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     # Solution: m3u8_native protocol + impersonate="chrome" → yt-dlp uses
     # curl_cffi for all manifest and segment fetches, passing Chrome TLS.
     if _is_luluvdo and _lulu_info_dict is not None:
-        _lulu_title = name or _lulu_info_dict.get("title", "luluvdo_video")
+        _lulu_title = name or _lulu_page_title or _lulu_info_dict.get("title", "luluvdo_video")
         # Use yt-dlp's native m3u8_native downloader with Chrome impersonation so
         # every segment request goes through curl_cffi — bypasses tnmr.org CDN TLS
         # fingerprint check that blocks both Python-SSL and the new ffmpeg build.
-        ydl_opts["impersonate"] = "chrome"
+        # ImpersonateTarget object required — plain string causes AssertionError in yt-dlp.
+        ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
         ydl_opts["http_headers"] = _lulu_http_headers
 
         # Quality selection — show buttons when multiple variants are available
