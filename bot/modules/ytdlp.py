@@ -267,16 +267,25 @@ async def _parse_luluvdo_m3u8(url, headers):
     Fetch HLS master playlist and return yt-dlp format dicts (one per quality variant).
     Also returns estimated total duration in seconds (from media playlist EXTINF tags).
     Falls back to a single best-quality entry on any error.
+
+    Uses curl_cffi with Chrome impersonation so tnmr.org CDN TLS-fingerprint checks
+    pass (aiohttp/Python-SSL gets HTTP 403 from tnmr.org just like yt-dlp does).
     """
     import re
+    import asyncio
     from urllib.parse import urljoin as _urljoin
+
+    # Use m3u8_native so yt-dlp's Python HTTP client (with impersonate="chrome")
+    # downloads every segment — never falls back to ffmpeg's own HTTP stack which
+    # also gets blocked by the CDN TLS fingerprint check.
+    _PROTO = "m3u8_native"
 
     _fallback = (
         [{
             "format_id": "hls-best",
             "url": url,
             "ext": "mp4",
-            "protocol": "m3u8",
+            "protocol": _PROTO,
             "vcodec": "h264",
             "acodec": "mp4a.40.2",
             "height": None,
@@ -288,12 +297,22 @@ async def _parse_luluvdo_m3u8(url, headers):
         0,
     )
 
+    # curl_cffi impersonates Chrome TLS — required to avoid 403 from tnmr.org CDN
     try:
-        async with ClientSession() as sess:
-            async with sess.get(url, headers=headers) as resp:
-                if resp.status != 200:
-                    return _fallback
-                content = await resp.text()
+        from curl_cffi import requests as _curl_req
+    except ImportError:
+        return _fallback
+
+    loop = asyncio.get_event_loop()
+
+    try:
+        resp = await loop.run_in_executor(
+            None,
+            lambda: _curl_req.get(url, headers=headers, impersonate="chrome", timeout=15),
+        )
+        if resp.status_code != 200:
+            return _fallback
+        content = resp.text
     except Exception:
         return _fallback
 
@@ -334,7 +353,7 @@ async def _parse_luluvdo_m3u8(url, headers):
                     "format_id": fmt_id,
                     "url": vurl,
                     "ext": "mp4",
-                    "protocol": "m3u8",
+                    "protocol": _PROTO,
                     "vcodec": "h264",
                     "acodec": "mp4a.40.2",
                     "height": height or None,
@@ -357,15 +376,17 @@ async def _parse_luluvdo_m3u8(url, headers):
     best_tbr = formats[-1].get("tbr") or 0
     duration = 0.0
     try:
-        async with ClientSession() as sess:
-            async with sess.get(best_url, headers=headers) as resp:
-                if resp.status == 200:
-                    mpls = await resp.text()
-                    duration = sum(
-                        float(ln.split(":")[1].split(",")[0])
-                        for ln in mpls.splitlines()
-                        if ln.startswith("#EXTINF:")
-                    )
+        resp2 = await loop.run_in_executor(
+            None,
+            lambda: _curl_req.get(best_url, headers=headers, impersonate="chrome", timeout=15),
+        )
+        if resp2.status_code == 200:
+            mpls = resp2.text
+            duration = sum(
+                float(ln.split(":")[1].split(",")[0])
+                for ln in mpls.splitlines()
+                if ln.startswith("#EXTINF:")
+            )
     except Exception:
         pass
 
@@ -687,14 +708,14 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         name, link = await _mdisk(link, name)
 
     # ── luluvdo.com / lulustream.com ────────────────────────────────────────────
-    # yt-dlp has NO extractor for luluvdo. The m3u8 URL is CDN-protected:
-    # ANY yt-dlp extract_info call on it triggers "Downloading webpage" which
-    # always gets HTTP 403 from tnmr.org regardless of headers — the CDN
-    # blocks Python urllib requests at the TLS/UA level.
+    # yt-dlp has NO extractor for luluvdo. The m3u8 URL is CDN-protected and
+    # tnmr.org blocks requests at the TLS fingerprint level — both Python-SSL
+    # (urllib/aiohttp) AND the new ffmpeg build get HTTP 403.
     #
-    # Solution: skip extract_info entirely → build a minimal synthetic info_dict
-    # → call process_ie_result with external_downloader=ffmpeg so ffmpeg (not
-    # yt-dlp's HTTP client) makes every CDN request with proper -headers.
+    # Solution: skip extract_info → build a synthetic info_dict with protocol
+    # "m3u8_native" → yt-dlp uses its own Python HTTP client + impersonate="chrome"
+    # (curl_cffi under the hood) for every manifest and segment request so
+    # tnmr.org sees a real Chrome TLS fingerprint.
     _is_luluvdo = False
     _lulu_info_dict = None
 
@@ -712,21 +733,13 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             from urllib.parse import urlparse as _up
             _parsed = _up(ref_val)
             _origin = f"{_parsed.scheme}://{_parsed.netloc}"
-            # ffmpeg -headers value: CRLF-separated, trailing CRLF required
-            _ffmpeg_hdr = (
-                f"Referer: {ref_val}\r\n"
-                f"Origin: {_origin}\r\n"
-                f"User-Agent: {_dlg_user_agent}\r\n"
-            )
             _lulu_http_headers = {
                 "Referer": ref_val,
                 "Origin": _origin,
                 "User-Agent": _dlg_user_agent,
             }
-            # Minimal info_dict — protocol "m3u8" (not "m3u8_native") so
-            # yt-dlp selects FFmpegFD; external_downloader="ffmpeg" in opts
-            # overrides even that and guarantees ffmpeg handles all CDN I/O.
             # Parse m3u8 master playlist for quality variants + size estimation
+            # (_parse_luluvdo_m3u8 uses curl_cffi internally for the same reason)
             _lulu_formats, _lulu_duration = await _parse_luluvdo_m3u8(
                 stream_url, _lulu_http_headers
             )
@@ -806,18 +819,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         options["playlist_items"] = "0"
 
     # ── luluvdo: skip extract_info entirely, use process_ie_result via info_dict ─
-    # extract_info on the m3u8 URL always 403s ("Downloading webpage" phase).
-    # We bypass it: inject external_downloader=ffmpeg into ydl_opts so that
-    # YoutubeDLHelper.__download_direct → process_ie_result uses FFmpegFD.
-    # FFmpegFD invokes ffmpeg with -headers, letting ffmpeg fetch the HLS
-    # manifest and every segment with proper Referer/Origin/User-Agent.
+    # extract_info on the m3u8 URL 403s ("Downloading webpage" phase) and
+    # external ffmpeg also 403s (new base image TLS fingerprint blocked by CDN).
+    # Solution: m3u8_native protocol + impersonate="chrome" → yt-dlp uses
+    # curl_cffi for all manifest and segment fetches, passing Chrome TLS.
     if _is_luluvdo and _lulu_info_dict is not None:
         _lulu_title = name or _lulu_info_dict.get("title", "luluvdo_video")
-        # Guarantee ffmpeg is the downloader regardless of protocol in info_dict
-        ydl_opts["external_downloader"] = "ffmpeg"
-        ydl_opts["external_downloader_args"] = {
-            "ffmpeg_i": ["-headers", _ffmpeg_hdr],
-        }
+        # Use yt-dlp's native m3u8_native downloader with Chrome impersonation so
+        # every segment request goes through curl_cffi — bypasses tnmr.org CDN TLS
+        # fingerprint check that blocks both Python-SSL and the new ffmpeg build.
+        ydl_opts["impersonate"] = "chrome"
         ydl_opts["http_headers"] = _lulu_http_headers
 
         # Quality selection — show buttons when multiple variants are available
