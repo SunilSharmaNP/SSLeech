@@ -840,7 +840,6 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
     buttons = ButtonMaker()
     if key is None:
         buttons.ibutton("⚙️ Config Variables", "botset var")
-        buttons.ibutton("🎬 TMDB API Key", "botset editvar TMDB_API_KEY")
         buttons.ibutton("📂 Private Files", "botset private")
         buttons.ibutton("🔧 Qbit Settings", "botset qbit")
         buttons.ibutton("🛠️ Aria2c Settings", "botset aria")
