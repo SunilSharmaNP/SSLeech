@@ -11,10 +11,12 @@ from bot import (
     aria2c_global,
     non_queued_dl,
     queue_dict_lock,
+    OWNER_ID,
 )
 from bot.helper.ext_utils.bot_utils import bt_selection_buttons, sync_to_async
 from bot.helper.mirror_utils.status_utils.aria2_status import Aria2Status
 from bot.helper.telegram_helper.message_utils import sendStatusMessage, sendMessage
+from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.task_manager import is_queued
 
 
@@ -22,7 +24,13 @@ async def add_aria2c_download(link, path, listener, filename, header, ratio, see
     if config_dict.get("DISABLE_TORRENTS") and (
         link.startswith("magnet:") or link.endswith(".torrent")
     ):
-        await listener.onDownloadError("Torrent/magnet downloads are currently disabled.")
+        _btn = ButtonMaker()
+        _btn.ubutton("👑 Contact Owner", f"tg://user?id={OWNER_ID}")
+        await listener.onDownloadError(
+            "Torrent & magnet downloads are currently disabled.\n"
+            "💎 Buy Premium Leech Bot plan to unlock — contact bot owner.",
+            button=_btn.build_menu(1),
+        )
         return
     a2c_opt = {**aria2_options}
     [a2c_opt.pop(k) for k in aria2c_global if k in aria2_options]
