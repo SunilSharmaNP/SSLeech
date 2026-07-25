@@ -232,7 +232,7 @@ async def _mirror_leech(
 
     if isQbit and config_dict.get("DISABLE_TORRENTS"):
         _tb = ButtonMaker()
-        _tb.ubutton("👑 Contact Owner", "https://t.me/Sunil_Sharma_2_0_Bot")
+        _tb.ubutton("👑 Contact Owner 👑", "https://t.me/Sunil_Sharma_2_0_Bot")
         await sendMessage(
             message,
             "🚫 <b>Torrent Downloads Disabled</b>\n\n"
