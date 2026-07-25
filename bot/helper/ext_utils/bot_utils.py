@@ -873,12 +873,12 @@ async def checking_access(user_id, button=None):
         shortener_link = short_url(bot_start_link)
         final_link = wrap_verify_page(shortener_link, user_id)
         button.ubutton("✨ Generate New Token", final_link)
-        button.ubutton("👑 Contact Owner", "https://t.me/Sunil_Sharma_2_0_Bot")
+        button.ubutton("👑 Contact Owner 👑", "https://t.me/Sunil_Sharma_2_0_Bot")
         return (
             f"⏰ <b>Access Token Expired!</b>\n\n"
             f"Your temporary token has expired. Generate a new token to continue using the bot.\n"
             f"<b>Token Validity:</b> <code>{get_readable_time(config_dict['TOKEN_TIMEOUT'])}</code>\n\n"
-            f"<b>💎 Want to skip token verification?</b>\n"
+            f"<b>💎 Want to skip token verification?</b>\n\n"
             f"Purchase our <b>Premium Leech Bot</b> plan and enjoy uninterrupted access!\n\n"
             f"<i>Tap 👑 Contact Owner to buy a plan.</i>",
             button,
