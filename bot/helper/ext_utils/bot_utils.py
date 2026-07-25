@@ -793,11 +793,7 @@ async def getdailytasks(
     if user_id in user_data and user_data[user_id].get("dly_tasks"):
         userdate, task, lsize, msize = user_data[user_id]["dly_tasks"]
         nowdate = datetime.now()
-        if (
-            userdate.year <= nowdate.year
-            and userdate.month <= nowdate.month
-            and userdate.day < nowdate.day
-        ):
+        if userdate.date() < nowdate.date():
             task, lsize, msize = 0, 0, 0
             if increase_task:
                 task = 1
@@ -877,8 +873,14 @@ async def checking_access(user_id, button=None):
         shortener_link = short_url(bot_start_link)
         final_link = wrap_verify_page(shortener_link, user_id)
         button.ubutton("✨ Generate New Token", final_link)
+        button.ubutton("👑 Contact Owner", f"tg://user?id={OWNER_ID}")
         return (
-            f'<i>Temporary Token has been expired,</i> Kindly generate a New Temp Token to start using bot Again.\n<b>Validity :</b> <code>{get_readable_time(config_dict["TOKEN_TIMEOUT"])}</code>',
+            f"⏰ <b>Access Token Expired!</b>\n\n"
+            f"Your temporary token has expired. Generate a new token to continue using the bot.\n"
+            f"<b>Token Validity:</b> <code>{get_readable_time(config_dict['TOKEN_TIMEOUT'])}</code>\n\n"
+            f"<b>💎 Want to skip token verification?</b>\n"
+            f"Purchase our <b>Premium Leech Bot</b> plan and enjoy uninterrupted access!\n\n"
+            f"<i>Tap 👑 Contact Owner to buy a plan.</i>",
             button,
         )
     return None, button
