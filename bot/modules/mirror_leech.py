@@ -231,7 +231,17 @@ async def _mirror_leech(
         return
 
     if isQbit and config_dict.get("DISABLE_TORRENTS"):
-        await sendMessage(message, "❌ Torrent (qBittorrent) downloads are currently disabled.")
+        _tb = ButtonMaker()
+        _tb.ubutton("👑 Contact Owner", f"tg://user?id={OWNER_ID}")
+        await sendMessage(
+            message,
+            "🚫 <b>Torrent Downloads Disabled</b>\n\n"
+            "Torrent & qBittorrent downloads are currently not available on this bot.\n\n"
+            "<b>💎 Want to use this feature?</b>\n"
+            "Purchase our <b>Premium Leech Bot</b> plan and unlock all downloads!\n\n"
+            "<i>Tap the button below to contact the bot owner and buy a plan.</i>",
+            _tb.build_menu(1),
+        )
         return
 
     if isBulk:
