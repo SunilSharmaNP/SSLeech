@@ -25,7 +25,7 @@ async def add_aria2c_download(link, path, listener, filename, header, ratio, see
         link.startswith("magnet:") or link.endswith(".torrent")
     ):
         _btn = ButtonMaker()
-        _btn.ubutton("👑 Contact Owner", f"tg://user?id={OWNER_ID}")
+        _btn.ubutton("👑 Contact Owner", "https://t.me/Sunil_Sharma_2_0_Bot")
         await listener.onDownloadError(
             "Torrent & magnet downloads are currently disabled.\n"
             "💎 Buy Premium Leech Bot plan to unlock — contact bot owner.",
