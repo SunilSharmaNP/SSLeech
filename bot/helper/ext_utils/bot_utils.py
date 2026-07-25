@@ -873,7 +873,7 @@ async def checking_access(user_id, button=None):
         shortener_link = short_url(bot_start_link)
         final_link = wrap_verify_page(shortener_link, user_id)
         button.ubutton("✨ Generate New Token", final_link)
-        button.ubutton("👑 Contact Owner", f"https://t.me/Sunil_Sharma_2_0_Bot")
+        button.ubutton("👑 Contact Owner", "https://t.me/Sunil_Sharma_2_0_Bot")
         return (
             f"⏰ <b>Access Token Expired!</b>\n\n"
             f"Your temporary token has expired. Generate a new token to continue using the bot.\n"
