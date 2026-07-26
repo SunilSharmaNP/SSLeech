@@ -201,7 +201,7 @@ def direct_link_generator(link):
         return gdflix_bypass(link)
 
     # -------- HUB FAMILY --------
-    elif any(x in domain for x in hub_list):
+    elif any(x in domain for x in hub_list) or any(x in domain for x in hubdrive_list):
         if "/packs/" in link:
             links = hubcloud_extract_pack(link)
             if not links:
@@ -346,7 +346,7 @@ def direct_link_generator(link):
 def detect_hubcloud_base(url):
     try:
         h = urlparse(url).hostname or ""
-        if "hubcloud." in h:
+        if "hubcloud." in h or "hubdrive." in h:
             return f"https://{h}"
         return "https://hubcloud.one"
     except:
