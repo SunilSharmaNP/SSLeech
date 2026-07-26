@@ -190,6 +190,10 @@ def direct_link_generator(link):
     elif config_dict.get("REAL_DEBRID_API") and any(x in domain for x in debrid_sites):
         return real_debrid(link)
 
+    # -------- MultiCloudLinks --------
+    elif "multicloudlinks.com" in domain:
+        return multicloudlinks_bypass(link)
+
     # -------- GDFlix FIRST --------
     elif any(x in domain for x in gdflix_list):
         if "/pack" in link or "/packs/" in link:
@@ -609,6 +613,70 @@ def gdflix_bypass(url):
         raise DirectDownloadLinkException("GDFlix pack failed")
 
     return gdflix_bypass_single(url)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MultiCloudLinks bypass
+# URL pattern: https://new.multicloudlinks.com/view/{hash}?c={code}&exp={ts}
+#
+# Page contains several download buttons (direct <a href> — no JS POST):
+#   1. Turbo Download (R2)   → dr1.multidownload.website/d/{id}?...
+#                              Redirects to same URL + &action=download → direct file
+#   2. Instant Download      → new.multicloudlinks.com/dl/{code}
+#                              Redirects to photos2.multicloudlinks.com (401 — skip)
+#   3. VikingFile Mirror     → viking.multicloudlinks.com/?vid={id}
+#                              Redirects vikingfile.com → vik1ngfile.site → direct file
+#   4. Pixeldrain Mirror     → pixeldra.multicloudlinks.com (async mirror — skip)
+#   5. GoFile Mirror         → gofile.multicloudlinks.com (500 — skip)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def multicloudlinks_bypass(url):
+    headers = {"User-Agent": user_agent, "Accept": "text/html,application/xhtml+xml,*/*"}
+
+    try:
+        r = get(url, headers=headers, allow_redirects=True, timeout=20)
+        html = r.text
+    except Exception as e:
+        raise DirectDownloadLinkException(f"MultiCloudLinks: page fetch failed — {e}")
+
+    # ── 1. Turbo Download (R2) — dr1.multidownload.website ───────────────────
+    # URL is embedded verbatim in the HTML <a href>.
+    # A GET on it returns HTTP 302 → same URL + &action=download → direct file.
+    dr1 = gdflix_scan(html, r'https://dr1\.multidownload\.website/d/[^\s"\'<>]+')
+    if dr1:
+        # unescape any HTML entity amp → &
+        dr1 = dr1.replace("&amp;", "&")
+        try:
+            resp = get(dr1, headers=headers, allow_redirects=False, timeout=15)
+            if resp.status_code in (301, 302, 303, 307, 308):
+                final_dl = resp.headers.get("location", "")
+            else:
+                # server might have already served the file or added action itself
+                final_dl = dr1 if "action=download" in dr1 else dr1 + "&action=download"
+            if final_dl:
+                return final_dl
+        except Exception:
+            # fall through to next option
+            pass
+
+    # ── 2. VikingFile Mirror — viking.multicloudlinks.com ────────────────────
+    # Redirect chain:  viking.multicloudlinks.com → vikingfile.com/f/{id}
+    #                  → vik1ngfile.site/f/{id}  (serves file directly)
+    viking = gdflix_scan(html, r'https://viking\.multicloudlinks\.com/\?vid=[^\s"\'<>]+')
+    if viking:
+        try:
+            resp = get(viking, headers=headers, allow_redirects=True, timeout=20)
+            final_url = resp.url
+            # vik1ngfile.site/f/{id} streams the file directly
+            if "vik1ngfile.site/f/" in final_url or "vikingfile.com/f/" in final_url:
+                return final_url
+        except Exception:
+            pass
+
+    raise DirectDownloadLinkException(
+        "MultiCloudLinks: no usable download link found on page "
+        "(Turbo/R2 and VikingFile both failed)"
+    )
 
 
 """def pbx_resolve_and_select(hub_url):
