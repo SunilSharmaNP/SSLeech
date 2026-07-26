@@ -72,6 +72,8 @@ gdflix_list = [
     "gdflix.dev",
     "gdflix.top",
     "gdflix.xyz",
+    "gdflix.io",
+    "gdlink.dev",
 ]
 
 # -------- HUBDRIVE ONLY --------
@@ -445,15 +447,10 @@ def gdflix_extract_pack_links(html, base):
             out.append(full)
     return out
 
-def gdflix_get_instant(url):
-    try:
-        r = get(url, headers={"User-Agent": user_agent}, timeout=15)
-        return gdflix_scan(
-            r.text,
-            r"https://instant\.busycdn\.cfd/[A-Za-z0-9:]+"
-        )
-    except:
-        return None
+def gdflix_get_instant(html):
+    # busycdn domain changed: .cfd → .xyz; new URL format is much longer hash-based
+    # The instant link is now embedded directly in page HTML as <a href>, no re-fetch needed
+    return gdflix_scan(html, r"https://instant\.busycdn\.xyz/[^\"\'\s<>]+")
 
 def unwrap_fastcdn(url):
     if not url:
@@ -515,9 +512,24 @@ def gdflix_get_google(instant):
 def gdflix_bypass_single(url):
     html, final = gdflix_fetch_html(url)
 
-    instant = gdflix_get_instant(url)
+    # ── Instant DL link ──────────────────────────────────────────────────────
+    # busycdn domain changed to .xyz; link is now embedded directly in page HTML
+    # (no separate GET needed). gdflix_get_instant now accepts html, not url.
+    instant = gdflix_get_instant(html)
+
+    # Follow instant link through fastcdn wrapper → Google Drive URL
     google = unwrap_fastcdn(gdflix_get_google(instant))
 
+    # ── /cloud/ fallback (new GDFlix addition) ───────────────────────────────
+    # If instant didn't yield a Google link, try the /cloud/ endpoint which also
+    # redirects through fastcdn → video-downloads.googleusercontent.com
+    if not google:
+        cloud_path = gdflix_scan(html, r'href="(/cloud/[^"\'<>\s]+)"')
+        if cloud_path:
+            cloud_url = urljoin(final, cloud_path)
+            google = gdflix_get_google(cloud_url)
+
+    # ── Other mirrors in the page ─────────────────────────────────────────────
     pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
     if pix:
         pix = pix.replace("?embed", "")
@@ -529,11 +541,18 @@ def gdflix_bypass_single(url):
     workers = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
     test = gdflix_scan(html, r"https://test\.[^\"'\s]+")
 
+    # ── Instant link itself as direct CDN fallback ────────────────────────────
+    # busycdn.xyz links are direct download CDN links even without unwrapping
+    instant_direct = gdflix_scan(html, r"https://instant\.busycdn\.xyz/[^\"\'\s<>]+")
+
     links = []
 
-    # ⭐ GOOGLE FIRST
+    # ⭐ Priority: Google > Instant CDN > Gofile > pub > workers > test > pixeldrain > tg
     if google:
         links.append({"type": "google", "url": google})
+
+    if instant_direct:
+        links.append({"type": "instant", "url": instant_direct})
 
     if gofile:
         links.append({"type": "gofile", "url": gofile})
@@ -560,16 +579,17 @@ def gdflix_bypass_single(url):
         links.append({"type": "telegram", "url": tg})
 
     if not links:
-        raise DirectDownloadLinkException("GDFlix: No usable links")
+        raise DirectDownloadLinkException("GDFlix: No usable links found (instant CDN domain may have changed again)")
 
     priority = {
-        "google": 0,
-        "gofile": 1,
-        "pub": 2,
-        "workers": 3,
-        "test": 4,
-        "pixeldrain": 5,
-        "telegram": 6,
+        "google":     0,
+        "instant":    1,
+        "gofile":     2,
+        "pub":        3,
+        "workers":    4,
+        "test":       5,
+        "pixeldrain": 6,
+        "telegram":   7,
     }
 
     links.sort(key=lambda x: priority.get(x["type"], 99))
