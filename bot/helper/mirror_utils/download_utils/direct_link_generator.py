@@ -533,13 +533,40 @@ def hubdrive_bypass(url):
 
     soup3 = BeautifulSoup(r3.text, "html.parser")
 
-    # ── Step 4: Mirror buttons se direct links nikalo ─────────────────────────
+    # ── Step 4a: Agar mirror page khud HubCloud hai → seedha bypass karo ────────
+    mirror_domain = urlparse(r3.url).hostname or ""
+    if "hubcloud" in mirror_domain or "hubcdn" in mirror_domain:
+        try:
+            return hubcloud_bypass_single(r3.url)
+        except Exception:
+            pass  # fallback: buttons dhundho
+
+    # ── Step 4b: Mirror buttons se direct links nikalo ───────────────────────────
+    SKIP_DOMAINS = {"t.me", "telegram.me", "telegram.org"}
     mirrors = []
     seen = set()
-    for sel in ["div.card-body h2 a.btn", "div.card-body a.btn", "div.download a", "a.btn"]:
+
+    # Pehle specific selectors, phir broad fallback
+    selectors = [
+        "div.card-body h2 a.btn",
+        "div.card-body a.btn",
+        "div.download a",
+        "div.mirror a",
+        "div.links a",
+        "a.btn",
+        "a.btn-success",
+        "a.btn-primary",
+        "a.btn-warning",
+        "a.btn-info",
+    ]
+    for sel in selectors:
         for a in soup3.select(sel):
             href = fix_url(a.get("href", ""))
             if not href or not href.startswith("http") or href in seen:
+                continue
+            # Ad/social links skip karo
+            hdom = urlparse(href).hostname or ""
+            if any(s in hdom for s in SKIP_DOMAINS):
                 continue
             seen.add(href)
             txt = a.get_text(strip=True).lower()
@@ -559,7 +586,14 @@ def hubdrive_bypass(url):
 
             mirrors.append({"type": t, "url": href})
 
+    # ── Step 4c: Agar phir bhi kuch nahi mila → hubcloud_bypass_single try karo ─
     if not mirrors:
+        # Intermediate link khud HubCloud style ho sakta hai
+        if any(x in link for x in ["hubcloud", "hubcdn", "/drive/", "/d/"]):
+            try:
+                return hubcloud_bypass_single(link)
+            except Exception:
+                pass
         raise DirectDownloadLinkException(
             "HubDrive: Koi download mirror nahi mila — page structure check karo"
         )
@@ -789,7 +823,9 @@ def gdflix_bypass_single(url):
     if pix:
         pix = pix.replace("?embed", "")
 
-    tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
+    # Only file-type TG links (t.me/c/channel_id/msg_id) — channel links skip
+    tg_raw = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
+    tg = tg_raw if (tg_raw and "/c/" in tg_raw) else None
 
     gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
     pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
