@@ -578,12 +578,16 @@ def hubdrive_bypass(url):
 
 def _resolve_cdn_redirect(url):
     """
-    PHP/redirect URLs ko follow karke actual direct CDN download URL nikalo.
+    PHP/redirect URLs se actual direct CDN download URL nikalo.
 
-    sportverse.cc/hubcloud.php?host=hubcloud&id=...&token=...
-    → HTTP 302 ya JS redirect → actual CDN URL (jaise cdn.hubcloud.one/d/...)
+    Strategy:
+      1. hubcloud.php?id=... → ID extract karo → hubcloud_bypass_single() seedha call karo
+         (ad chain — bonuscaf.com etc. — bilkul bypass ho jaega)
+      2. Baki PHP/redirect URLs → carefully follow karo, ad domains skip karo
     """
-    # Sirf tab resolve karo jab URL suspicious lage (PHP script ya known redirect host)
+    # Ad/tracking domains jo 204 ya blank dete hain — inhe kabhi return mat karo
+    AD_DOMAINS = {"bonuscaf.com", "shorte.st", "ouo.io", "adf.ly", "linkvertise.com"}
+
     parsed = urlparse(url)
     is_redirect_url = (
         parsed.path.endswith(".php")
@@ -592,53 +596,88 @@ def _resolve_cdn_redirect(url):
         or "workers.dev" in url
     )
     if not is_redirect_url:
-        return url  # already direct, chhod do
+        return url  # already direct link, kuch karne ki zaroorat nahi
 
+    # ── Strategy 1: hubcloud.php URL se ID nikaalo, seedha HubCloud bypass karo ──
+    if "hubcloud.php" in url or "sportverse.cc" in url:
+        qs = parse_qs(parsed.query)
+        file_id = qs.get("id", [""])[0]
+        host    = qs.get("host", ["hubcloud"])[0]
+
+        if file_id:
+            # HubCloud base domain determine karo
+            hc_base = "https://hubcloud.one"
+            if host and host not in ("hubcloud",):
+                hc_base = f"https://{host}.one"
+
+            # hubcloud_bypass_single seedha call karo — ad chain completely bypass
+            for hc_url in [
+                f"{hc_base}/drive/{file_id}",
+                f"https://hubcloud.one/drive/{file_id}",
+                f"https://hubcloud.lol/drive/{file_id}",
+            ]:
+                try:
+                    result = hubcloud_bypass_single(hc_url)
+                    if result:
+                        return result
+                except Exception:
+                    continue
+
+    # ── Strategy 2: Baki redirect URLs — carefully follow karo ──────────────────
     scraper = create_scraper()
     headers = {"User-Agent": user_agent, "Accept": "*/*"}
 
     try:
-        r = scraper.get(url, headers=headers, allow_redirects=True, timeout=20)
+        # allow_redirects=False — manually follow karo taaki ad domains detect ho sakein
+        r = scraper.get(url, headers=headers, allow_redirects=False, timeout=20)
 
-        # Case 1: HTTP redirect follow ho gaya — r.url final URL hai
-        if r.url and r.url != url:
-            final = r.url
-            # Sirf tab return karo agar yeh bhi PHP page nahi hai
-            if not final.endswith(".php") and "hubcloud.php" not in final:
-                return final
+        # Redirect mila
+        if r.status_code in (301, 302, 303, 307, 308):
+            loc = r.headers.get("Location") or r.headers.get("location", "")
+            if loc:
+                loc_domain = urlparse(loc).hostname or ""
+                # Ad domain nahi hai? Return karo
+                if not any(ad in loc_domain for ad in AD_DOMAINS):
+                    return loc
 
-        # Case 2: Content-Disposition header — seedha file serve ho rahi hai
-        cd = r.headers.get("Content-Disposition", "")
-        if cd and "filename" in cd:
-            return r.url or url
+        # 200 ke saath response — JS ya body mein URL dhundho
+        if r.status_code == 200:
+            # Content-Disposition — seedha file
+            cd = r.headers.get("Content-Disposition", "")
+            if cd and "filename" in cd:
+                return r.url or url
 
-        # Case 3: JavaScript redirect (window.location / location.href)
-        for pat in [
-            r'window\.location(?:\.href)?\s*=\s*["\']([^"\']{15,})["\']',
-            r'location\.replace\(["\']([^"\']{15,})["\']\)',
-            r'location\.href\s*=\s*["\']([^"\']{15,})["\']',
-        ]:
-            m = re.search(pat, r.text)
-            if m:
-                candidate = m.group(1)
-                if candidate.startswith("http") and ".php" not in candidate:
-                    return candidate
+            # JavaScript redirect
+            for pat in [
+                r'window\.location(?:\.href)?\s*=\s*["\']([^"\']{15,})["\']',
+                r'location\.replace\(["\']([^"\']{15,})["\']\)',
+                r'location\.href\s*=\s*["\']([^"\']{15,})["\']',
+            ]:
+                m = re.search(pat, r.text)
+                if m:
+                    candidate = m.group(1)
+                    if candidate.startswith("http") and ".php" not in candidate:
+                        cdom = urlparse(candidate).hostname or ""
+                        if not any(ad in cdom for ad in AD_DOMAINS):
+                            return candidate
 
-        # Case 4: Response body mein CDN URL dhundho
-        for pat in [
-            r'(https?://(?:cdn|dl|d|download)\.[^\s"\'<>\]]{10,})',
-            r'"url"\s*:\s*"(https?://[^\s"\'<>]{15,})"',
-        ]:
-            m = re.search(pat, r.text)
-            if m:
-                candidate = m.group(1)
-                if ".php" not in candidate and "hubcloud.php" not in candidate:
-                    return candidate
+            # JSON ya body mein CDN URL
+            for pat in [
+                r'(https?://(?:cdn|dl|d|download)\.[^\s"\'<>\]]{10,})',
+                r'"url"\s*:\s*"(https?://[^\s"\'<>]{15,})"',
+            ]:
+                m = re.search(pat, r.text)
+                if m:
+                    candidate = m.group(1)
+                    if ".php" not in candidate:
+                        cdom = urlparse(candidate).hostname or ""
+                        if not any(ad in cdom for ad in AD_DOMAINS):
+                            return candidate
 
     except Exception:
         pass
 
-    return url  # fallback: original URL wapas do
+    return url  # fallback
 
 def gdflix_fetch_html(url):
     r = get(
