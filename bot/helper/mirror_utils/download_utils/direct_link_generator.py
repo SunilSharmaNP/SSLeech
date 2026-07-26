@@ -567,7 +567,78 @@ def hubdrive_bypass(url):
     priority = {"fsl": 0, "direct": 1, "cdn": 2, "google": 3, "pixel": 4, "other": 5}
     mirrors.sort(key=lambda x: priority.get(x["type"], 99))
 
-    return mirrors[0]["url"]
+    final_url = mirrors[0]["url"]
+
+    # ── Step 5: PHP redirect resolve karo ────────────────────────────────────
+    # sportverse.cc/hubcloud.php?... jaisi URLs actual CDN URL pe redirect karti hain
+    # Aria2 inhe PHP file samajh ke download kar leta hai — isliye resolve karna zaroori hai
+    resolved = _resolve_cdn_redirect(final_url)
+    return resolved if resolved else final_url
+
+
+def _resolve_cdn_redirect(url):
+    """
+    PHP/redirect URLs ko follow karke actual direct CDN download URL nikalo.
+
+    sportverse.cc/hubcloud.php?host=hubcloud&id=...&token=...
+    → HTTP 302 ya JS redirect → actual CDN URL (jaise cdn.hubcloud.one/d/...)
+    """
+    # Sirf tab resolve karo jab URL suspicious lage (PHP script ya known redirect host)
+    parsed = urlparse(url)
+    is_redirect_url = (
+        parsed.path.endswith(".php")
+        or "hubcloud.php" in url
+        or "sportverse.cc" in url
+        or "workers.dev" in url
+    )
+    if not is_redirect_url:
+        return url  # already direct, chhod do
+
+    scraper = create_scraper()
+    headers = {"User-Agent": user_agent, "Accept": "*/*"}
+
+    try:
+        r = scraper.get(url, headers=headers, allow_redirects=True, timeout=20)
+
+        # Case 1: HTTP redirect follow ho gaya — r.url final URL hai
+        if r.url and r.url != url:
+            final = r.url
+            # Sirf tab return karo agar yeh bhi PHP page nahi hai
+            if not final.endswith(".php") and "hubcloud.php" not in final:
+                return final
+
+        # Case 2: Content-Disposition header — seedha file serve ho rahi hai
+        cd = r.headers.get("Content-Disposition", "")
+        if cd and "filename" in cd:
+            return r.url or url
+
+        # Case 3: JavaScript redirect (window.location / location.href)
+        for pat in [
+            r'window\.location(?:\.href)?\s*=\s*["\']([^"\']{15,})["\']',
+            r'location\.replace\(["\']([^"\']{15,})["\']\)',
+            r'location\.href\s*=\s*["\']([^"\']{15,})["\']',
+        ]:
+            m = re.search(pat, r.text)
+            if m:
+                candidate = m.group(1)
+                if candidate.startswith("http") and ".php" not in candidate:
+                    return candidate
+
+        # Case 4: Response body mein CDN URL dhundho
+        for pat in [
+            r'(https?://(?:cdn|dl|d|download)\.[^\s"\'<>\]]{10,})',
+            r'"url"\s*:\s*"(https?://[^\s"\'<>]{15,})"',
+        ]:
+            m = re.search(pat, r.text)
+            if m:
+                candidate = m.group(1)
+                if ".php" not in candidate and "hubcloud.php" not in candidate:
+                    return candidate
+
+    except Exception:
+        pass
+
+    return url  # fallback: original URL wapas do
 
 def gdflix_fetch_html(url):
     r = get(
