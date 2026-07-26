@@ -365,73 +365,54 @@ def hubcloud_bypass_single(url):
     base = detect_hubcloud_base(url)
     new_url = url.replace(get_base(url), base)
 
-    # requests.get me allow_redirects=True daala hai, taaki agar link automatic redirect ho to track ho jaye
-    r = get(new_url, headers={"User-Agent": user_agent}, allow_redirects=True, timeout=15)
+    r = get(new_url, headers={"User-Agent": user_agent}, timeout=15)
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # Mirror links extract karne ka internal function
-    def extract_mirrors(s):
-        mrs = []
-        # 'h2' hata diya hai taaki agar site design change kare to bhi buttons pakde jayein
-        for a in s.select("div.card-body a.btn"):
-            href = fix_url(a.get("href", ""))
-            txt = a.get_text(strip=True).lower()
+    link = ""
+    for s in soup.find_all("script"):
+        t = s.string or ""
+        m = re.search(r"var\s+url\s*=\s*'([^']+)'", t)
+        if m:
+            link = m.group(1)
+            break
 
-            if "fsl" in txt: t = "fsl"
-            elif "google" in txt: t = "google"
-            elif "cdn" in txt: t = "cdn"
-            elif "pixel" in href: t = "pixel"
-            else: t = "direct"
+    if not link:
+        a = soup.select_one("div.vd center a")
+        if a:
+            link = a.get("href", "")
 
-            mrs.append({"type": t, "url": href})
-        return mrs
+    if not link:
+        raise DirectDownloadLinkException("HubCloud: Link not found")
 
-    # Check karte hain kya hum already actual download (mirrors) page par hain
-    mirrors = extract_mirrors(soup)
+    if not link.startswith("http"):
+        link = base + link
 
-    if not mirrors:
-        # Agar mirrors nahi mile, to ye initial/landing page hai. Yaha se redirect link nikalna hoga.
-        link = ""
-        
-        # Method 1: Check in JS variables (var url = ... or window.location.href = ...)
-        for s in soup.find_all("script"):
-            t = s.string or ""
-            m = re.search(r"(?:var\s+url|window\.location\.href)\s*=\s*['\"]([^'\"]+)['\"]", t)
-            if m:
-                link = m.group(1)
-                break
-                
-        # Method 2: Check for Meta Refresh Tag
-        if not link:
-            meta = soup.find("meta", attrs={"http-equiv": re.compile("refresh", re.I)})
-            if meta and meta.get("content"):
-                m_meta = re.search(r"url=['\"]?([^;'\"\s]+)", meta["content"], re.I)
-                if m_meta:
-                    link = m_meta.group(1)
-        
-        # Method 3: Check for traditional center button
-        if not link:
-            a = soup.select_one("div.vd center a") or soup.find("a", class_=re.compile(r"btn", re.I))
-            if a and a.has_attr("href"):
-                link = a.get("href", "")
+    r2 = get(link, headers={"User-Agent": user_agent}, timeout=15)
+    soup2 = BeautifulSoup(r2.text, "html.parser")
 
-        if not link or link == "#":
-            raise DirectDownloadLinkException("HubCloud/HubDrive: Redirect link not found on landing page")
+    mirrors = []
+    for a in soup2.select("div.card-body h2 a.btn"):
+        href = fix_url(a.get("href", ""))
+        txt = a.get_text(strip=True).lower()
 
-        # Agar relative link hai to usko pure URL me convert karein
-        if not link.startswith("http"):
-            link = urljoin(r.url, link)
+        if "fsl" in txt:
+            t = "fsl"
+        elif "google" in txt:
+            t = "google"
+        elif "cdn" in txt:
+            t = "cdn"
+        elif "pixel" in href:
+            t = "pixel"
+        else:
+            t = "direct"
 
-        # Step 2: Final mirror page ko open karna
-        r2 = get(link, headers={"User-Agent": user_agent}, allow_redirects=True, timeout=15)
-        soup2 = BeautifulSoup(r2.text, "html.parser")
-        mirrors = extract_mirrors(soup2)
+        mirrors.append({"type": t, "url": href})
 
     if not mirrors:
-        raise DirectDownloadLinkException("HubCloud/HubDrive: No download mirrors found on final page")
+        raise DirectDownloadLinkException("HubCloud: No mirrors found")
 
-    # Priority set karna
-    priority = {"fsl": 0, "google": 2, "cdn": 3, "hub": 4, "cloud": 5, "pixel": 6, "direct": 7}
+    # 🔥 priority
+    priority = {"fsl": 0, "google": 2, "cdn": 3, "hub": 4, "cloud": 5, "pixel": 6}
     mirrors.sort(key=lambda x: priority.get(x["type"], 99))
 
     return mirrors[0]["url"]
