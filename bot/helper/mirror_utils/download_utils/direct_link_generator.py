@@ -200,11 +200,7 @@ def direct_link_generator(link):
             return gdflix_bypass(link)
         return gdflix_bypass(link)
 
-    # -------- HUBDRIVE --------
-    elif any(x in domain for x in hubdrive_list):
-        return hubdrive_bypass(link)
-
-    # -------- HUBCLOUD --------
+    # -------- HUB FAMILY --------
     elif any(x in domain for x in hub_list):
         if "/packs/" in link:
             links = hubcloud_extract_pack(link)
@@ -350,7 +346,7 @@ def direct_link_generator(link):
 def detect_hubcloud_base(url):
     try:
         h = urlparse(url).hostname or ""
-        if "hubcloud." in h or "hubdrive." in h:
+        if "hubcloud." in h:
             return f"https://{h}"
         return "https://hubcloud.one"
     except:
@@ -431,287 +427,6 @@ def hubcloud_extract_pack(url):
     data = json.loads(m.group(1))
     base = get_base(url)
     return [f"{base}/drive/{f['share_id']}" for f in data.get("files", [])]
-
-
-def hubdrive_bypass(url):
-    """
-    HubDrive Direct Download Bypass.
-
-    Flow:
-      1. Cloudscraper se share page fetch karo (Cloudflare bypass)
-      2. Intermediate URL dhundho — JS variable ya button ya POST form se
-      3. Mirror/download page fetch karo
-      4. Best mirror choose karo priority ke hisaab se
-    """
-    cget = create_scraper().request
-    base = get_base(url)
-    headers = {
-        "User-Agent": user_agent,
-        "Referer": base + "/",
-    }
-
-    # ── Step 1: Share page fetch ──────────────────────────────────────────────
-    try:
-        r = cget("GET", url, headers=headers, timeout=20)
-    except Exception as e:
-        raise DirectDownloadLinkException(f"HubDrive: Page fetch failed — {e}")
-
-    if r.status_code not in (200, 302):
-        raise DirectDownloadLinkException(f"HubDrive: HTTP {r.status_code}")
-
-    soup = BeautifulSoup(r.text, "html.parser")
-
-    # ── Step 2: Intermediate link dhundho ────────────────────────────────────
-    # Method A: JavaScript variable
-    link = ""
-    for s in soup.find_all("script"):
-        t = s.string or ""
-        for pat in [
-            r"var\s+url\s*=\s*['\"]([^'\"]{10,})['\"]",
-            r"var\s+url2\s*=\s*['\"]([^'\"]{10,})['\"]",
-            r"window\.location\.href\s*=\s*['\"]([^'\"]{10,})['\"]",
-        ]:
-            m = re.search(pat, t)
-            if m and m.group(1).startswith("http"):
-                link = m.group(1)
-                break
-        if link:
-            break
-
-    # Method B: Anchor/button tag
-    if not link:
-        for sel in ["div.vd center a", "div.card a.btn", "a.btn-success", "a.btn-primary"]:
-            a = soup.select_one(sel)
-            if a and a.get("href", "").startswith("http"):
-                link = a["href"]
-                break
-
-    # Method C: POST form (token-based flow)
-    if not link:
-        form = soup.find("form")
-        if form:
-            action = form.get("action") or url
-            if not action.startswith("http"):
-                action = base + action
-            inputs = {
-                i.get("name"): i.get("value", "")
-                for i in form.find_all("input") if i.get("name")
-            }
-            try:
-                r2 = cget("POST", action, data=inputs,
-                          headers={**headers, "Referer": url}, timeout=20)
-                soup2 = BeautifulSoup(r2.text, "html.parser")
-                for sel in ["div.vd center a", "div.card a.btn", "a.btn-success", "a.btn-primary"]:
-                    a = soup2.select_one(sel)
-                    if a and a.get("href", "").startswith("http"):
-                        link = a["href"]
-                        break
-                if not link:
-                    for s in soup2.find_all("script"):
-                        t = s.string or ""
-                        m = re.search(r"var\s+url\s*=\s*['\"]([^'\"]{10,})['\"]", t)
-                        if m and m.group(1).startswith("http"):
-                            link = m.group(1)
-                            break
-            except Exception:
-                pass
-
-    if not link:
-        raise DirectDownloadLinkException(
-            "HubDrive: Intermediate link nahi mila — site ka HTML structure badal gaya hai"
-        )
-
-    if not link.startswith("http"):
-        link = base + link
-
-    # ── Step 3: Mirror page fetch ─────────────────────────────────────────────
-    headers["Referer"] = url
-    try:
-        r3 = cget("GET", link, headers=headers, timeout=20)
-    except Exception as e:
-        raise DirectDownloadLinkException(f"HubDrive: Mirror page fetch failed — {e}")
-
-    soup3 = BeautifulSoup(r3.text, "html.parser")
-
-    # ── Step 4a: Agar mirror page khud HubCloud hai → seedha bypass karo ────────
-    mirror_domain = urlparse(r3.url).hostname or ""
-    if "hubcloud" in mirror_domain or "hubcdn" in mirror_domain:
-        try:
-            return hubcloud_bypass_single(r3.url)
-        except Exception:
-            pass  # fallback: buttons dhundho
-
-    # ── Step 4b: Mirror buttons se direct links nikalo ───────────────────────────
-    SKIP_DOMAINS = {"t.me", "telegram.me", "telegram.org"}
-    mirrors = []
-    seen = set()
-
-    # Pehle specific selectors, phir broad fallback
-    selectors = [
-        "div.card-body h2 a.btn",
-        "div.card-body a.btn",
-        "div.download a",
-        "div.mirror a",
-        "div.links a",
-        "a.btn",
-        "a.btn-success",
-        "a.btn-primary",
-        "a.btn-warning",
-        "a.btn-info",
-    ]
-    for sel in selectors:
-        for a in soup3.select(sel):
-            href = fix_url(a.get("href", ""))
-            if not href or not href.startswith("http") or href in seen:
-                continue
-            # Ad/social links skip karo
-            hdom = urlparse(href).hostname or ""
-            if any(s in hdom for s in SKIP_DOMAINS):
-                continue
-            seen.add(href)
-            txt = a.get_text(strip=True).lower()
-
-            if "fsl" in txt or "fsl" in href:
-                t = "fsl"
-            elif "google" in txt or "drive.google" in href:
-                t = "google"
-            elif "cdn" in txt:
-                t = "cdn"
-            elif "pixel" in href:
-                t = "pixel"
-            elif "direct" in txt or "instant" in txt:
-                t = "direct"
-            else:
-                t = "other"
-
-            mirrors.append({"type": t, "url": href})
-
-    # ── Step 4c: Agar phir bhi kuch nahi mila → hubcloud_bypass_single try karo ─
-    if not mirrors:
-        # Intermediate link khud HubCloud style ho sakta hai
-        if any(x in link for x in ["hubcloud", "hubcdn", "/drive/", "/d/"]):
-            try:
-                return hubcloud_bypass_single(link)
-            except Exception:
-                pass
-        raise DirectDownloadLinkException(
-            "HubDrive: Koi download mirror nahi mila — page structure check karo"
-        )
-
-    priority = {"fsl": 0, "direct": 1, "cdn": 2, "google": 3, "pixel": 4, "other": 5}
-    mirrors.sort(key=lambda x: priority.get(x["type"], 99))
-
-    final_url = mirrors[0]["url"]
-
-    # ── Step 5: PHP redirect resolve karo ────────────────────────────────────
-    # sportverse.cc/hubcloud.php?... jaisi URLs actual CDN URL pe redirect karti hain
-    # Aria2 inhe PHP file samajh ke download kar leta hai — isliye resolve karna zaroori hai
-    resolved = _resolve_cdn_redirect(final_url)
-    return resolved if resolved else final_url
-
-
-def _resolve_cdn_redirect(url):
-    """
-    PHP/redirect URLs se actual direct CDN download URL nikalo.
-
-    Strategy:
-      1. hubcloud.php?id=... → ID extract karo → hubcloud_bypass_single() seedha call karo
-         (ad chain — bonuscaf.com etc. — bilkul bypass ho jaega)
-      2. Baki PHP/redirect URLs → carefully follow karo, ad domains skip karo
-    """
-    # Ad/tracking domains jo 204 ya blank dete hain — inhe kabhi return mat karo
-    AD_DOMAINS = {"bonuscaf.com", "shorte.st", "ouo.io", "adf.ly", "linkvertise.com"}
-
-    parsed = urlparse(url)
-    is_redirect_url = (
-        parsed.path.endswith(".php")
-        or "hubcloud.php" in url
-        or "sportverse.cc" in url
-        or "workers.dev" in url
-    )
-    if not is_redirect_url:
-        return url  # already direct link, kuch karne ki zaroorat nahi
-
-    # ── Strategy 1: hubcloud.php URL se ID nikaalo, seedha HubCloud bypass karo ──
-    if "hubcloud.php" in url or "sportverse.cc" in url:
-        qs = parse_qs(parsed.query)
-        file_id = qs.get("id", [""])[0]
-        host    = qs.get("host", ["hubcloud"])[0]
-
-        if file_id:
-            # HubCloud base domain determine karo
-            hc_base = "https://hubcloud.one"
-            if host and host not in ("hubcloud",):
-                hc_base = f"https://{host}.one"
-
-            # hubcloud_bypass_single seedha call karo — ad chain completely bypass
-            for hc_url in [
-                f"{hc_base}/drive/{file_id}",
-                f"https://hubcloud.one/drive/{file_id}",
-                f"https://hubcloud.lol/drive/{file_id}",
-            ]:
-                try:
-                    result = hubcloud_bypass_single(hc_url)
-                    if result:
-                        return result
-                except Exception:
-                    continue
-
-    # ── Strategy 2: Baki redirect URLs — carefully follow karo ──────────────────
-    scraper = create_scraper()
-    headers = {"User-Agent": user_agent, "Accept": "*/*"}
-
-    try:
-        # allow_redirects=False — manually follow karo taaki ad domains detect ho sakein
-        r = scraper.get(url, headers=headers, allow_redirects=False, timeout=20)
-
-        # Redirect mila
-        if r.status_code in (301, 302, 303, 307, 308):
-            loc = r.headers.get("Location") or r.headers.get("location", "")
-            if loc:
-                loc_domain = urlparse(loc).hostname or ""
-                # Ad domain nahi hai? Return karo
-                if not any(ad in loc_domain for ad in AD_DOMAINS):
-                    return loc
-
-        # 200 ke saath response — JS ya body mein URL dhundho
-        if r.status_code == 200:
-            # Content-Disposition — seedha file
-            cd = r.headers.get("Content-Disposition", "")
-            if cd and "filename" in cd:
-                return r.url or url
-
-            # JavaScript redirect
-            for pat in [
-                r'window\.location(?:\.href)?\s*=\s*["\']([^"\']{15,})["\']',
-                r'location\.replace\(["\']([^"\']{15,})["\']\)',
-                r'location\.href\s*=\s*["\']([^"\']{15,})["\']',
-            ]:
-                m = re.search(pat, r.text)
-                if m:
-                    candidate = m.group(1)
-                    if candidate.startswith("http") and ".php" not in candidate:
-                        cdom = urlparse(candidate).hostname or ""
-                        if not any(ad in cdom for ad in AD_DOMAINS):
-                            return candidate
-
-            # JSON ya body mein CDN URL
-            for pat in [
-                r'(https?://(?:cdn|dl|d|download)\.[^\s"\'<>\]]{10,})',
-                r'"url"\s*:\s*"(https?://[^\s"\'<>]{15,})"',
-            ]:
-                m = re.search(pat, r.text)
-                if m:
-                    candidate = m.group(1)
-                    if ".php" not in candidate:
-                        cdom = urlparse(candidate).hostname or ""
-                        if not any(ad in cdom for ad in AD_DOMAINS):
-                            return candidate
-
-    except Exception:
-        pass
-
-    return url  # fallback
 
 def gdflix_fetch_html(url):
     r = get(
@@ -823,9 +538,7 @@ def gdflix_bypass_single(url):
     if pix:
         pix = pix.replace("?embed", "")
 
-    # Only file-type TG links (t.me/c/channel_id/msg_id) — channel links skip
-    tg_raw = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
-    tg = tg_raw if (tg_raw and "/c/" in tg_raw) else None
+    tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
 
     gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
     pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
@@ -966,6 +679,131 @@ def multicloudlinks_bypass(url):
     )
 
 
+"""def pbx_resolve_and_select(hub_url):
+   
+    PBX API resolver (FINAL):
+    - Domain aware PBX selection
+    - Safe GET check (Range=0-0)
+    - Priority based mirror selection
+   
+
+    domain = urlparse(hub_url).hostname or ""
+
+    # -------- DOMAIN → API MAPPING --------
+    if "hubcloud" in domain or "hubcdn" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/hubcloud",
+            "https://pbx1botapi.vercel.app/api/hubcdn",
+        ]
+
+    elif "hubdrive" in domain or "katdrive" in domain:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/hubdrive",
+            "https://pbx1botapi.vercel.app/api/driveleech",
+        ]
+
+    elif "gdflix" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/gdflix"]
+
+    elif "vcloud" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/vcloud"]
+
+    elif "driveleech" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/driveleech"]
+
+    elif "neo" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/neo"]
+
+    elif "gdrex" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/gdrex"]
+
+    elif "pixelcdn" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/pixelcdn"]
+
+    elif "extralink" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/extralink"]
+
+    elif "luxdrive" in domain:
+        PBX_APIS = ["https://pbx1botapi.vercel.app/api/luxdrive"]
+
+    elif "nexdrive" in domain:
+        PBX_APIS = ["https://pbx1botsapi2.vercel.app/api/nexdrive"]
+
+    elif "hblinks" in domain:
+        PBX_APIS = ["https://pbx1botsapi2.vercel.app/api/hblinks"]
+
+    else:
+        PBX_APIS = [
+            "https://pbx1botapi.vercel.app/api/hubcloud",
+            "https://pbx1botapi.vercel.app/api/vcloud",
+            "https://pbx1botapi.vercel.app/api/hubcdn",
+            "https://pbx1botapi.vercel.app/api/driveleech",
+            "https://pbx1botapi.vercel.app/api/hubdrive",
+            "https://pbx1botapi.vercel.app/api/neo",
+            "https://pbx1botapi.vercel.app/api/gdrex",
+            "https://pbx1botapi.vercel.app/api/pixelcdn",
+            "https://pbx1botapi.vercel.app/api/extralink",
+            "https://pbx1botapi.vercel.app/api/luxdrive",
+            "https://pbx1botapi.vercel.app/api/gdflix",
+            "https://pbx1botsapi2.vercel.app/api/nexdrive",
+            "https://pbx1botsapi2.vercel.app/api/hblinks",
+        ]
+
+    session = Session()
+    session.headers.update({
+        "User-Agent": user_agent,
+        "Accept": "*/*",
+    })
+
+    for api in PBX_APIS:
+        try:
+            api_url = f"{api}?url={quote(hub_url, safe='')}"
+            resp = session.get(api_url, timeout=20)
+
+            if resp.status_code != 200:
+                continue
+
+            data = resp.json()
+            links = data.get("links") or []
+            if not links:
+                continue
+
+            # -------- PRIORITY --------
+            def priority(item):
+                t = (item.get("type") or "").lower()
+                if any(x in t for x in ("fsl", "direct", "cloud", "cdn")):
+                    return 0
+                if "pixel" in t:
+                    return 1
+                return 2
+
+            links.sort(key=priority)
+
+            # -------- SAFE CHECK (Range) --------
+            for item in links:
+                dl = item.get("url")
+                if not dl:
+                    continue
+                try:
+                    r = session.get(
+                        dl,
+                        headers={"Range": "bytes=0-0"},
+                        allow_redirects=True,
+                        timeout=12,
+                    )
+                    if r.status_code in (200, 206):
+                        LOGGER.info(f"PBX SUCCESS → {item.get('type')} | {dl}")
+                        return dl
+                except Exception:
+                    continue
+
+        except Exception:
+            continue
+
+    raise DirectDownloadLinkException(
+        "ERROR: No working direct download link found"
+    )
+    """
 
 
 def filepress(url):
