@@ -847,6 +847,41 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
 
+    # ── vidara.to / vidara.so ────────────────────────────────────────────────────
+    # yt-dlp has no extractor for vidara.to. The site embeds odysseusa.cc in an
+    # iframe and the real video is served as a token-based HLS m3u8.
+    #
+    # Solution: call direct_link_generator → POST odysseusa.cc/api/stream
+    #           → get streaming_url (master.m3u8) → pass to yt-dlp with headers.
+    _is_vidara = any(h in link for h in ("vidara.to", "vidara.so"))
+    if _is_vidara:
+        try:
+            resolved = await sync_to_async(direct_link_generator, link)
+            if isinstance(resolved, tuple):
+                stream_url, vidara_headers = resolved[0], resolved[1]
+                if isinstance(vidara_headers, list):
+                    # Convert ["Referer:https://…", "Origin:…"] → dict
+                    vidara_headers_dict = {}
+                    for h in vidara_headers:
+                        if ":" in h:
+                            k, v = h.split(":", 1)
+                            vidara_headers_dict[k.strip()] = v.strip()
+                else:
+                    vidara_headers_dict = {"Referer": str(vidara_headers)}
+            else:
+                stream_url = resolved
+                vidara_headers_dict = {"Referer": "https://odysseusa.cc/"}
+
+            LOGGER.info(f"vidara resolved → {stream_url[:80]}…")
+            link = stream_url
+            options = {"usenetrc": True, "cookiefile": "cookies.txt",
+                       "http_headers": vidara_headers_dict}
+        except DirectDownloadLinkException as e:
+            await sendMessage(message, f"{tag} {e}")
+            await delete_links(message)
+            return
+    # ────────────────────────────────────────────────────────────────────────────
+
     # ── luluvdo.com / lulustream.com ────────────────────────────────────────────
     # yt-dlp has NO extractor for luluvdo. The m3u8 URL is CDN-protected and
     # tnmr.org blocks requests at the TLS fingerprint level — both Python-SSL
@@ -911,7 +946,8 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             await sendMessage(message, f"{tag} {e}")
             await delete_links(message)
             return
-    else:
+    elif not _is_vidara:
+        # vidara already set options above; only set default if neither branch ran
         options = {"usenetrc": True, "cookiefile": "cookies.txt"}
     # ────────────────────────────────────────────────────────────────────────────
     ydl_opts = {}
