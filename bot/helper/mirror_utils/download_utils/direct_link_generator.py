@@ -534,11 +534,25 @@ def gdflix_bypass_single(url):
             google = gdflix_get_google(cloud_url)
 
     # ── Other mirrors in the page ─────────────────────────────────────────────
+
+    # 🥇 DIRECT SERVER [MGT] — indexserver.site direct download (highest priority)
+    # Pattern: https://<region>.indexserver.site/<encoded_path>/<host>/<filename>
+    indexserver = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.indexserver\.site/[^\s\"'<>]+")
+
     pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
     if pix:
         pix = pix.replace("?embed", "")
 
-    tg = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
+    # Only match actual Telegram file links (t.me/c/channel_id/msg_id)
+    # Skip plain channel join links like t.me/gdflix_com — those are useless
+    tg_raw = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
+    tg = tg_raw if (tg_raw and "/c/" in tg_raw) else None
+
+    # Filesgram bot link (Telegram File button) — bot-based, lowest priority
+    filesgram = gdflix_scan(html, r"https://filesgram\.xyz/[^\s\"'<>&]+")
+
+    # FoxCloud CDN (Instant DL [10GBPS] button)
+    foxcloud = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.foxcloud\.rest/[^\s\"'<>]+")
 
     gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
     pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
@@ -551,9 +565,17 @@ def gdflix_bypass_single(url):
 
     links = []
 
-    # ⭐ Priority: Google > Instant CDN > Gofile > pub > workers > test > pixeldrain > tg
+    # ⭐ Priority: DIRECT SERVER [MGT] > Google > FoxCloud > Instant CDN > Gofile
+    #             > pub > workers > test > pixeldrain > tg file > filesgram
+
+    if indexserver:
+        links.append({"type": "indexserver", "url": indexserver})
+
     if google:
         links.append({"type": "google", "url": google})
+
+    if foxcloud:
+        links.append({"type": "foxcloud", "url": foxcloud})
 
     if instant_direct:
         links.append({"type": "instant", "url": instant_direct})
@@ -582,18 +604,24 @@ def gdflix_bypass_single(url):
     if tg:
         links.append({"type": "telegram", "url": tg})
 
+    if filesgram:
+        links.append({"type": "filesgram", "url": filesgram})
+
     if not links:
         raise DirectDownloadLinkException("GDFlix: No usable links found (instant CDN domain may have changed again)")
 
     priority = {
-        "google":     0,
-        "instant":    1,
-        "gofile":     2,
-        "pub":        3,
-        "workers":    4,
-        "test":       5,
-        "pixeldrain": 6,
-        "telegram":   7,
+        "indexserver": 0,   # DIRECT SERVER [MGT] — direct download, highest priority
+        "google":      1,
+        "foxcloud":    2,   # Instant DL [10GBPS]
+        "instant":     3,
+        "gofile":      4,
+        "pub":         5,
+        "workers":     6,
+        "test":        7,
+        "pixeldrain":  8,
+        "telegram":    9,   # t.me/c/... file links only
+        "filesgram":   10,  # bot-based, lowest
     }
 
     links.sort(key=lambda x: priority.get(x["type"], 99))
