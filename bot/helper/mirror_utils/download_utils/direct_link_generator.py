@@ -513,142 +513,144 @@ def gdflix_get_google(instant):
     return None
 
 
+def _gdflix_unescape(url):
+    """HTML-unescape a URL extracted from raw HTML (e.g. &amp; → &)."""
+    if url:
+        url = url.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    return url
+
+
+def _gdflix_resolve_multiup(multiup_url):
+    """
+    Fetch a goflix.sbs/en/mirror/ (MultiUp) page and extract the best
+    direct-download link available (gofile.io preferred).
+    Returns None if nothing found.
+    """
+    try:
+        r = get(
+            multiup_url,
+            headers={"User-Agent": user_agent},
+            allow_redirects=True,
+            timeout=12,
+        )
+        page = r.text
+        # Prefer gofile.io — free, fast, direct
+        gofile = gdflix_scan(page, r'https://gofile\.io/d/[A-Za-z0-9]+')
+        if gofile:
+            return gofile
+        # Fallback: megaup.net
+        megaup = gdflix_scan(page, r'https://megaup\.net/[A-Za-z0-9]+/[^\s"\'<>]+')
+        if megaup:
+            return megaup
+    except Exception:
+        pass
+    return None
+
+
 def gdflix_bypass_single(url):
     html, final = gdflix_fetch_html(url)
 
     # ── Instant DL link ──────────────────────────────────────────────────────
-    # busycdn domain changed to .xyz; link is now embedded directly in page HTML
-    # (no separate GET needed). gdflix_get_instant now accepts html, not url.
     instant = gdflix_get_instant(html)
 
     # Follow instant link through fastcdn wrapper → Google Drive URL
     google = unwrap_fastcdn(gdflix_get_google(instant))
 
-    # ── /cloud/ fallback (new GDFlix addition) ───────────────────────────────
-    # If instant didn't yield a Google link, try the /cloud/ endpoint which also
-    # redirects through fastcdn → video-downloads.googleusercontent.com
+    # ── /cloud/ fallback ─────────────────────────────────────────────────────
     if not google:
         cloud_path = gdflix_scan(html, r'href="(/cloud/[^"\'<>\s]+)"')
         if cloud_path:
             cloud_url = urljoin(final, cloud_path)
             google = gdflix_get_google(cloud_url)
 
-    # ── Other mirrors in the page ─────────────────────────────────────────────
+    # ── Other mirrors ─────────────────────────────────────────────────────────
 
-    # 🥇 DIRECT SERVER [MGT] — indexserver.site direct download (highest priority)
-    # Pattern: https://<region>.indexserver.site/<encoded_path>/<host>/<filename>
-    indexserver = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.indexserver\.site/[^\s\"'<>]+")
+    # 🥇 DIRECT SERVER [MGT] — pre-signed indexserver.site URL.
+    #    Fresh from page fetch; return IMMEDIATELY without HEAD check
+    #    (any delay risks expiry — these links are valid for ~10-30 seconds).
+    indexserver_raw = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.indexserver\.site/[^\s\"'<>]+")
+    indexserver = _gdflix_unescape(indexserver_raw)
 
     pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
     if pix:
         pix = pix.replace("?embed", "")
 
-    # Only match actual Telegram file links (t.me/c/channel_id/msg_id)
-    # Skip plain channel join links like t.me/gdflix_com — those are useless
+    # Only t.me/c/channel_id/msg_id file links — skip plain channel join links
     tg_raw = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
     tg = tg_raw if (tg_raw and "/c/" in tg_raw) else None
 
-    # Filesgram bot link (Telegram File button) — bot-based, lowest priority
+    # Filesgram bot link (Telegram File button)
     filesgram = gdflix_scan(html, r"https://filesgram\.xyz/[^\s\"'<>&]+")
 
-    # FoxCloud CDN (Instant DL [10GBPS] button)
-    foxcloud = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.foxcloud\.rest/[^\s\"'<>]+")
-
+    # gofile.io direct link (sometimes embedded directly in GDFlix page)
     gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
+
+    # goflix.sbs/en/mirror/ → MultiUp mirror page containing gofile.io links
+    multiup_page_url = gdflix_scan(html, r"https://(?:goflix\.sbs|validate\.multiup2\.workers\.dev)/[^\s\"'<>]+")
+    multiup_gofile = None
+    if multiup_page_url and not gofile:
+        multiup_gofile = _gdflix_resolve_multiup(_gdflix_unescape(multiup_page_url))
+
     pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
     workers = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
     test = gdflix_scan(html, r"https://test\.[^\"'\s]+")
 
-    # ── Instant link itself as direct CDN fallback ────────────────────────────
-    # busycdn.xyz links are direct download CDN links even without unwrapping
+    # busycdn.xyz direct CDN fallback
     instant_direct = gdflix_scan(html, r"https://instant\.busycdn\.xyz/[^\"\'\s<>]+")
 
+    # ── 🥇 Return indexserver IMMEDIATELY — no HEAD check to avoid expiry ─────
+    if indexserver:
+        LOGGER.info(f"GDFlix: Using DIRECT SERVER [MGT] → {indexserver[:80]}...")
+        return indexserver
+
+    # ── Build fallback chain ──────────────────────────────────────────────────
     links = []
 
-    # ⭐ Priority: DIRECT SERVER [MGT] > Google > FoxCloud > Instant CDN > Gofile
-    #             > pub > workers > test > pixeldrain > tg file > filesgram
-
-    if indexserver:
-        links.append({"type": "indexserver", "url": indexserver})
-
     if google:
-        links.append({"type": "google", "url": google})
-
-    if foxcloud:
-        links.append({"type": "foxcloud", "url": foxcloud})
-
+        links.append({"type": "google",    "url": google})
     if instant_direct:
-        links.append({"type": "instant", "url": instant_direct})
-
+        links.append({"type": "instant",   "url": instant_direct})
     if gofile:
-        links.append({"type": "gofile", "url": gofile})
-
+        links.append({"type": "gofile",    "url": gofile})
+    if multiup_gofile:
+        links.append({"type": "gofile",    "url": multiup_gofile})
     if pub:
         pub = unwrap_fastcdn(pub)
         if pub:
-            links.append({"type": "pub", "url": pub})
-
+            links.append({"type": "pub",   "url": pub})
     if workers:
         workers = unwrap_fastcdn(workers)
         if workers:
             links.append({"type": "workers", "url": workers})
-
     if test:
         test = unwrap_fastcdn(test)
         if test:
-            links.append({"type": "test", "url": test})
-
+            links.append({"type": "test",  "url": test})
     if pix:
-        links.append({"type": "pixeldrain", "url": pix})
-
+        links.append({"type": "pixeldrain","url": pix})
     if tg:
-        links.append({"type": "telegram", "url": tg})
-
+        links.append({"type": "telegram",  "url": tg})
     if filesgram:
         links.append({"type": "filesgram", "url": filesgram})
 
     if not links:
-        raise DirectDownloadLinkException("GDFlix: No usable links found (instant CDN domain may have changed again)")
+        raise DirectDownloadLinkException("GDFlix: No usable links found")
 
     priority = {
-        "indexserver": 0,   # DIRECT SERVER [MGT] — direct download, highest priority
-        "google":      1,
-        "foxcloud":    2,   # Instant DL [10GBPS]
-        "instant":     3,
-        "gofile":      4,
-        "pub":         5,
-        "workers":     6,
-        "test":        7,
-        "pixeldrain":  8,
-        "telegram":    9,   # t.me/c/... file links only
-        "filesgram":   10,  # bot-based, lowest
+        "google":     0,
+        "instant":    1,
+        "gofile":     2,   # gofile.io — direct download
+        "pub":        3,
+        "workers":    4,
+        "test":       5,
+        "pixeldrain": 6,
+        "telegram":   7,
+        "filesgram":  8,
     }
-
     links.sort(key=lambda x: priority.get(x["type"], 99))
-
-    # ── Validate time-sensitive direct links before returning ─────────────────
-    # indexserver.site URLs are pre-signed and expire within seconds.
-    # Do a quick HEAD check; skip 404/error links and fall to next priority.
-    VALIDATE_TYPES = {"indexserver", "foxcloud"}
-    for item in links:
-        if item["type"] not in VALIDATE_TYPES:
-            return item["url"]   # bot/TG/gofile links need no validation
-        try:
-            r_check = get(
-                item["url"],
-                headers={"User-Agent": user_agent},
-                allow_redirects=True,
-                timeout=8,
-                stream=True,   # don't download body
-            )
-            if r_check.status_code < 400:
-                return item["url"]
-            LOGGER.warning(f"GDFlix: {item['type']} link expired ({r_check.status_code}), trying next...")
-        except Exception as e:
-            LOGGER.warning(f"GDFlix: {item['type']} link check failed ({e}), trying next...")
-        continue
-
-    raise DirectDownloadLinkException("GDFlix: All links expired or unreachable")
+    best = links[0]
+    LOGGER.info(f"GDFlix: Using fallback [{best['type']}] → {best['url'][:80]}")
+    return best["url"]
 
 
 def gdflix_bypass(url):
