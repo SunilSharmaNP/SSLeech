@@ -625,7 +625,30 @@ def gdflix_bypass_single(url):
     }
 
     links.sort(key=lambda x: priority.get(x["type"], 99))
-    return links[0]["url"]
+
+    # ── Validate time-sensitive direct links before returning ─────────────────
+    # indexserver.site URLs are pre-signed and expire within seconds.
+    # Do a quick HEAD check; skip 404/error links and fall to next priority.
+    VALIDATE_TYPES = {"indexserver", "foxcloud"}
+    for item in links:
+        if item["type"] not in VALIDATE_TYPES:
+            return item["url"]   # bot/TG/gofile links need no validation
+        try:
+            r_check = get(
+                item["url"],
+                headers={"User-Agent": user_agent},
+                allow_redirects=True,
+                timeout=8,
+                stream=True,   # don't download body
+            )
+            if r_check.status_code < 400:
+                return item["url"]
+            LOGGER.warning(f"GDFlix: {item['type']} link expired ({r_check.status_code}), trying next...")
+        except Exception as e:
+            LOGGER.warning(f"GDFlix: {item['type']} link check failed ({e}), trying next...")
+        continue
+
+    raise DirectDownloadLinkException("GDFlix: All links expired or unreachable")
 
 
 def gdflix_bypass(url):
