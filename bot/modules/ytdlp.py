@@ -849,33 +849,64 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
     # ── vidara.to / vidara.so ────────────────────────────────────────────────────
     # yt-dlp has no extractor for vidara.to. The site embeds odysseusa.cc in an
-    # iframe and the real video is served as a token-based HLS m3u8.
+    # iframe and the real video is a token-based HLS m3u8 served from a CDN
+    # (s1-25-ilr3.97bf1.com) that blocks Python-SSL via TLS fingerprinting —
+    # same problem as luluvdo/tnmr.org.
     #
-    # Solution: call direct_link_generator → POST odysseusa.cc/api/stream
-    #           → get streaming_url (master.m3u8) → pass to yt-dlp with headers.
+    # Solution: POST odysseusa.cc/api/stream → get master.m3u8 → parse with
+    # _parse_luluvdo_m3u8 (curl_cffi + Chrome impersonation) → build synthetic
+    # info_dict → skip extract_info → download with m3u8_native + impersonate=chrome.
     _is_vidara = any(h in link for h in ("vidara.to", "vidara.so"))
+    _vidara_info_dict = None
+    _vidara_http_headers = None
+
     if _is_vidara:
         try:
             resolved = await sync_to_async(direct_link_generator, link)
             if isinstance(resolved, tuple):
-                stream_url, vidara_headers = resolved[0], resolved[1]
-                if isinstance(vidara_headers, list):
-                    # Convert ["Referer:https://…", "Origin:…"] → dict
-                    vidara_headers_dict = {}
-                    for h in vidara_headers:
+                stream_url, _raw_hdrs = resolved[0], resolved[1]
+                if isinstance(_raw_hdrs, list):
+                    _vidara_http_headers = {}
+                    for h in _raw_hdrs:
                         if ":" in h:
                             k, v = h.split(":", 1)
-                            vidara_headers_dict[k.strip()] = v.strip()
+                            _vidara_http_headers[k.strip()] = v.strip()
                 else:
-                    vidara_headers_dict = {"Referer": str(vidara_headers)}
+                    _vidara_http_headers = {"Referer": str(_raw_hdrs)}
             else:
                 stream_url = resolved
-                vidara_headers_dict = {"Referer": "https://odysseusa.cc/"}
+                _vidara_http_headers = {}
+
+            # Ensure User-Agent is always present
+            _vidara_http_headers.setdefault("User-Agent", _dlg_user_agent)
 
             LOGGER.info(f"vidara resolved → {stream_url[:80]}…")
             link = stream_url
-            options = {"usenetrc": True, "cookiefile": "cookies.txt",
-                       "http_headers": vidara_headers_dict}
+
+            # Parse m3u8 master playlist using curl_cffi (Chrome TLS) so the CDN
+            # doesn't block the manifest fetch with a connection reset.
+            _vidara_formats, _vidara_duration = await _parse_luluvdo_m3u8(
+                stream_url, _vidara_http_headers
+            )
+            _vidara_filesize = 0
+            if _vidara_duration and _vidara_formats:
+                best_fmt = max(_vidara_formats, key=lambda f: f.get("tbr") or 0)
+                if best_fmt.get("tbr"):
+                    _vidara_filesize = int(_vidara_duration * best_fmt["tbr"] * 1000 / 8)
+
+            _vidara_info_dict = {
+                "id": "vidara",
+                "title": name or "vidara_video",
+                "webpage_url": stream_url,
+                "original_url": stream_url,
+                "extractor": "generic",
+                "extractor_key": "Generic",
+                "http_headers": _vidara_http_headers,
+                "formats": _vidara_formats,
+                "filesize_approx": _vidara_filesize or None,
+                "duration": _vidara_duration or None,
+            }
+            options = {"usenetrc": True, "cookiefile": "cookies.txt"}
         except DirectDownloadLinkException as e:
             await sendMessage(message, f"{tag} {e}")
             await delete_links(message)
@@ -998,9 +1029,38 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
         options["playlist_items"] = "0"
 
+    # ── vidara: same CDN-TLS-fingerprint bypass as luluvdo ──────────────────────
+    # s1-25-ilr3.97bf1.com resets Python-SSL connections; curl_cffi+Chrome fixes it.
+    if _is_vidara and _vidara_info_dict is not None:
+        _vidara_title = name or _vidara_info_dict.get("title", "vidara_video")
+        ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+        ydl_opts["http_headers"] = _vidara_http_headers
+
+        # Quality selection — reuse LuluQualitySelector (works for any HLS variants)
+        _vidara_fmts = _vidara_info_dict.get("formats", [])
+        _sel_fmt = await LuluQualitySelector(client, message).get_quality(_vidara_fmts)
+        if _sel_fmt is None:
+            return  # user cancelled / timed out
+        _vidara_info_dict["formats"] = [_sel_fmt]
+        _vidara_info_dict["filesize_approx"] = (
+            _sel_fmt.get("filesize_approx") or _vidara_info_dict.get("filesize_approx")
+        )
+        _vidara_sel_qual = _sel_fmt["format_id"]
+
+        __run_multi()
+        await delete_links(message)
+        LOGGER.info(f"vidara: process_ie_result+chrome → {link[:80]}… qual={_vidara_sel_qual}")
+        ydl = YoutubeDLHelper(listener)
+        await ydl.add_download(
+            link, path, _vidara_title, _vidara_sel_qual,
+            False, ydl_opts, info_dict=_vidara_info_dict,
+        )
+        return
+    # ────────────────────────────────────────────────────────────────────────────
+
     # ── luluvdo: skip extract_info entirely, use process_ie_result via info_dict ─
     # extract_info on the m3u8 URL 403s ("Downloading webpage" phase) and
-    # external ffmpeg also 403s (new base image TLS fingerprint blocked by CDN).
+    # external ffmpeg also 406s (new base image TLS fingerprint blocked by CDN).
     # Solution: m3u8_native protocol + impersonate="chrome" → yt-dlp uses
     # curl_cffi for all manifest and segment fetches, passing Chrome TLS.
     if _is_luluvdo and _lulu_info_dict is not None:
