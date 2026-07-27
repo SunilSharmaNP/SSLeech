@@ -3161,7 +3161,28 @@ def vidara(url: str):
         )
     filecode = path_parts[1]
 
-    # ── 2. Call odysseusa.cc /api/stream ────────────────────────────────────
+    # ── 2. Fetch page title from vidara.to HTML ──────────────────────────────
+    _page_title = None
+    try:
+        _page_headers = {"User-Agent": user_agent, "Referer": "https://vidara.to/"}
+        _page_resp = get(f"https://vidara.to/v/{filecode}",
+                         headers=_page_headers, timeout=10)
+        if _page_resp.status_code == 200:
+            _soup = BeautifulSoup(_page_resp.text, "lxml")
+            # Try og:title first, then <title> tag
+            _og = _soup.find("meta", property="og:title")
+            if _og and _og.get("content"):
+                _page_title = _og["content"].strip()
+            elif _soup.title and _soup.title.string:
+                _raw = _soup.title.string.strip()
+                # Remove leading "Watch " prefix if present
+                _page_title = sub(r"^Watch\s+", "", _raw, flags=__import__("re").IGNORECASE).strip()
+            if not _page_title:
+                _page_title = None
+    except Exception:
+        _page_title = None
+
+    # ── 3. Call odysseusa.cc /api/stream ─────────────────────────────────────
     EMBED_BASE   = "https://odysseusa.cc"
     STREAM_API   = f"{EMBED_BASE}/api/stream"
     EMBED_URL    = f"{EMBED_BASE}/e/{filecode}"
@@ -3200,7 +3221,11 @@ def vidara(url: str):
             f"Response keys: {list(data.keys())}"
         )
 
-    # ── 3. Return URL + headers so yt-dlp / aria2 can fetch the m3u8 ────────
+    # Use API title if page scrape failed
+    if not _page_title:
+        _page_title = (data.get("title") or "").strip() or None
+
+    # ── 4. Return (m3u8_url, headers_list, title) — 3-tuple like luluvdo ────
     return (
         streaming_url,
         [
@@ -3208,4 +3233,5 @@ def vidara(url: str):
             f"Origin:{EMBED_BASE}",
             f"User-Agent:{user_agent}",
         ],
+        _page_title,
     )
