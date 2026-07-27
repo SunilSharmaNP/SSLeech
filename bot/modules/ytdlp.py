@@ -329,12 +329,10 @@ class LuluQualitySelector:
         """
         formats : list of format dicts from _parse_luluvdo_m3u8 (any order).
         Returns  : selected format dict, or None on cancel / timeout.
-        If only one format exists, returns it directly without showing buttons.
+        Always shows buttons — even single quality — so user can confirm or cancel.
         """
         if not formats:
             return None
-        if len(formats) == 1:
-            return formats[0]
 
         future = self.__event_handler()
 
@@ -863,8 +861,12 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if _is_vidara:
         try:
             resolved = await sync_to_async(direct_link_generator, link)
+            _vidara_page_title = None
             if isinstance(resolved, tuple):
-                stream_url, _raw_hdrs = resolved[0], resolved[1]
+                if len(resolved) == 3:
+                    stream_url, _raw_hdrs, _vidara_page_title = resolved
+                else:
+                    stream_url, _raw_hdrs = resolved[0], resolved[1]
                 if isinstance(_raw_hdrs, list):
                     _vidara_http_headers = {}
                     for h in _raw_hdrs:
@@ -880,7 +882,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             # Ensure User-Agent is always present
             _vidara_http_headers.setdefault("User-Agent", _dlg_user_agent)
 
-            LOGGER.info(f"vidara resolved → {stream_url[:80]}…")
+            LOGGER.info(f"vidara resolved → {stream_url[:80]}… title={_vidara_page_title!r}")
             link = stream_url
 
             # Parse m3u8 master playlist using curl_cffi (Chrome TLS) so the CDN
@@ -896,7 +898,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
 
             _vidara_info_dict = {
                 "id": "vidara",
-                "title": name or "vidara_video",
+                "title": name or _vidara_page_title or "vidara_video",
                 "webpage_url": stream_url,
                 "original_url": stream_url,
                 "extractor": "generic",
@@ -1032,7 +1034,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     # ── vidara: same CDN-TLS-fingerprint bypass as luluvdo ──────────────────────
     # s1-25-ilr3.97bf1.com resets Python-SSL connections; curl_cffi+Chrome fixes it.
     if _is_vidara and _vidara_info_dict is not None:
-        _vidara_title = name or _vidara_info_dict.get("title", "vidara_video")
+        _vidara_title = name or _vidara_page_title or _vidara_info_dict.get("title", "vidara_video")
         ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
         ydl_opts["http_headers"] = _vidara_http_headers
 
