@@ -522,9 +522,12 @@ def _gdflix_unescape(url):
 
 def _gdflix_resolve_multiup(multiup_url):
     """
-    Fetch a goflix.sbs/en/mirror/ (MultiUp) page and extract the best
-    direct-download link available (gofile.io preferred).
-    Returns None if nothing found.
+    Fetch a goflix.sbs/en/mirror/ (MultiUp) page, find the gofile.io link,
+    then resolve it through the gofile API to get a real CDN download URL.
+
+    Returns (cdn_url, cookie_header) on success, or None on failure.
+    gofile() returns (url, header) for single-file folders where
+    header = "Cookie: accountToken=<token>".
     """
     try:
         r = get(
@@ -534,104 +537,122 @@ def _gdflix_resolve_multiup(multiup_url):
             timeout=12,
         )
         page = r.text
-        # Prefer gofile.io — free, fast, direct
-        gofile = gdflix_scan(page, r'https://gofile\.io/d/[A-Za-z0-9]+')
-        if gofile:
-            return gofile
-        # Fallback: megaup.net
-        megaup = gdflix_scan(page, r'https://megaup\.net/[A-Za-z0-9]+/[^\s"\'<>]+')
-        if megaup:
-            return megaup
-    except Exception:
-        pass
+
+        # Extract gofile.io folder link from the MultiUp mirror page
+        gofile_folder = gdflix_scan(page, r'https://gofile\.io/d/[A-Za-z0-9]+')
+        if gofile_folder:
+            LOGGER.info(f"GDFlix: Resolving gofile via MultiUp: {gofile_folder}")
+            try:
+                result = gofile(gofile_folder)
+                # gofile() returns (url, header) for a single-file folder
+                if isinstance(result, tuple):
+                    cdn_url, cookie_header = result
+                    LOGGER.info(f"GDFlix: gofile CDN resolved → {cdn_url[:80]}...")
+                    return cdn_url, cookie_header
+                # Multi-file: pick the first file
+                if isinstance(result, dict) and result.get("contents"):
+                    item = result["contents"][0]
+                    cdn_url = item["url"]
+                    cookie_header = result.get("header", "")
+                    LOGGER.info(f"GDFlix: gofile CDN resolved (multi) → {cdn_url[:80]}...")
+                    return cdn_url, cookie_header
+            except DirectDownloadLinkException as e:
+                LOGGER.warning(f"GDFlix: gofile resolve failed: {e}")
+    except Exception as e:
+        LOGGER.warning(f"GDFlix: MultiUp fetch failed: {e}")
     return None
 
 
 def gdflix_bypass_single(url):
     html, final = gdflix_fetch_html(url)
 
-    # ── Instant DL link ──────────────────────────────────────────────────────
+    # ── Instant DL link (busycdn.xyz) ────────────────────────────────────────
     instant = gdflix_get_instant(html)
-
-    # Follow instant link through fastcdn wrapper → Google Drive URL
     google = unwrap_fastcdn(gdflix_get_google(instant))
 
-    # ── /cloud/ fallback ─────────────────────────────────────────────────────
+    # ── /cloud/ fallback → fastcdn → Google Drive ────────────────────────────
     if not google:
         cloud_path = gdflix_scan(html, r'href="(/cloud/[^"\'<>\s]+)"')
         if cloud_path:
             cloud_url = urljoin(final, cloud_path)
             google = gdflix_get_google(cloud_url)
 
-    # ── Other mirrors ─────────────────────────────────────────────────────────
-
-    # 🥇 DIRECT SERVER [MGT] — pre-signed indexserver.site URL.
-    #    Fresh from page fetch; return IMMEDIATELY without HEAD check
-    #    (any delay risks expiry — these links are valid for ~10-30 seconds).
-    indexserver_raw = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.indexserver\.site/[^\s\"'<>]+")
-    indexserver = _gdflix_unescape(indexserver_raw)
+    # ── Scan all mirrors embedded in the GDFlix HTML page ────────────────────
 
     pix = gdflix_scan(html, r"https://pixeldrain\.dev/[^\"']+")
     if pix:
         pix = pix.replace("?embed", "")
 
-    # Only t.me/c/channel_id/msg_id file links — skip plain channel join links
+    # Only real Telegram file links (t.me/c/channel_id/msg_id)
+    # Plain channel join links like t.me/gdflix_com are silently skipped
     tg_raw = gdflix_scan(html, r"https://t\.me/[A-Za-z0-9_/?=]+")
     tg = tg_raw if (tg_raw and "/c/" in tg_raw) else None
 
-    # Filesgram bot link (Telegram File button)
+    # Filesgram bot link — Telegram File button (lowest priority, bot-based)
     filesgram = gdflix_scan(html, r"https://filesgram\.xyz/[^\s\"'<>&]+")
 
-    # gofile.io direct link (sometimes embedded directly in GDFlix page)
-    gofile = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
+    # gofile.io folder directly embedded in the page (rare)
+    gofile_direct = gdflix_scan(html, r"https://gofile\.io/d/[A-Za-z0-9]+")
 
-    # goflix.sbs/en/mirror/ → MultiUp mirror page containing gofile.io links
-    multiup_page_url = gdflix_scan(html, r"https://(?:goflix\.sbs|validate\.multiup2\.workers\.dev)/[^\s\"'<>]+")
-    multiup_gofile = None
-    if multiup_page_url and not gofile:
-        multiup_gofile = _gdflix_resolve_multiup(_gdflix_unescape(multiup_page_url))
+    # goflix.sbs/en/mirror/ → MultiUp page containing gofile.io links.
+    # This is the PRIMARY working path for GDFlix:
+    #   goflix.sbs mirror page → gofile.io/d/<id> → gofile API → CDN direct URL
+    # NOTE: indexserver.site URLs in the HTML are browser-session-tied and expire
+    #       within seconds — they cannot be used with aria2 directly. Skip them.
+    multiup_url = gdflix_scan(html, r"https://(?:goflix\.sbs|validate\.multiup2\.workers\.dev)/[^\s\"'<>]+")
+    multiup_result = None
+    if multiup_url:
+        multiup_result = _gdflix_resolve_multiup(_gdflix_unescape(multiup_url))
 
     pub = gdflix_scan(html, r"https://pub\.[^\"'\s]+")
-    workers = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
+    workers_raw = gdflix_scan(html, r"https://[A-Za-z0-9\-]+\.workers\.dev/[^\"]+")
     test = gdflix_scan(html, r"https://test\.[^\"'\s]+")
-
-    # busycdn.xyz direct CDN fallback
     instant_direct = gdflix_scan(html, r"https://instant\.busycdn\.xyz/[^\"\'\s<>]+")
 
-    # ── 🥇 Return indexserver IMMEDIATELY — no HEAD check to avoid expiry ─────
-    if indexserver:
-        LOGGER.info(f"GDFlix: Using DIRECT SERVER [MGT] → {indexserver[:80]}...")
-        return indexserver
+    # ── 🥇 gofile via MultiUp (PRIMARY — real direct CDN download + cookie) ───
+    if multiup_result:
+        cdn_url, cookie_header = multiup_result
+        LOGGER.info(f"GDFlix: ✅ Using gofile CDN via MultiUp")
+        return cdn_url, cookie_header
 
-    # ── Build fallback chain ──────────────────────────────────────────────────
+    # ── Directly embedded gofile folder → resolve via API ────────────────────
+    if gofile_direct:
+        try:
+            result = gofile(gofile_direct)
+            if isinstance(result, tuple):
+                LOGGER.info(f"GDFlix: ✅ Using gofile direct embed")
+                return result
+            if isinstance(result, dict) and result.get("contents"):
+                item = result["contents"][0]
+                return item["url"], result.get("header", "")
+        except DirectDownloadLinkException:
+            pass
+
+    # ── Remaining fallbacks ───────────────────────────────────────────────────
     links = []
 
     if google:
-        links.append({"type": "google",    "url": google})
+        links.append({"type": "google",     "url": google})
     if instant_direct:
-        links.append({"type": "instant",   "url": instant_direct})
-    if gofile:
-        links.append({"type": "gofile",    "url": gofile})
-    if multiup_gofile:
-        links.append({"type": "gofile",    "url": multiup_gofile})
+        links.append({"type": "instant",    "url": instant_direct})
     if pub:
         pub = unwrap_fastcdn(pub)
         if pub:
-            links.append({"type": "pub",   "url": pub})
-    if workers:
-        workers = unwrap_fastcdn(workers)
-        if workers:
-            links.append({"type": "workers", "url": workers})
+            links.append({"type": "pub",    "url": pub})
+    if workers_raw:
+        workers_raw = unwrap_fastcdn(workers_raw)
+        if workers_raw:
+            links.append({"type": "workers","url": workers_raw})
     if test:
         test = unwrap_fastcdn(test)
         if test:
-            links.append({"type": "test",  "url": test})
+            links.append({"type": "test",   "url": test})
     if pix:
-        links.append({"type": "pixeldrain","url": pix})
+        links.append({"type": "pixeldrain", "url": pix})
     if tg:
-        links.append({"type": "telegram",  "url": tg})
+        links.append({"type": "telegram",   "url": tg})
     if filesgram:
-        links.append({"type": "filesgram", "url": filesgram})
+        links.append({"type": "filesgram",  "url": filesgram})
 
     if not links:
         raise DirectDownloadLinkException("GDFlix: No usable links found")
@@ -639,13 +660,12 @@ def gdflix_bypass_single(url):
     priority = {
         "google":     0,
         "instant":    1,
-        "gofile":     2,   # gofile.io — direct download
-        "pub":        3,
-        "workers":    4,
-        "test":       5,
-        "pixeldrain": 6,
-        "telegram":   7,
-        "filesgram":  8,
+        "pub":        2,
+        "workers":    3,
+        "test":       4,
+        "pixeldrain": 5,
+        "telegram":   6,
+        "filesgram":  7,
     }
     links.sort(key=lambda x: priority.get(x["type"], 99))
     best = links[0]
