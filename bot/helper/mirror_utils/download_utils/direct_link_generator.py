@@ -320,6 +320,10 @@ def direct_link_generator(link):
         "terafileshare.com", "terabox.club",
     ]):
         return terabox(link)
+    elif any(x in domain for x in [
+        "vidara.to", "vidara.so",
+    ]):
+        return vidara(link)
     elif any(x in domain for x in fmed_list):
         return fembed(link)
     elif any(x in domain for x in ["sbembed.com", "watchsb.com", "streamsb.net", "sbplay.org"]):
@@ -3127,3 +3131,81 @@ def swisstransfer(link):
         "total_size": total_size,
         "header": "User-Agent:Mozilla/5.0",
     }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# VIDARA.TO  (player: odysseusa.cc → HLS m3u8 via /api/stream)
+# ──────────────────────────────────────────────────────────────────────────────
+def vidara(url: str):
+    """
+    Resolves a vidara.to video page to a direct HLS m3u8 streaming URL.
+
+    Flow:
+        vidara.to/v/<filecode>
+            └─► iframe: odysseusa.cc/e/<filecode>
+                    └─► POST odysseusa.cc/api/stream  {filecode, device:"web"}
+                            └─► {"streaming_url": "https://…/master.m3u8?token=…", …}
+
+    The returned m3u8 is then downloaded by yt-dlp (supports HLS natively).
+    """
+    # ── 1. Extract filecode ──────────────────────────────────────────────────
+    parsed = urlparse(url)
+    # Accepts:
+    #   vidara.to/v/<filecode>
+    #   vidara.to/e/<filecode>   (embed URL)
+    #   odysseusa.cc/e/<filecode>
+    path_parts = [p for p in parsed.path.split("/") if p]
+    if len(path_parts) < 2 or path_parts[0] not in ("v", "e"):
+        raise DirectDownloadLinkException(
+            "ERROR: Invalid Vidara URL. Expected format: vidara.to/v/<filecode>"
+        )
+    filecode = path_parts[1]
+
+    # ── 2. Call odysseusa.cc /api/stream ────────────────────────────────────
+    EMBED_BASE   = "https://odysseusa.cc"
+    STREAM_API   = f"{EMBED_BASE}/api/stream"
+    EMBED_URL    = f"{EMBED_BASE}/e/{filecode}"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Referer":      EMBED_URL,
+        "Origin":       EMBED_BASE,
+        "User-Agent":   user_agent,
+    }
+
+    try:
+        resp = post(STREAM_API, json={"filecode": filecode, "device": "web"},
+                    headers=headers, timeout=20)
+    except Exception as exc:
+        raise DirectDownloadLinkException(
+            f"ERROR: Network error while contacting Vidara API — {exc}"
+        ) from exc
+
+    if resp.status_code != 200:
+        raise DirectDownloadLinkException(
+            f"ERROR: Vidara API returned HTTP {resp.status_code}"
+        )
+
+    try:
+        data = resp.json()
+    except Exception:
+        raise DirectDownloadLinkException(
+            "ERROR: Vidara API returned non-JSON response"
+        )
+
+    streaming_url = data.get("streaming_url") or data.get("url")
+    if not streaming_url:
+        raise DirectDownloadLinkException(
+            "ERROR: Vidara — streaming_url not found in API response. "
+            f"Response keys: {list(data.keys())}"
+        )
+
+    # ── 3. Return URL + headers so yt-dlp / aria2 can fetch the m3u8 ────────
+    return (
+        streaming_url,
+        [
+            f"Referer:{EMBED_URL}",
+            f"Origin:{EMBED_BASE}",
+            f"User-Agent:{user_agent}",
+        ],
+    )
