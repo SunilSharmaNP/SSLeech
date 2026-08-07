@@ -50,6 +50,10 @@ from bot.helper.mirror_utils.download_utils.direct_link_generator import (
 from bot.helper.mirror_utils.download_utils.telegram_download import (
     TelegramDownloadHelper,
 )
+from bot.helper.mirror_utils.download_utils.youtube_api_download import (
+    choose_youtube_download,
+    is_youtube_url,
+)
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.button_build import ButtonMaker
@@ -372,6 +376,7 @@ async def _mirror_leech(
     if link:
         LOGGER.info(link)
         org_link = link
+    use_youtube_api = config_dict.get("DISABLE_YT_COOKIES") and is_youtube_url(link)
 
     if (
         (
@@ -390,6 +395,7 @@ async def _mirror_leech(
         and not is_gdrive_link(link)
         and not link.endswith(".torrent")
         and file_ is None
+        and not use_youtube_api
     ):
         content_type = await get_content_type(link)
         if content_type is None or re_match(r"text/html|text/plain", content_type):
@@ -510,6 +516,15 @@ async def _mirror_leech(
             await sendMessage(message, up)
             await delete_links(message)
             return
+
+    if use_youtube_api:
+        api_download = await choose_youtube_download(message, link, name)
+        if api_download is None:
+            await delete_links(message)
+            return
+        link = api_download["url"]
+        name = api_download["filename"]
+        org_link = api_download["source_url"]
 
     if merge_video:
         _u_dict = user_data.get(message.from_user.id, {})
