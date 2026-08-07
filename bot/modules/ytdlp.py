@@ -35,6 +35,11 @@ from bot.helper.ext_utils.bot_utils import (
     arg_parser,
 )
 from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
+from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
+from bot.helper.mirror_utils.download_utils.youtube_api_download import (
+    choose_youtube_download,
+    is_youtube_url,
+)
 from bot.helper.mirror_utils.download_utils.direct_link_generator import (
     direct_link_generator,
     user_agent as _dlg_user_agent,
@@ -432,14 +437,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     args = arg_parser(input_list[1:], arg_base)
     cmd = input_list[0].split("@")[0]
 
-    if config_dict.get("DISABLE_YTDLP"):
-        await sendMessage(
-            message,
-            "<b>❌ YT-DLP Disabled!</b>\n\nyt-dlp (YouTube/media URL) downloads are currently disabled by the admin.",
-        )
-        await delete_links(message)
-        return
-
     try:
         multi = int(args["-i"])
     except Exception:
@@ -566,6 +563,17 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         await delete_links(message)
         return
 
+    if config_dict.get("DISABLE_YTDLP") and not (
+        config_dict.get("DISABLE_YT_COOKIES") and is_youtube_url(link)
+    ):
+        await sendMessage(
+            message,
+            "<b>❌ YT-DLP Disabled!</b>\n\n"
+            "yt-dlp downloads are currently disabled by the admin.",
+        )
+        await delete_links(message)
+        return
+
     error_msg = []
     error_button = None
     task_utilis_msg, error_button = await task_utils(message)
@@ -682,6 +690,24 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         source_url=link,
         leech_utils={"screenshots": sshots, "thumb": thumb},
     )
+
+    if config_dict.get("DISABLE_YT_COOKIES") and is_youtube_url(link):
+        api_download = await choose_youtube_download(message, link, name)
+        if api_download is None:
+            await delete_links(message)
+            return
+        __run_multi()
+        await delete_links(message)
+        await add_aria2c_download(
+            api_download["url"],
+            path,
+            listener,
+            api_download["filename"],
+            "",
+            None,
+            None,
+        )
+        return
 
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
