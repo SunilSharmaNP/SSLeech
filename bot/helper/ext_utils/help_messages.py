@@ -438,6 +438,7 @@ default_desp = {
     "USER_MAX_TASKS": "Limit the Maximum task for users of group at a time. use the Int",
     "DAILY_TASK_LIMIT": "Maximum task a user can do in one day. use the Int",
     "DISABLE_DRIVE_LINK": "Disable drive link button. Default is False. Bool",
+    "DISABLE_YT_COOKIES": "When True, YouTube links use the Vercel direct-link API instead of yt-dlp with cookies. Default is False. Bool",
     "FAST_TG_DOWNLOAD": "Stream Telegram media via a local direct-link server and pull it with parallel byte-range requests across every available session, instead of one serial download_media() stream. Falls back automatically on any error. Default True. Bool",
     "ADDITIONAL_BOT_TOKENS": "Optional, comma-separated extra bot tokens from @BotFather (e.g. 111:AAA,222:BBB). Each becomes its own session so FAST_TG_DOWNLOAD gets real extra bandwidth. Leave empty to only use the main bot + premium user session.",
     "BIN_CHANNEL": "Optional private channel ID (e.g. -1001234567890). Add the main bot, the premium user (if any), and every ADDITIONAL_BOT_TOKENS bot there as admins. FAST_TG_DOWNLOAD copies each leeched message here so every session can independently get a valid copy to stream.",
