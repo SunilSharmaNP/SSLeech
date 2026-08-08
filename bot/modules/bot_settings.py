@@ -849,7 +849,6 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
             f"🍪 Disable YT-DLP + Cookies: {yt_api_state}",
             "botset editvar DISABLE_YT_COOKIES",
         )
-        buttons.ibutton("🎬 TMDB API Key", "botset editvar TMDB_API_KEY")
         buttons.ibutton("📂 Private Files", "botset private")
         buttons.ibutton("🔧 Qbit Settings", "botset qbit")
         buttons.ibutton("🛠️ Aria2c Settings", "botset aria")
