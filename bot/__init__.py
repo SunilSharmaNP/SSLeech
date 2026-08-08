@@ -171,8 +171,17 @@ if DATABASE_URL:
             db.settings.deployConfig.replace_one(
                 {"_id": bot_id}, current_config, upsert=True
             )
-        if db_bot_config := db.settings.config.find_one({"_id": bot_id}):
+        db_bot_config = db.settings.config.find_one({"_id": bot_id})
+        yt_default_migration_key = "_DISABLE_YT_COOKIES_DEFAULT_V1"
+        yt_default_needs_migration = (
+            not db_bot_config
+            or yt_default_migration_key not in db_bot_config
+        )
+        if db_bot_config:
             del db_bot_config["_id"]
+            db_bot_config.pop(yt_default_migration_key, None)
+            if yt_default_needs_migration:
+                db_bot_config["DISABLE_YT_COOKIES"] = "True"
             for key, value in db_bot_config.items():
                 # Load ALL non-None values — including empty strings and False/0.
                 # The old `str(value).strip()` guard was wrong: it silently dropped
@@ -181,6 +190,18 @@ if DATABASE_URL:
                 # changes appear not to stick.
                 if value is not None:
                     environ[key] = str(value)
+        if yt_default_needs_migration:
+            environ["DISABLE_YT_COOKIES"] = "True"
+            db.settings.config.update_one(
+                {"_id": bot_id},
+                {
+                    "$set": {
+                        "DISABLE_YT_COOKIES": True,
+                        yt_default_migration_key: True,
+                    }
+                },
+                upsert=True,
+            )
         if pf_dict := db.settings.files.find_one({"_id": bot_id}):
             del pf_dict["_id"]
             for key, value in pf_dict.items():
@@ -631,6 +652,11 @@ DISABLE_SEED = DISABLE_SEED.lower() == "true"
 DISABLE_YTDLP = environ.get("DISABLE_YTDLP", "")
 DISABLE_YTDLP = DISABLE_YTDLP.lower() == "true"
 
+DISABLE_YT_COOKIES = environ.get("DISABLE_YT_COOKIES", "")
+DISABLE_YT_COOKIES = (
+    True if len(DISABLE_YT_COOKIES) == 0 else DISABLE_YT_COOKIES.lower() == "true"
+)
+
 DISABLE_MIRROR = environ.get("DISABLE_MIRROR", "")
 DISABLE_MIRROR = DISABLE_MIRROR.lower() == "true"
 # ─────────────────────────────────────────────────────────────────────────────
@@ -821,6 +847,7 @@ config_dict = {
     "DISABLE_MULTI": DISABLE_MULTI,
     "DISABLE_SEED": DISABLE_SEED,
     "DISABLE_YTDLP": DISABLE_YTDLP,
+    "DISABLE_YT_COOKIES": DISABLE_YT_COOKIES,
     "DISABLE_MIRROR": DISABLE_MIRROR,
     "BOT_THEME": BOT_THEME,
     "IMAGES": IMAGES,
