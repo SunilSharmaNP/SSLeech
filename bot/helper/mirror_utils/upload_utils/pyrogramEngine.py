@@ -909,10 +909,14 @@ class TgUploader:
                 await aioremove(thumb)
                 if (
                     (dir_name := ospath.dirname(thumb))
-                    and dir_name != "Thumbnails"
+                    and not dir_name.startswith("Thumbnails")
                     and await aiopath.exists(dir_name)
                 ):
-                    await rmdir(dir_name)
+                    try:
+                        await rmdir(dir_name)
+                    except OSError:
+                        pass
+                        
             self.__retry_error = False
         except FloodWait as f:
             LOGGER.warning(str(f))
