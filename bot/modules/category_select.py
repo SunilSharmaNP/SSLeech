@@ -8,6 +8,7 @@ from bot.helper.ext_utils.bot_utils import (
     MirrorStatus,
     arg_parser,
     fetch_user_tds,
+    fetch_user_drive_categories,
     fetch_user_dumps,
     getDownloadByGid,
     is_gdrive_link,
@@ -78,7 +79,10 @@ async def change_category(client, message):
         return
     listener = dl.listener() if dl and hasattr(dl, "listener") else None
     if listener and not listener.isLeech:
-        if not index_link and not drive_id and categories_dict:
+        is_cancelled = False
+        if not index_link and not drive_id and (
+            categories_dict or await fetch_user_drive_categories(user_id)
+        ):
             drive_id, index_link, is_cancelled = await open_category_btns(message)
         if is_cancelled:
             return
@@ -88,7 +92,7 @@ async def change_category(client, message):
         if drive_id:
             if not (
                 folder_name := await sync_to_async(
-                    GoogleDriveHelper().getFolderData, drive_id
+                    GoogleDriveHelper(user_id=user_id).getFolderData, drive_id
                 )
             ):
                 return await sendMessage(message, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ ɪᴅ ᴠᴀʟɪᴅᴀᴛɪᴏɴ ғᴀɪʟᴇᴅ!!")
@@ -121,7 +125,10 @@ async def confirm_category(client, query):
         bot_cache[msg_id][3] = True
         return
     await query.answer()
-    user_tds = await fetch_user_tds(user_id)
+    user_tds = {
+        **await fetch_user_drive_categories(user_id),
+        **await fetch_user_tds(user_id),
+    }
     merged_dict = {**categories_dict, **user_tds}
     cat_name = data[3].replace("_", " ")
     bot_cache[msg_id][0] = merged_dict[cat_name].get("drive_id")
@@ -133,7 +140,7 @@ async def confirm_category(client, query):
                 f'{"✅️" if cat_name == _name else ""} {_name}',
                 f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
-    elif len(categories_dict) > 1:
+    elif len(merged_dict) > 1:
         for _name in categories_dict.keys():
             buttons.ibutton(
                 f'{"✅️" if cat_name == _name else ""} {_name}',
