@@ -44,6 +44,7 @@ from bot.helper.ext_utils.bot_utils import (
     sync_to_async,
     download_image_url,
     fetch_user_tds,
+    fetch_user_drive_categories,
     fetch_user_dumps,
     new_thread,
 )
@@ -448,22 +449,29 @@ async def open_category_btns(message):
     msg_id = message.id
     buttons = ButtonMaker()
     _tick = True
-    if len(utds := await fetch_user_tds(user_id)) > 1:
-        for _name in utds.keys():
+    user_categories = {
+        **await fetch_user_drive_categories(user_id),
+        **(await fetch_user_tds(user_id)),
+    }
+    merged_categories = {**categories_dict, **user_categories}
+    if len(user_categories) >= 1:
+        for _name in user_categories.keys():
             buttons.ibutton(
                 f'{"✅️" if _tick else ""} {_name}',
                 f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
             if _tick:
                 _tick, cat_name = False, _name
-    elif len(categories_dict) > 1:
-        for _name in categories_dict.keys():
+    elif len(merged_categories) > 1:
+        for _name in merged_categories.keys():
             buttons.ibutton(
                 f'{"✅️" if _tick else ""} {_name}',
                 f"scat {user_id} {msg_id} {_name.replace(' ', '_')}",
             )
             if _tick:
                 _tick, cat_name = False, _name
+    else:
+        cat_name = "None"
     buttons.ibutton("Cancel", f"scat {user_id} {msg_id} scancel", "footer")
     buttons.ibutton(f"Done (60)", f"scat {user_id} {msg_id} sdone", "footer")
     prompt = await sendMessage(
