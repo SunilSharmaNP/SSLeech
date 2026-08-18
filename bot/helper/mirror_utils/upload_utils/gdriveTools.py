@@ -160,14 +160,24 @@ class GoogleDriveHelper:
         link = str(link).strip()
         if link == "root" or re_search(r"^[A-Za-z0-9_-]{10,}$", link):
             return link
-        if "folders" in link or "file" in link:
-            regex = r"https:\/\/drive\.google\.com\/(?:drive(.*?)\/folders\/|file(.*?)?\/d\/)([-\w]+)"
-            res = re_search(regex, link)
-            if res is None:
-                raise IndexError("G-Drive ID not found.")
-            return res.group(3)
+        if "drive.google.com" not in link:
+            raise IndexError("G-Drive ID not found.")
+        # Google Drive has several valid URL shapes.  Keep the parser
+        # deliberately independent of the optional /u/<account> segment.
+        patterns = (
+            r"/folders/([-\w]+)",
+            r"/file/d/([-\w]+)",
+            r"[?&]id=([-\w]+)",
+        )
+        for pattern in patterns:
+            res = re_search(pattern, link)
+            if res:
+                return res.group(1)
         parsed = urlparse(link)
-        return parse_qs(parsed.query)["id"][0]
+        try:
+            return parse_qs(parsed.query)["id"][0]
+        except (KeyError, IndexError):
+            raise IndexError("G-Drive ID not found.")
 
     @retry(
         wait=wait_exponential(multiplier=2, min=3, max=6),
@@ -297,7 +307,7 @@ class GoogleDriveHelper:
     def deletefile(self, link: str):
         try:
             file_id = self.getIdFromUrl(link)
-        except (KeyError, IndexError):
+        except (KeyError, IndexError, ValueError):
             return "Google Drive ID could not be found in the provided link"
         msg = ""
         try:
@@ -935,7 +945,7 @@ class GoogleDriveHelper:
     def count(self, link):
         try:
             file_id = self.getIdFromUrl(link)
-        except (KeyError, IndexError):
+        except (KeyError, IndexError, ValueError):
             return (
                 "Google Drive ID could not be found in the provided link",
                 None,
