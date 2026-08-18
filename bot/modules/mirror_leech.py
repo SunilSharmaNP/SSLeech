@@ -32,6 +32,7 @@ from bot.helper.ext_utils.bot_utils import (
     is_telegram_link,
     arg_parser,
     fetch_user_tds,
+    fetch_user_drive_categories,
     fetch_user_dumps,
     get_stats,
 )
@@ -173,6 +174,10 @@ async def _mirror_leech(
     reply_to = None
     file_ = None
     session = ""
+
+    user_settings = user_data.get(message.from_user.id, {})
+    drive_id = drive_id or user_settings.get("GDRIVE_ID")
+    index_link = index_link or user_settings.get("INDEX_URL")
 
     if not isinstance(seed, bool):
         dargs = seed.split(":")
@@ -431,7 +436,11 @@ async def _mirror_leech(
             up = "ddl"
         if not up and config_dict["DEFAULT_UPLOAD"] == "gd":
             up = "gd"
-            user_tds = await fetch_user_tds(message.from_user.id)
+            user_tds = {
+                **await fetch_user_drive_categories(message.from_user.id),
+                **await fetch_user_tds(message.from_user.id),
+            }
+            all_categories = {**categories_dict, **user_tds}
             if not drive_id and gd_cat:
                 merged_dict = {**categories_dict, **user_tds}
                 drive_id, index_link = next(
@@ -444,21 +453,16 @@ async def _mirror_leech(
                 )
             if not drive_id and len(user_tds) == 1:
                 drive_id, index_link = next(iter(user_tds.values())).values()
-            elif not drive_id and (
-                len(categories_dict) > 1
-                and len(user_tds) == 0
-                or len(categories_dict) >= 1
-                and len(user_tds) > 1
-            ):
+            elif not drive_id and len(all_categories) > 1:
                 drive_id, index_link, is_cancelled = await open_category_btns(message)
                 if is_cancelled:
                     await delete_links(message)
                     return
             if drive_id and not await sync_to_async(
-                GoogleDriveHelper().getFolderData, drive_id
+                GoogleDriveHelper(user_id=message.from_user.id).getFolderData, drive_id
             ):
                 return await sendMessage(message, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ 𝐈ᴅ 𝐕ᴀʟɪᴅᴀᴛɪᴏɴ 𝐅ᴀɪʟᴇᴅ‼")
-        if up == "gd" and not config_dict["GDRIVE_ID"] and not drive_id:
+        if up == "gd" and not (config_dict["GDRIVE_ID"] or drive_id):
             await sendMessage(message, "𝐆𝐃𝐑𝐈𝐕𝐄_𝐈𝐃 ɴᴏᴛ 𝐏ʀᴏᴠɪᴅᴇᴅ!")
             return
         elif not up:
