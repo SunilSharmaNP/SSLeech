@@ -19,12 +19,19 @@ from tenacity import (
     RetryError,
 )
 
-from bot import OWNER_ID, config_dict, list_drives_dict, GLOBAL_EXTENSION_FILTER
+from bot import (
+    OWNER_ID,
+    config_dict,
+    list_drives_dict,
+    GLOBAL_EXTENSION_FILTER,
+    user_data,
+)
 from bot.helper.ext_utils.bot_utils import (
     setInterval,
     async_to_sync,
     get_readable_file_size,
     fetch_user_tds,
+    fetch_user_drive_categories,
 )
 from bot.helper.ext_utils.fs_utils import get_mime_type
 from bot.helper.ext_utils.leech_utils import format_filename
@@ -35,7 +42,14 @@ getLogger("googleapiclient.discovery").setLevel(ERROR)
 
 class GoogleDriveHelper:
 
-    def __init__(self, name=None, path=None, listener=None, user_id=None):
+    def __init__(
+        self,
+        name=None,
+        path=None,
+        listener=None,
+        user_id=None,
+        use_user_token=True,
+    ):
         self.__OAUTH_SCOPE = ["https://www.googleapis.com/auth/drive"]
         self.__G_DRIVE_DIR_MIME_TYPE = "application/vnd.google-apps.folder"
         self.__G_DRIVE_BASE_DOWNLOAD_URL = (
@@ -46,7 +60,8 @@ class GoogleDriveHelper:
         )
         self.__listener = listener
         self.__user_id = (
-            listener.message.from_user.id if listener else user_id
+            listener.message.from_user.id if listener and use_user_token else
+            user_id if use_user_token else None
         )
         self.__path = path
         self.__total_bytes = 0
@@ -142,6 +157,9 @@ class GoogleDriveHelper:
 
     @staticmethod
     def getIdFromUrl(link):
+        link = str(link).strip()
+        if link == "root" or re_search(r"^[A-Za-z0-9_-]{10,}$", link):
+            return link
         if "folders" in link or "file" in link:
             regex = r"https:\/\/drive\.google\.com\/(?:drive(.*?)\/folders\/|file(.*?)?\/d\/)([-\w]+)"
             res = re_search(regex, link)
@@ -191,6 +209,29 @@ class GoogleDriveHelper:
         stop=stop_after_attempt(3),
         retry=retry_if_exception_type(Exception),
     )
+    def add_permission_user(self, file_id, email):
+        """Grant a specific Google account read access to a Drive item."""
+        permissions = {
+            "role": "reader",
+            "type": "user",
+            "emailAddress": email,
+        }
+        return (
+            self.__service.permissions()
+            .create(
+                fileId=file_id,
+                body=permissions,
+                supportsAllDrives=True,
+                sendNotificationEmail=False,
+            )
+            .execute()
+        )
+
+    @retry(
+        wait=wait_exponential(multiplier=2, min=3, max=6),
+        stop=stop_after_attempt(3),
+        retry=retry_if_exception_type(Exception),
+    )
     def __getFileMetadata(self, file_id):
         return (
             self.__service.files()
@@ -207,16 +248,26 @@ class GoogleDriveHelper:
         stop=stop_after_attempt(3),
         retry=retry_if_exception_type(Exception),
     )
-    def __getFilesByFolderId(self, folder_id):
+    def __getFilesByFolderId(self, folder_id, item_type=""):
         page_token = None
         files = []
+        if item_type == "folders":
+            type_query = (
+                f" and mimeType = '{self.__G_DRIVE_DIR_MIME_TYPE}'"
+            )
+        elif item_type == "files":
+            type_query = (
+                f" and mimeType != '{self.__G_DRIVE_DIR_MIME_TYPE}'"
+            )
+        else:
+            type_query = ""
         while True:
             response = (
                 self.__service.files()
                 .list(
                     supportsAllDrives=True,
                     includeItemsFromAllDrives=True,
-                    q=f"'{folder_id}' in parents and trashed = false",
+                    q=f"'{folder_id}' in parents{type_query} and trashed = false",
                     spaces="drive",
                     pageSize=200,
                     fields="nextPageToken, files(id, name, mimeType, size, shortcutDetails)",
@@ -270,49 +321,56 @@ class GoogleDriveHelper:
         return msg
 
     def driveclean(self, drive_id: str, trash: bool):
-        msg = ""
-        query = f"'{drive_id}' in parents and trashed = false"
-        page_token = None
-        while True:
-            try:
+        def clean_children(folder_id):
+            page_token = None
+            while True:
                 drive_query = (
                     self.__service.files()
                     .list(
-                        q=query,
+                        q=f"'{folder_id}' in parents and trashed = false",
                         spaces="drive",
-                        fields="nextPageToken, files(id, name, size)",
+                        fields="nextPageToken, files(id, name, mimeType, size)",
                         pageToken=page_token,
                         includeItemsFromAllDrives=True,
                         supportsAllDrives=True,
+                        pageSize=200,
                     )
                     .execute()
                 )
-                files = drive_query.get("files", [])
-                for file in files:
+                for file in drive_query.get("files", []):
+                    if file.get("mimeType") == self.__G_DRIVE_DIR_MIME_TYPE:
+                        # Keep the selected folder and all nested folders, but
+                        # clean every file below them.
+                        clean_children(file["id"])
+                        continue
                     self.__total_files += 1
-                    self.__total_bytes += int(file.get("size", 0))
+                    self.__total_bytes += int(file.get("size", 0) or 0)
                     if trash:
                         self.__service.files().update(
-                            fileId=file["id"], body={"trashed": True}
+                            fileId=file["id"],
+                            body={"trashed": True},
+                            supportsAllDrives=True,
                         ).execute()
                     else:
                         self.__service.files().delete(
                             fileId=file["id"], supportsAllDrives=True
                         ).execute()
-                page_token = drive_query.get("nextPageToken", None)
+                page_token = drive_query.get("nextPageToken")
                 if page_token is None:
-                    msg = (
-                        "⌬ <b><i>Successfully Moved Folder/Drive to Bin :</i></b> "
-                        if trash
-                        else "⌬ <b><i>Successfully Cleaned Folder/Drive :</i></b>"
-                    )
-                    msg += f"\n\n<b>Total Files:</b> <code>{self.__total_files}</code>\n<b>Total Size:</b> <code>{get_readable_file_size(self.__total_bytes)}</code>"
                     break
-            except Exception as err:
-                msg = str(err).replace(">", "").replace("<", "")
-                LOGGER.error(err)
-                break
-        return msg
+
+        try:
+            clean_children(drive_id)
+            action = "Moved Folder/Drive to Bin" if trash else "Cleaned Folder/Drive"
+            return (
+                f"⌬ <b><i>Successfully {action}:</i></b>\n\n"
+                f"<b>Total Files:</b> <code>{self.__total_files}</code>\n"
+                f"<b>Total Size:</b> <code>{get_readable_file_size(self.__total_bytes)}</code>"
+            )
+        except Exception as err:
+            msg = str(err).replace(">", "").replace("<", "")
+            LOGGER.error(err)
+            return msg
 
     def upload(self, file_name, size, gdrive_id):
         if not gdrive_id:
@@ -772,9 +830,22 @@ class GoogleDriveHelper:
         contents_no = 0
         telegraph_content = []
         Title = False
-        merged_dict = list_drives_dict
-        if userId and (user_tds := async_to_sync(fetch_user_tds, userId)):
-            merged_dict = {**list_drives_dict, **user_tds}
+        merged_dict = dict(list_drives_dict)
+        if userId:
+            user_settings = user_data.get(userId, {})
+            user_drive_id = user_settings.get("GDRIVE_ID")
+            user_index = user_settings.get("INDEX_URL") or ""
+            if user_drive_id:
+                merged_dict["User Default"] = {
+                    "drive_id": user_drive_id,
+                    "index_link": user_index,
+                }
+            if user_categories := async_to_sync(
+                fetch_user_drive_categories, userId
+            ):
+                merged_dict.update(user_categories)
+            if user_tds := async_to_sync(fetch_user_tds, userId):
+                merged_dict.update(user_tds)
         if len(merged_dict) > 1:
             token_service = self.__alt_authorize()
             if token_service is not None:
