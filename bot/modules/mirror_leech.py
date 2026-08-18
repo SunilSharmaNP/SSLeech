@@ -475,7 +475,6 @@ async def _mirror_leech(
             else:
                 config_path = "rclone.conf"
             if not await aiopath.exists(config_path):
-                await sendMessage(message, f"RClone Config: {config_path} not Exists!")
                 await delete_links(message)
                 return
         if up != "gd" and up != "ddl" and not is_rclone_path(up):
@@ -510,14 +509,16 @@ async def _mirror_leech(
     if link == "rcl":
         link = await RcloneList(client, message).get_rclone_path("rcd")
         if not is_rclone_path(link):
-            await sendMessage(message, link)
+            if link:
+                await sendMessage(message, link)
             await delete_links(message)
             return
 
     if up == "rcl" and not isLeech:
         up = await RcloneList(client, message).get_rclone_path("rcu")
         if not is_rclone_path(up):
-            await sendMessage(message, up)
+            if up:
+                await sendMessage(message, up)
             await delete_links(message)
             return
 
@@ -579,9 +580,6 @@ async def _mirror_leech(
         else:
             config_path = "rclone.conf"
         if not await aiopath.exists(config_path):
-            await sendMessage(
-                message, f"<b>RClone Config:</b> {config_path} not Exists!"
-            )
             await delete_links(message)
             return
         await add_rclone_download(link, config_path, f"{path}/", _dl_name, listener)
