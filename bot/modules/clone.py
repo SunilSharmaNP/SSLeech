@@ -15,6 +15,7 @@ from bot import (
     categories_dict,
     config_dict,
     bot,
+    user_data,
 )
 from bot.helper.ext_utils.task_manager import limit_checker, task_utils
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
@@ -37,6 +38,7 @@ from bot.helper.ext_utils.bot_utils import (
     get_readable_file_size,
     sync_to_async,
     fetch_user_tds,
+    fetch_user_drive_categories,
     is_share_link,
     new_task,
     is_rclone_path,
@@ -230,10 +232,15 @@ async def gdcloneNode(message, link, listen_up):
         if mime_type is None:
             await sendMessage(message, name)
             return
-        if config_dict["STOP_DUPLICATE"]:
+        if user_data.get(message.from_user.id, {}).get(
+            "STOP_DUPLICATE", config_dict["STOP_DUPLICATE"]
+        ):
             LOGGER.info("𝐂ʜᴇᴄᴋɪɴɢ 𝐅ɪʟᴇ/𝐅ᴏʟᴅᴇʀ ɪғ ᴀʟʀᴇᴀᴅʏ ɪɴ 𝐃ʀɪᴠᴇ...")
             telegraph_content, contents_no = await sync_to_async(
-                gd.drive_list, name, True, True
+                GoogleDriveHelper(user_id=message.from_user.id).drive_list,
+                name,
+                True,
+                True,
             )
             if telegraph_content:
                 msg = BotTheme("STOP_DUPLICATE", content=contents_no)
@@ -316,6 +323,10 @@ async def clone(client, message):
     index_link = args["-index"]
     gd_cat = args["-c"] or args["-category"]
 
+    user_settings = user_data.get(message.from_user.id, {})
+    drive_id = drive_id or user_settings.get("GDRIVE_ID")
+    index_link = index_link or user_settings.get("INDEX_URL")
+
     if username := message.from_user.username:
         tag = f"@{username}"
     else:
@@ -385,7 +396,11 @@ async def clone(client, message):
             return
         await rcloneNode(client, message, link, dst_path, rcf, tag)
     else:
-        user_tds = await fetch_user_tds(message.from_user.id)
+        user_tds = {
+            **await fetch_user_drive_categories(message.from_user.id),
+            **await fetch_user_tds(message.from_user.id),
+        }
+        all_categories = {**categories_dict, **user_tds}
         if not drive_id and gd_cat:
             merged_dict = {**categories_dict, **user_tds}
             for drive_name, drive_dict in merged_dict.items():
@@ -397,21 +412,16 @@ async def clone(client, message):
                     break
         if not drive_id and len(user_tds) == 1:
             drive_id, index_link = next(iter(user_tds.values())).values()
-        elif not drive_id and (
-            len(categories_dict) > 1
-            and len(user_tds) == 0
-            or len(categories_dict) >= 1
-            and len(user_tds) > 1
-        ):
+        elif not drive_id and len(all_categories) > 1:
             drive_id, index_link, is_cancelled = await open_category_btns(message)
             if is_cancelled:
                 await delete_links(message)
                 return
         if drive_id and not await sync_to_async(
-            GoogleDriveHelper().getFolderData, drive_id
+            GoogleDriveHelper(user_id=message.from_user.id).getFolderData, drive_id
         ):
             return await sendMessage(message, "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ 𝐈ᴅ ᴠᴀʟɪᴅᴀᴛɪᴏɴ ғᴀɪʟᴇᴅ!!")
-        if not config_dict["GDRIVE_ID"] and not drive_id:
+        if not (config_dict["GDRIVE_ID"] or drive_id):
             await sendMessage(message, "𝐆ᴅʀɪᴠᴇ_𝐈ᴅ ɴᴏᴛ 𝐏ʀᴏᴠɪᴅᴇᴅ!")
             await delete_links(message)
             return
