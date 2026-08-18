@@ -62,7 +62,8 @@ async def rcloneNode(client, message, link, dst_path, rcf, tag):
     if link == "rcl":
         link = await RcloneList(client, message).get_rclone_path("rcd")
         if not is_rclone_path(link):
-            await sendMessage(message, link)
+            if link:
+                await sendMessage(message, link)
             return
 
     if link.startswith("mrcc:"):
@@ -72,13 +73,13 @@ async def rcloneNode(client, message, link, dst_path, rcf, tag):
         config_path = "rclone.conf"
 
     if not await aiopath.exists(config_path):
-        await sendMessage(message, f"<b>𝐑ᴄʟᴏɴᴇ 𝐂ᴏɴғɪɢ:</b> {config_path} ɴᴏᴛ 𝐄xɪsᴛs!")
         return
 
     if dst_path == "rcl" or config_dict["RCLONE_PATH"] == "rcl":
         dst_path = await RcloneList(client, message).get_rclone_path("rcu", config_path)
         if not is_rclone_path(dst_path):
-            await sendMessage(message, dst_path)
+            if dst_path:
+                await sendMessage(message, dst_path)
             return
 
     dst_path = (dst_path or config_dict["RCLONE_PATH"]).strip("/")
