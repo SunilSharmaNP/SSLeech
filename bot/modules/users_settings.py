@@ -21,6 +21,15 @@ def _pesc(val):
     if val in (_TICK, _CROSS) or str(val).startswith('<emoji '):
         return val
     return escape(str(val))
+
+
+def _setting_bool(value):
+    """Normalize booleans loaded from env vars, JSON, or MongoDB."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().casefold() in {"1", "true", "yes", "on"}
+    return bool(value)
 from io import BytesIO
 from asyncio import sleep
 from cryptography.fernet import Fernet
@@ -337,7 +346,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         index_url = user_dict.get("INDEX_URL")
         if index_url is None:
             index_url = config_dict.get("INDEX_URL") or "None"
-        stop_duplicate = bool(
+        stop_duplicate = _setting_bool(
             user_dict.get("STOP_DUPLICATE", config_dict.get("STOP_DUPLICATE", False))
         )
         drive_categories = user_dict.get("DRIVE_CAT") or {}
@@ -1229,7 +1238,7 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, "gdrive_tools")
     elif data[2] == "gdrive_toggle":
         handler_dict[user_id] = False
-        current = bool(
+        current = _setting_bool(
             user_dict.get("STOP_DUPLICATE", config_dict.get("STOP_DUPLICATE", False))
         )
         update_user_ldata(user_id, "STOP_DUPLICATE", not current)
