@@ -320,7 +320,7 @@ class RcloneList:
             self.__rc_owner = await aiopath.exists("rclone.conf")
             if not self.__rc_owner and not self.__rc_user:
                 self.event.set()
-                return "Rclone Config not Exists!"
+                return ""
             await self.list_config()
         else:
             self.config_path = config_path
