@@ -834,6 +834,12 @@ async def fetch_user_tds(user_id, force=False):
     return {}
 
 
+async def fetch_user_drive_categories(user_id):
+    """Return Drive categories configured from the user settings screen."""
+    drive_categories = user_data.get(user_id, {}).get("DRIVE_CAT", {})
+    return drive_categories if isinstance(drive_categories, dict) else {}
+
+
 async def fetch_user_dumps(user_id):
     user_dict = user_data.get(user_id, {})
     if dumps := user_dict.get("ldump", False):
