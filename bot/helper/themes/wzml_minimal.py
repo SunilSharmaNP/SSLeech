@@ -286,7 +286,7 @@ class WZMLStyle:
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
-    MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
+    MIRROR_LEGACY = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
 ┎ <emoji id=5224450179368767019>🌎</emoji> <b>𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
 ┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <i>{MPREFIX}</i>
@@ -298,6 +298,13 @@ class WZMLStyle:
 ┖ <emoji id=5429651785352501917>↗️</emoji> <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <i>{DM} ᴘᴇʀ ᴅᴀʏ</i>
 
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
+"""
+
+    MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
+
+┖ <emoji id=5429651785352501917>↗️</emoji> <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <i>{DM} ᴘᴇʀ ᴅᴀʏ</i>
+
+✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
