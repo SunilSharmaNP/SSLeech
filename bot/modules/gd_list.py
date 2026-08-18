@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from os import path as ospath
-
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex
 
@@ -68,13 +66,20 @@ async def _list_drive(
         user_id=user_id if user_token else None,
         use_user_token=user_token,
     )
-    telegraph_content, contents_no = await sync_to_async(
-        gdrive.drive_list,
-        key,
-        isRecursive=is_recursive,
-        itemType=item_type,
-        userId=user_id,
-    )
+    try:
+        telegraph_content, contents_no = await sync_to_async(
+            gdrive.drive_list,
+            key,
+            isRecursive=is_recursive,
+            itemType=item_type,
+            userId=user_id,
+        )
+    except Exception as err:
+        LOGGER.error("GDrive list failed: %s", err, exc_info=True)
+        return await editMessage(
+            message,
+            f"<b>Drive search failed:</b> <code>{str(err).replace('<', '').replace('>', '')}</code>",
+        )
     if telegraph_content:
         try:
             button = await get_telegraph_list(telegraph_content)
