@@ -31,8 +31,12 @@ from bot.helper.themes import BotTheme
 
 
 async def stop_duplicate_check(name, listener):
+    user_settings = user_data.get(getattr(listener, "user_id", 0), {})
+    stop_duplicate = bool(
+        user_settings.get("STOP_DUPLICATE", config_dict["STOP_DUPLICATE"])
+    )
     if (
-        not config_dict["STOP_DUPLICATE"]
+        not stop_duplicate
         or listener.isLeech
         or listener.upPath != "gd"
         or listener.select
@@ -48,7 +52,7 @@ async def stop_duplicate_check(name, listener):
             name = None
     if name is not None:
         telegraph_content, contents_no = await sync_to_async(
-            GoogleDriveHelper().drive_list, name, stopDup=True
+            GoogleDriveHelper(listener=listener).drive_list, name, stopDup=True
         )
         if telegraph_content:
             msg = BotTheme("STOP_DUPLICATE", content=contents_no)
