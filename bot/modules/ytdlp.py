@@ -23,6 +23,7 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.bot_utils import (
     get_readable_file_size,
     fetch_user_tds,
+    fetch_user_drive_categories,
     fetch_user_dumps,
     is_url,
     is_gdrive_link,
@@ -462,6 +463,9 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     thumb = args["-t"] or args["-thumb"]
     sshots = int(ss) if (ss := (args["-ss"] or args["-screenshots"])).isdigit() else 0
 
+    drive_id = drive_id or user_data.get(message.from_user.id, {}).get("GDRIVE_ID")
+    index_link = index_link or user_data.get(message.from_user.id, {}).get("INDEX_URL")
+
     if not isinstance(isBulk, bool):
         dargs = isBulk.split(":")
         bulk_start = dargs[0] or None
@@ -597,7 +601,11 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             up = "ddl"
         if not up and config_dict["DEFAULT_UPLOAD"] == "gd":
             up = "gd"
-            user_tds = await fetch_user_tds(message.from_user.id)
+            user_tds = {
+                **await fetch_user_drive_categories(message.from_user.id),
+                **await fetch_user_tds(message.from_user.id),
+            }
+            all_categories = {**categories_dict, **user_tds}
             if not drive_id and gd_cat:
                 merged_dict = {**categories_dict, **user_tds}
                 for drive_name, drive_dict in merged_dict.items():
@@ -609,21 +617,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                         break
             if not drive_id and len(user_tds) == 1:
                 drive_id, index_link = next(iter(user_tds.values())).values()
-            elif not drive_id and (
-                len(categories_dict) > 1
-                and len(user_tds) == 0
-                or len(categories_dict) >= 1
-                and len(user_tds) > 1
-            ):
+            elif not drive_id and len(all_categories) > 1:
                 drive_id, index_link, is_cancelled = await open_category_btns(message)
                 if is_cancelled:
                     await delete_links(message)
                     return
             if drive_id and not await sync_to_async(
-                GoogleDriveHelper().getFolderData, drive_id
+                GoogleDriveHelper(user_id=message.from_user.id).getFolderData, drive_id
             ):
                 return await sendMessage(message, "Google Drive ID validation failed!!")
-        if up == "gd" and not config_dict["GDRIVE_ID"] and not drive_id:
+        if up == "gd" and not (config_dict["GDRIVE_ID"] or drive_id):
             await sendMessage(message, "GDRIVE_ID not Provided!")
             await delete_links(message)
             return
