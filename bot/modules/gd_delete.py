@@ -22,7 +22,14 @@ async def deletefile(_, message):
     if is_gdrive_link(link):
         LOGGER.info(link)
         drive = GoogleDriveHelper(user_id=message.from_user.id)
-        msg = await sync_to_async(drive.deletefile, link)
+        try:
+            msg = await sync_to_async(drive.deletefile, link)
+        except Exception as err:
+            LOGGER.error("GDrive delete failed: %s", err, exc_info=True)
+            msg = (
+                "<b>Drive delete failed:</b> "
+                f"<code>{str(err).replace('<', '').replace('>', '')}</code>"
+            )
     else:
         msg = (
             "𝐒ᴇɴᴅ 𝐆ᴅʀɪᴠᴇ ʟɪɴᴋ ᴀʟᴏɴɢ ᴡɪᴛʜ ᴄᴏᴍᴍᴀɴᴅ ᴏʀ ʙʏ ʀᴇᴘʟʏɪɴɢ ᴛᴏ ᴛʜᴇ ʟɪɴᴋ ʙʏ ᴄᴏᴍᴍᴀɴᴅ"
