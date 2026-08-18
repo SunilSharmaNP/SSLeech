@@ -35,7 +35,7 @@ getLogger("googleapiclient.discovery").setLevel(ERROR)
 
 class GoogleDriveHelper:
 
-    def __init__(self, name=None, path=None, listener=None):
+    def __init__(self, name=None, path=None, listener=None, user_id=None):
         self.__OAUTH_SCOPE = ["https://www.googleapis.com/auth/drive"]
         self.__G_DRIVE_DIR_MIME_TYPE = "application/vnd.google-apps.folder"
         self.__G_DRIVE_BASE_DOWNLOAD_URL = (
@@ -45,7 +45,9 @@ class GoogleDriveHelper:
             "https://drive.google.com/drive/folders/{}"
         )
         self.__listener = listener
-        self.__user_id = listener.message.from_user.id if listener else None
+        self.__user_id = (
+            listener.message.from_user.id if listener else user_id
+        )
         self.__path = path
         self.__total_bytes = 0
         self.__total_files = 0
@@ -83,7 +85,16 @@ class GoogleDriveHelper:
 
     def __authorize(self):
         credentials = None
-        if config_dict["USE_SERVICE_ACCOUNTS"]:
+        user_token_path = (
+            f"tokens/{self.__user_id}.pickle"
+            if self.__user_id and ospath.exists(f"tokens/{self.__user_id}.pickle")
+            else None
+        )
+        if user_token_path:
+            LOGGER.info(f"Authorize with user token.pickle for {self.__user_id}")
+            with open(user_token_path, "rb") as f:
+                credentials = pload(f)
+        elif config_dict["USE_SERVICE_ACCOUNTS"]:
             json_files = listdir("accounts")
             self.__sa_number = len(json_files)
             self.__sa_index = randrange(self.__sa_number)
@@ -104,9 +115,14 @@ class GoogleDriveHelper:
     def __alt_authorize(self):
         if not self.__alt_auth:
             self.__alt_auth = True
-            if ospath.exists("token.pickle"):
+            user_token_path = (
+                f"tokens/{self.__user_id}.pickle"
+                if self.__user_id and ospath.exists(f"tokens/{self.__user_id}.pickle")
+                else "token.pickle"
+            )
+            if ospath.exists(user_token_path):
                 LOGGER.info("Authorize with token.pickle")
-                with open("token.pickle", "rb") as f:
+                with open(user_token_path, "rb") as f:
                     credentials = pload(f)
                 return build(
                     "drive", "v3", credentials=credentials, cache_discovery=False
