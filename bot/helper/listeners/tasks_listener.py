@@ -161,8 +161,16 @@ class MirrorLeechListener:
         self.upPath = upPath
         self.random_pic = "IMAGES" if config_dict["IMAGES"] else None
         self.join = join
-        self.drive_id = drive_id
-        self.index_link = index_link
+        self.drive_id = (
+            drive_id
+            or self.user_dict.get("GDRIVE_ID")
+            or config_dict.get("GDRIVE_ID")
+        )
+        self.index_link = (
+            index_link
+            or self.user_dict.get("INDEX_URL")
+            or config_dict.get("INDEX_URL")
+        )
         self.logMessage = logMessage
         self.linkslogmsg = None
         self.botpmmsg = None
@@ -1138,7 +1146,7 @@ class MirrorLeechListener:
                     buttons.ubutton(BotTheme("RCLONE_LINK"), share_url)
                 elif not rclonePath and not is_DDL:
                     INDEX_URL = (
-                        self.index_link if self.drive_id else config_dict["INDEX_URL"]
+                        self.index_link or config_dict["INDEX_URL"]
                     )
                     if INDEX_URL:
                         url_path = rutils.quote(f"{name}")
