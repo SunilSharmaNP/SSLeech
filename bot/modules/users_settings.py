@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+from ast import literal_eval
 from datetime import datetime
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex, create
 
 from aiofiles import open as aiopen
-from aiofiles.os import remove as aioremove, path as aiopath, mkdir
+from aiofiles.os import remove as aioremove, path as aiopath, mkdir, makedirs
 from langcodes import Language
 from os import path as ospath, getcwd
 from PIL import Image
@@ -330,37 +331,68 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(" 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "gdrive_tools":
-        text = (
-            "㊂ <b><u>Gdrive tools : {0}</u></b>\n\n"
-            "<i>Gdrive tools yahan add kiye jayenge.</i>"
-        ).format(name)
-        gdrive_tools_callback = f"userset {user_id} gdrive_tools"
+        token_path = f"tokens/{user_id}.pickle"
+        token_exists = await aiopath.exists(token_path)
+        gdrive_id = user_dict.get("GDRIVE_ID") or config_dict.get("GDRIVE_ID") or "None"
+        index_url = user_dict.get("INDEX_URL")
+        if index_url is None:
+            index_url = config_dict.get("INDEX_URL") or "None"
+        stop_duplicate = bool(
+            user_dict.get("STOP_DUPLICATE", config_dict.get("STOP_DUPLICATE", False))
+        )
+        drive_categories = user_dict.get("DRIVE_CAT") or {}
+        category_lines = [
+            f"  <b>Default</b>: <code>{escape(str(gdrive_id))}</code>"
+        ]
+        if index_url != "None":
+            category_lines[0] += f" | <code>{escape(str(index_url))}</code>"
+        if isinstance(drive_categories, dict):
+            for category_name, category in drive_categories.items():
+                if isinstance(category, dict):
+                    category_id = category.get("drive_id", "")
+                    category_index = category.get("index_link", "")
+                else:
+                    category_id, _, category_index = str(category).partition("|")
+                index_part = (
+                    f" | <code>{escape(str(category_index))}</code>"
+                    if category_index
+                    else ""
+                )
+                category_lines.append(
+                    f"  <b>{escape(str(category_name))}</b>: "
+                    f"<code>{escape(str(category_id))}</code>{index_part}"
+                )
+
         buttons.ibutton(
             "User Drive Categories",
-            gdrive_tools_callback,
+            f"userset {user_id} gdrive_menu DRIVE_CAT",
             "header",
             icon_custom_emoji_id=5190806721286657692,
         )
         buttons.ibutton(
             "Default Gdrive ID",
-            gdrive_tools_callback,
+            f"userset {user_id} gdrive_menu GDRIVE_ID",
             "f_body",
             icon_custom_emoji_id=5224450179368767019,
         )
         buttons.ibutton(
             "Default Index URL",
-            gdrive_tools_callback,
+            f"userset {user_id} gdrive_menu INDEX_URL",
             "f_body",
             icon_custom_emoji_id=5271604874419647061,
         )
         buttons.ibutton(
-            "Token.pickle",
-            gdrive_tools_callback,
+            "Remove Token.pickle" if token_exists else "Token.pickle",
+            (
+                f"userset {user_id} gdrive_remove TOKEN_PICKLE"
+                if token_exists
+                else f"userset {user_id} gdrive_file TOKEN_PICKLE"
+            ),
             icon_custom_emoji_id=5197288647275071607,
         )
         buttons.ibutton(
-            "Enable Stop Duplicate",
-            gdrive_tools_callback,
+            "Disable Stop Duplicate" if stop_duplicate else "Enable Stop Duplicate",
+            f"userset {user_id} gdrive_toggle STOP_DUPLICATE",
             icon_custom_emoji_id=5427168083074628963,
         )
         buttons.ibutton(
@@ -375,6 +407,16 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             "footer",
             icon_custom_emoji_id=5447644880824181073,
         )
+        text = f"""㊂ <b><u>GDrive Tools Settings :</u></b>
+│
+┠ <b>Name</b> → {name}
+┃
+┠ <b>Gdrive ID</b> → <code>{escape(str(gdrive_id))}</code>
+┠ <b>Index URL</b> → <code>{escape(str(index_url))}</code>
+┠ <b>Stop Duplicate</b> → <b>{"Enabled" if stop_duplicate else "Disabled"}</b>
+┠ <b>GDrive token.pickle</b> → <b>{"Exists" if token_exists else "Not Exists"}</b>
+┖ <b>Drive Categories:</b>
+   {"<br>".join(category_lines)}"""
         button = buttons.build_menu(1, fb_cols=2, f_cols=2)
     elif key == "leech":
         if (
@@ -881,6 +923,56 @@ async def set_custom(client, message, pre_event, key, direct=False):
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
         return
+    elif key == "GDRIVE_ID":
+        value = value.strip()
+        if is_gdrive_link(value):
+            try:
+                value = GoogleDriveHelper.getIdFromUrl(value)
+            except (IndexError, KeyError, ValueError):
+                await sendMessage(message, "Invalid Google Drive link.")
+                await update_user_settings(pre_event, "gdrive_tools")
+                return
+        if not value:
+            await sendMessage(message, "Google Drive ID cannot be empty.")
+            await update_user_settings(pre_event, "gdrive_tools")
+            return
+        return_key = "gdrive_tools"
+    elif key == "INDEX_URL":
+        value = value.strip().rstrip("/")
+        return_key = "gdrive_tools"
+    elif key == "DRIVE_CAT":
+        try:
+            parsed = literal_eval(value.strip())
+            if not isinstance(parsed, dict):
+                raise ValueError("It must be a dictionary.")
+            categories = {}
+            for category_name, category_value in parsed.items():
+                category_name = str(category_name).strip()
+                if not category_name:
+                    raise ValueError("Category name cannot be empty.")
+                if category_name.casefold() == "default":
+                    raise ValueError('"Default" is reserved for the default Drive.')
+                if isinstance(category_value, dict):
+                    drive_id = str(category_value.get("drive_id", "")).strip()
+                    index_link = str(category_value.get("index_link", "")).strip().rstrip("/")
+                else:
+                    parts = str(category_value).split("|", 1)
+                    drive_id = parts[0].strip()
+                    index_link = parts[1].strip().rstrip("/") if len(parts) > 1 else ""
+                if is_gdrive_link(drive_id):
+                    drive_id = GoogleDriveHelper.getIdFromUrl(drive_id)
+                if not drive_id:
+                    raise ValueError(f"Drive ID is missing for {category_name}.")
+                categories[category_name] = {
+                    "drive_id": drive_id,
+                    "index_link": index_link,
+                }
+            value = categories
+        except Exception as err:
+            await sendMessage(message, f"Invalid Drive Categories: {err}")
+            await update_user_settings(pre_event, "gdrive_tools")
+            return
+        return_key = "gdrive_tools"
     elif key in ["gofile", "streamtape"]:
         ddl_dict = user_dict.get("ddl_servers", {})
         mode, api = ddl_dict.get(key, [False, ""])
@@ -995,6 +1087,77 @@ async def add_rclone(client, message, pre_event):
         await DbManger().update_user_doc(user_id, "rclone", des_dir)
 
 
+async def add_token_pickle(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    token_dir = f"{getcwd()}/tokens"
+    await makedirs(token_dir, exist_ok=True)
+    token_path = ospath.join(token_dir, f"{user_id}.pickle")
+    await message.download(file_name=token_path)
+    update_user_ldata(user_id, "TOKEN_PICKLE", token_path)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, "gdrive_tools")
+    if DATABASE_URL:
+        await DbManger().update_user_doc(user_id, "TOKEN_PICKLE", token_path)
+
+
+async def add_drive_category(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    raw_value = message.text.strip()
+    try:
+        if ":" in raw_value:
+            category_name, raw_value = raw_value.split(":", 1)
+            category_name = category_name.strip()
+            drive_id, _, index_link = raw_value.strip().partition("|")
+        else:
+            parts = raw_value.split(maxsplit=2)
+            if len(parts) < 2:
+                raise ValueError("Use: <name> <drive_id> [index_url]")
+            category_name, drive_id = parts[:2]
+            index_link = parts[2] if len(parts) == 3 else ""
+        category_name = category_name.strip()
+        drive_id = drive_id.strip()
+        index_link = index_link.strip().rstrip("/")
+        if not category_name or category_name.casefold() == "default":
+            raise ValueError("Category name is empty or reserved.")
+        if is_gdrive_link(drive_id):
+            drive_id = GoogleDriveHelper.getIdFromUrl(drive_id)
+        if not drive_id:
+            raise ValueError("Drive ID is missing.")
+        categories = user_data.get(user_id, {}).get("DRIVE_CAT", {}).copy()
+        categories[category_name] = {
+            "drive_id": drive_id,
+            "index_link": index_link,
+        }
+        update_user_ldata(user_id, "DRIVE_CAT", categories)
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+        await deleteMessage(message)
+    except Exception as err:
+        await sendMessage(message, f"Invalid Drive Category: {err}")
+    await update_user_settings(pre_event, "gdrive_tools")
+
+
+async def remove_drive_category(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    category_name = message.text.strip().casefold()
+    categories = user_data.get(user_id, {}).get("DRIVE_CAT", {}).copy()
+    category_key = next(
+        (key for key in categories if str(key).casefold() == category_name), None
+    )
+    if category_key is None:
+        await sendMessage(message, "That Drive category was not found.")
+    else:
+        categories.pop(category_key)
+        update_user_ldata(user_id, "DRIVE_CAT", categories)
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+        await deleteMessage(message)
+    await update_user_settings(pre_event, "gdrive_tools")
+
+
 async def leech_split_size(client, message, pre_event):
     user_id = message.from_user.id
     handler_dict[user_id] = False
@@ -1049,12 +1212,145 @@ async def edit_user_settings(client, query):
     data = query.data.split()
     thumb_path = f"Thumbnails/{user_id}.jpg"
     rclone_path = f"rclone/{user_id}.conf"
+    token_path = f"tokens/{user_id}.pickle"
     user_dict = user_data.get(user_id, {})
     if user_id != int(data[1]):
         await query.answer("𝐍ᴏᴛ 𝐘ᴏᴜʀs!", show_alert=True)
     elif data[2] in ["universal", "mirror", "leech"]:
         await query.answer()
         await update_user_settings(query, data[2])
+    elif data[2] == "gdrive_tools":
+        handler_dict[user_id] = False
+        await query.answer()
+        await update_user_settings(query, "gdrive_tools")
+    elif data[2] == "gdrive_cancel":
+        handler_dict[user_id] = False
+        await query.answer()
+        await update_user_settings(query, "gdrive_tools")
+    elif data[2] == "gdrive_toggle":
+        handler_dict[user_id] = False
+        current = bool(
+            user_dict.get("STOP_DUPLICATE", config_dict.get("STOP_DUPLICATE", False))
+        )
+        update_user_ldata(user_id, "STOP_DUPLICATE", not current)
+        await query.answer()
+        await update_user_settings(query, "gdrive_tools")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == "gdrive_menu":
+        handler_dict[user_id] = False
+        option = data[3]
+        await query.answer()
+        if option == "DRIVE_CAT" and len(data) == 4:
+            categories = user_dict.get("DRIVE_CAT") or {}
+            category_text = "\n".join(
+                f"• <b>{escape(str(category_name))}</b>"
+                for category_name in categories
+            ) or "• No user categories configured."
+            buttons = ButtonMaker()
+            buttons.ibutton("Set / Replace All", f"userset {user_id} gdrive_menu DRIVE_CAT set")
+            buttons.ibutton("Add Category", f"userset {user_id} gdrive_menu DRIVE_CAT add")
+            buttons.ibutton("Remove Category", f"userset {user_id} gdrive_menu DRIVE_CAT remove")
+            buttons.ibutton("Reset Categories", f"userset {user_id} gdrive_reset DRIVE_CAT")
+            buttons.ibutton("Back", f"userset {user_id} gdrive_tools", "footer")
+            buttons.ibutton("Close", f"userset {user_id} close", "footer")
+            await editMessage(
+                message,
+                f"<b>GDrive Tools — User Drive Categories</b>\n\n{category_text}",
+                buttons.build_menu(1),
+            )
+            return
+        mode = data[4] if len(data) > 4 else "set"
+        prompt = {
+            "GDRIVE_ID": (
+                "<b>Send the default Google Drive folder/Team Drive ID.</b>\n"
+                "You may also send a Google Drive folder URL."
+            ),
+            "INDEX_URL": (
+                "<b>Send the default Google Drive Index URL.</b>\n"
+                "Send an empty value only if you want to clear it."
+            ),
+            "DRIVE_CAT": (
+                (
+                    "<b>Send categories as a Python dictionary:</b>\n"
+                    "<code>{'Movies': 'drive_id|https://index.example/'}</code>"
+                    if mode == "set"
+                    else (
+                        "<b>Send one category as:</b>\n"
+                        "<code>Name drive_id https://index.example/</code>"
+                    )
+                )
+            ),
+        }.get(option)
+        if not prompt:
+            await update_user_settings(query, "gdrive_tools")
+            return
+        buttons = ButtonMaker()
+        buttons.ibutton("Stop", f"userset {user_id} gdrive_cancel")
+        if option in ["GDRIVE_ID", "INDEX_URL"] or (
+            option == "DRIVE_CAT" and mode == "set"
+        ):
+            buttons.ibutton("Reset", f"userset {user_id} gdrive_reset {option}")
+        buttons.ibutton("Back", f"userset {user_id} gdrive_tools", "footer")
+        buttons.ibutton("Close", f"userset {user_id} close", "footer")
+        await editMessage(
+            message,
+            f"<b>GDrive Tools — {option.replace('_', ' ').title()}</b>\n\n{prompt}\n\n"
+            "<b>Time left:</b> <code>60 sec</code>",
+            buttons.build_menu(1),
+        )
+        if option == "DRIVE_CAT" and mode == "add":
+            pfunc = partial(add_drive_category, pre_event=query)
+        elif option == "DRIVE_CAT" and mode == "remove":
+            pfunc = partial(remove_drive_category, pre_event=query)
+        else:
+            pfunc = partial(set_custom, pre_event=query, key=option)
+        rfunc = partial(update_user_settings, query, "gdrive_tools")
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == "gdrive_file":
+        handler_dict[user_id] = False
+        await query.answer()
+        buttons = ButtonMaker()
+        buttons.ibutton("Stop", f"userset {user_id} gdrive_cancel")
+        buttons.ibutton("Back", f"userset {user_id} gdrive_tools", "footer")
+        buttons.ibutton("Close", f"userset {user_id} close", "footer")
+        await editMessage(
+            message,
+            "<b>Send your token.pickle file as a document.</b>\n\n"
+            "<i>This token is stored separately for your user and used for your "
+            "Google Drive operations.</i>\n\n<b>Time left:</b> <code>60 sec</code>",
+            buttons.build_menu(1),
+        )
+        pfunc = partial(add_token_pickle, pre_event=query)
+        rfunc = partial(update_user_settings, query, "gdrive_tools")
+        await event_handler(client, query, pfunc, rfunc, document=True)
+    elif data[2] == "gdrive_remove":
+        handler_dict[user_id] = False
+        option = data[3]
+        if option == "TOKEN_PICKLE" and await aiopath.exists(token_path):
+            await aioremove(token_path)
+            update_user_ldata(user_id, "TOKEN_PICKLE", "")
+            if DATABASE_URL:
+                await DbManger().update_user_doc(user_id, "TOKEN_PICKLE")
+            await query.answer("Token.pickle removed.")
+        else:
+            await query.answer("Token.pickle is not uploaded.", show_alert=True)
+        await update_user_settings(query, "gdrive_tools")
+    elif data[2] == "gdrive_reset":
+        handler_dict[user_id] = False
+        option = data[3]
+        if option == "TOKEN_PICKLE":
+            if await aiopath.exists(token_path):
+                await aioremove(token_path)
+            update_user_ldata(user_id, "TOKEN_PICKLE", "")
+            if DATABASE_URL:
+                await DbManger().update_user_doc(user_id, "TOKEN_PICKLE")
+        else:
+            user_data.setdefault(user_id, {}).pop(option, None)
+            if DATABASE_URL:
+                await DbManger().update_user_data(user_id)
+        await query.answer("Setting reset.")
+        await update_user_settings(query, "gdrive_tools")
     elif data[2] == "doc":
         update_user_ldata(user_id, "as_doc", not user_dict.get("as_doc", False))
         await query.answer()
@@ -1374,6 +1670,8 @@ async def edit_user_settings(client, query):
             await aioremove(thumb_path)
         if await aiopath.exists(rclone_path):
             await aioremove(rclone_path)
+        if await aiopath.exists(token_path):
+            await aioremove(token_path)
         await query.answer()
         update_user_ldata(user_id, None, None)
         await update_user_settings(query)
@@ -1381,6 +1679,7 @@ async def edit_user_settings(client, query):
             await DbManger().update_user_data(user_id)
             await DbManger().update_user_doc(user_id, "thumb")
             await DbManger().update_user_doc(user_id, "rclone")
+            await DbManger().update_user_doc(user_id, "TOKEN_PICKLE")
     elif data[2] == "user_del":
         user_id = int(data[3])
         await query.answer()
@@ -1390,11 +1689,14 @@ async def edit_user_settings(client, query):
             await aioremove(thumb_path)
         if await aiopath.exists(rclone_path):
             await aioremove(rclone_path)
+        if await aiopath.exists(token_path):
+            await aioremove(token_path)
         update_user_ldata(user_id, None, None)
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
             await DbManger().update_user_doc(user_id, "thumb")
             await DbManger().update_user_doc(user_id, "rclone")
+            await DbManger().update_user_doc(user_id, "TOKEN_PICKLE")
         await editMessage(message, f"𝐃ᴀᴛᴀ 𝐑ᴇsᴇᴛ ғᴏʀ {user_id}")
     else:
         handler_dict[user_id] = False
