@@ -640,7 +640,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             else:
                 config_path = "rclone.conf"
             if not await aiopath.exists(config_path):
-                await sendMessage(message, f"Rclone Config: {config_path} not Exists!")
                 await delete_links(message)
                 return
         if up != "gd" and up != "ddl" and not is_rclone_path(up):
@@ -675,7 +674,8 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if up == "rcl" and not isLeech:
         up = await RcloneList(client, message).get_rclone_path("rcu")
         if not is_rclone_path(up):
-            await sendMessage(message, up)
+            if up:
+                await sendMessage(message, up)
             await delete_links(message)
             return
 
