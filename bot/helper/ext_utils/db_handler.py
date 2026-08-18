@@ -64,6 +64,7 @@ class DbManger:
                 del row["_id"]
                 thumb_path = f"Thumbnails/{uid}.jpg"
                 rclone_path = f"rclone/{uid}.conf"
+                token_path = f"tokens/{uid}.pickle"
                 if row.get("thumb"):
                     if not await aiopath.exists("Thumbnails"):
                         await makedirs("Thumbnails")
@@ -76,6 +77,12 @@ class DbManger:
                     async with aiopen(rclone_path, "wb+") as f:
                         await f.write(row["rclone"])
                     row["rclone"] = rclone_path
+                if row.get("TOKEN_PICKLE") and isinstance(row["TOKEN_PICKLE"], bytes):
+                    if not await aiopath.exists("tokens"):
+                        await makedirs("tokens")
+                    async with aiopen(token_path, "wb+") as f:
+                        await f.write(row["TOKEN_PICKLE"])
+                    row["TOKEN_PICKLE"] = token_path
                 user_data[uid] = row
             LOGGER.info("Users data has been imported from Database")
         self.__conn.close
@@ -136,10 +143,16 @@ class DbManger:
         if self.__err:
             return
         data = user_data[user_id].copy()
-        if data.get("thumb"):
-            del data["thumb"]
-        if data.get("rclone"):
-            del data["rclone"]
+        # Binary private files are written by update_user_doc. Preserve the
+        # already stored bytes while updating normal user settings.
+        stored = await self.__db.users[bot_id].find_one(
+            {"_id": user_id},
+            {"thumb": 1, "rclone": 1, "TOKEN_PICKLE": 1},
+        )
+        for key in ("thumb", "rclone", "TOKEN_PICKLE"):
+            data.pop(key, None)
+            if stored and stored.get(key):
+                data[key] = stored[key]
         await self.__db.users[bot_id].replace_one({"_id": user_id}, data, upsert=True)
         self.__conn.close
 
