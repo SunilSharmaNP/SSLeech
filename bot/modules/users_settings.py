@@ -320,6 +320,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             f"userset {user_id} gdrive_tools",
             icon_custom_emoji_id=5224450179368767019,
         )
+        buttons.ibutton(
+            "DDL Servers",
+            f"userset {user_id} ddl_servers",
+            icon_custom_emoji_id=5193177581888755275,
+        )
         dailytlup = (
             get_readable_file_size(config_dict["DAILY_MIRROR_LIMIT"] * 1024**3)
             if config_dict["DAILY_MIRROR_LIMIT"]
@@ -1059,7 +1064,18 @@ async def set_custom(client, message, pre_event, key, direct=False):
         return_key = "universal"
     update_user_ldata(user_id, n_key, value)
     await deleteMessage(message)
-    await update_user_settings(pre_event, key, return_key, msg=message, sdirect=direct)
+    # GDrive fields use a dedicated settings screen.  Rendering the raw
+    # field key here makes get_user_settings() treat it like a legacy
+    # setting and look it up in fname_dict/desp_dict, which do not contain
+    # GDRIVE_ID, INDEX_URL, or DRIVE_CAT.
+    display_key = (
+        "gdrive_tools"
+        if key in {"GDRIVE_ID", "INDEX_URL", "DRIVE_CAT"}
+        else key
+    )
+    await update_user_settings(
+        pre_event, display_key, return_key, msg=message, sdirect=direct
+    )
     if DATABASE_URL:
         await DbManger().update_user_data(user_id)
 
