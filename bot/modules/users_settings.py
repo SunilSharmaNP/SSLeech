@@ -305,8 +305,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton(" 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "mirror":
-        buttons.ibutton(" 𝐑ᴄʟᴏɴᴇ", f"userset {user_id} rcc", icon_custom_emoji_id=5224450179368767019)
-        rccmsg = "<emoji id=5206607081334906820>✔️</emoji>" if await aiopath.exists(rclone_path) else "<emoji id=5210952531676504517>❌</emoji>"
+        buttons.ibutton(
+            "Gdrive tools",
+            f"userset {user_id} gdrive_tools",
+            icon_custom_emoji_id=5224450179368767019,
+        )
         dailytlup = (
             get_readable_file_size(config_dict["DAILY_MIRROR_LIMIT"] * 1024**3)
             if config_dict["DAILY_MIRROR_LIMIT"]
@@ -317,68 +320,62 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             if config_dict["DAILY_MIRROR_LIMIT"] and user_id != OWNER_ID
             else "️∞"
         )
-        buttons.ibutton(" 𝐌ɪʀʀᴏʀ 𝐏ʀᴇғɪx", f"userset {user_id} mprefix", icon_custom_emoji_id=5271604874419647061)
-        mprefix = (
-            "<emoji id=5210952531676504517>❌</emoji>"
-            if (
-                val := user_dict.get(
-                    "mprefix", config_dict.get("MIRROR_FILENAME_PREFIX", "")
-                )
-            )
-            == ""
-            else val
-        )
-
-        buttons.ibutton(" 𝐌ɪʀʀᴏʀ 𝐒ᴜғғɪx", f"userset {user_id} msuffix", icon_custom_emoji_id=5397916757333654639)
-        msuffix = (
-            "<emoji id=5210952531676504517>❌</emoji>"
-            if (
-                val := user_dict.get(
-                    "msuffix", config_dict.get("MIRROR_FILENAME_SUFFIX", "")
-                )
-            )
-            == ""
-            else val
-        )
-
-        buttons.ibutton(" 𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ", f"userset {user_id} mremname", icon_custom_emoji_id=5429651785352501917)
-        mremname = (
-            "<emoji id=5210952531676504517>❌</emoji>"
-            if (
-                val := user_dict.get(
-                    "mremname", config_dict.get("MIRROR_FILENAME_REMNAME", "")
-                )
-            )
-            == ""
-            else val
-        )
-
-        ddl_serv = len(val) if (val := user_dict.get("ddl_servers", False)) else 0
-        buttons.ibutton(" 𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀs", f"userset {user_id} ddl_servers", icon_custom_emoji_id=5193177581888755275)
-
-        tds_mode = "<emoji id=5206607081334906820>✔️</emoji>" if user_dict.get("td_mode", False) else "<emoji id=5210952531676504517>❌</emoji>"
-        if not config_dict["USER_TD_MODE"]:
-            tds_mode = "<emoji id=5210952531676504517>❌</emoji> 𝐅ᴏʀᴄᴇ"
-
-        user_tds = len(val) if (val := user_dict.get("user_tds", False)) else 0
-        buttons.ibutton(" 𝐔sᴇʀ 𝐓ᴅs", f"userset {user_id} user_tds", icon_custom_emoji_id=5427168083074628963)
-
         text = BotTheme(
             "MIRROR",
             NAME=name,
-            RCLONE=rccmsg,
-            DDL_SERVER=ddl_serv,
             DM=f"{dailyup} / {dailytlup}",
-            MREMNAME=_pesc(mremname),
-            MPREFIX=_pesc(mprefix),
-            MSUFFIX=_pesc(msuffix),
-            TMODE=tds_mode,
-            USERTD=user_tds,
         )
 
         buttons.ibutton(" 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer", icon_custom_emoji_id=5416117059207572332)
         buttons.ibutton(" 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
+    elif key == "gdrive_tools":
+        text = (
+            "㊂ <b><u>Gdrive tools : {0}</u></b>\n\n"
+            "<i>Gdrive tools yahan add kiye jayenge.</i>"
+        ).format(name)
+        gdrive_tools_callback = f"userset {user_id} gdrive_tools"
+        buttons.ibutton(
+            "User Drive Categories",
+            gdrive_tools_callback,
+            "header",
+            icon_custom_emoji_id=5190806721286657692,
+        )
+        buttons.ibutton(
+            "Default Gdrive ID",
+            gdrive_tools_callback,
+            "f_body",
+            icon_custom_emoji_id=5224450179368767019,
+        )
+        buttons.ibutton(
+            "Default Index URL",
+            gdrive_tools_callback,
+            "f_body",
+            icon_custom_emoji_id=5271604874419647061,
+        )
+        buttons.ibutton(
+            "Token.pickle",
+            gdrive_tools_callback,
+            icon_custom_emoji_id=5197288647275071607,
+        )
+        buttons.ibutton(
+            "Enable Stop Duplicate",
+            gdrive_tools_callback,
+            icon_custom_emoji_id=5427168083074628963,
+        )
+        buttons.ibutton(
+            " 𝐁ᴀᴄᴋ",
+            f"userset {user_id} mirror",
+            "footer",
+            icon_custom_emoji_id=5416117059207572332,
+        )
+        buttons.ibutton(
+            " 𝐂ʟᴏsᴇ",
+            f"userset {user_id} close",
+            "footer",
+            icon_custom_emoji_id=5447644880824181073,
+        )
+        button = buttons.build_menu(1, fb_cols=2, f_cols=2)
     elif key == "leech":
         if (
             user_dict.get("as_doc", False)
