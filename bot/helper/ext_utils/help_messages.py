@@ -2,25 +2,24 @@
 from bot.helper.telegram_helper.bot_commands import BotCommands
 
 YT_HELP_MESSAGE = [
-    """<i>Send links/files along with cmd or reply to cmd to mirror or leech ytdl supported stes on Telegram or GDrive or DDLs with different Engines like RClone or yt-dlp</i>
+    """<i>Send links/files along with cmd or reply to cmd to mirror or leech ytdl supported sites on Telegram or GDrive or DDLs</i>
 
 ➲ <b><u>Available Args</u></b>:
 
 1.  <b>-n or -name :</b> Rename file.
 2.  <b>-z or -zip :</b> Zip files or Links
-3.  <b>-up or -upload :</b> Upload to your Drive or RClone or DDL
+3.  <b>-up or -upload :</b> Upload to your Drive or DDL
 4.  <b>-b or -bulk :</b> Download bulk links.
 5.  <b>-i :</b> Download multi links by reply
 6.  <b>-m or -sd or -samedir :</b> Download multi links within same upload directory.
 7.  <b>-opt or -options :</b> Attach Custom yt-dlp options to link
 8.  <b>-s or -select :</b> Select files from yt-dlp links even if qual is specified
-9.  <b>-rcf :</b> RClone additional Flags
-10. <b>-id :</b> GDrive Folder id or link
-11. <b>-index:</b> Index url for gdrive_arg
-12. <b>-c or -category :</b> Gdrive category to Upload, Specific Name (case insensitive)
-13. <b>-ud or -dump :</b> Dump category to Upload, Specific Name (case insensitive) or chat_id or chat_username
-14. <b>-ss or -screenshots :</b> Generate Screenshots for Leeched Files
-15. <b>-t or -thumb :</b> Custom Thumb for Specific Leech
+9.  <b>-id :</b> GDrive Folder id or link
+10. <b>-index:</b> Index url for gdrive_arg
+11. <b>-c or -category :</b> Gdrive category to Upload, Specific Name (case insensitive)
+12. <b>-ud or -dump :</b> Dump category to Upload, Specific Name (case insensitive) or chat_id or chat_username
+13. <b>-ss or -screenshots :</b> Generate Screenshots for Leeched Files
+14. <b>-t or -thumb :</b> Custom Thumb for Specific Leech
 """,
     """
 ➲ <b><i>Send link along with command line</i></b>:
@@ -77,32 +76,20 @@ You -ud all for Uploading in all Dump Chats of yours
 Make Sure Bot is already Admin else it will not accept.
 
 ➲ <b><i>Upload</i></b>: -up or -upload
-<code>/cmd</code> link -up <code>rcl</code> (To select rclone config, remote and path)
+<code>/cmd</code> link -up <code>gd</code>
 <code>/cmd</code> link -up <code>ddl</code>
-You can directly add the upload path: -up remote:dir/subdir
-
-If DEFAULT_UPLOAD is `rc` then you can pass up: `gd` to upload using gdrive tools to GDRIVE_ID.
-If DEFAULT_UPLOAD is `gd` then you can pass up: `rc` to upload to RCLONE_PATH.
-If DEFAULT_UPLOAD is `ddl` then you can pass up: `rc` or `gd` to upload to RCLONE_PATH or GDRIVE_ID
-If you want to add path manually from your config (uploaded from usetting) add <code>mrcc:</code> before the path without space
-<code>/cmd</code> link -up <code>mrcc:</code>main:dump
-
-➲ <b><i>RClone Flags</i></b>: -rcf
-<code>/cmd</code> link -up path|rcl -rcf --buffer-size:8M|--drive-starred-only|key|key:value
-This will override all other flags except --exclude
-Check here all <a href='https://rclone.org/flags/'>RcloneFlags</a>.
 
 ➲ <b><i>Bulk Download</i></b>: -b or -bulk
 Bulk can be used by text message and by replying to text file contains links seperated by new line.
 You can use it only by reply to message(text/file).
 All options should be along with link!
 <b>Example:</b>
-link1 -n new name -up remote1:path1 -rcf |key:value|key:value
-link2 -z -n new name -up remote2:path2
+link1 -n new name -up gd
+link2 -z -n new name -up ddl
 link3 -z -n new name -opt ytdlpoptions
 
 <b>Note:</b> You can't add -m arg for some links only, do it for all links or use multi without bulk!
-link pswd: pass(zip) opt: ytdlpoptions up: remote2:path2
+link pswd: pass(zip) opt: ytdlpoptions up: ddl
 Reply to this example by this cmd <code>/cmd</code> b(bulk)
 You can set start and end of the links from the bulk with -b start:end or only end by -b :end or only start by -b start. The default start is from zero(first link) to inf.
 
@@ -112,14 +99,14 @@ Check all yt-dlp API options from this <a href='https://github.com/yt-dlp/yt-dlp
 ]
 
 MIRROR_HELP_MESSAGE = [
-    """<i>Send links/files along with cmd or reply to cmd to mirror or leech on Telegram or GDrive or DDLs with different Engines like RClone, Aria2 or qBit</i>
+    """<i>Send links/files along with cmd or reply to cmd to mirror or leech on Telegram or GDrive or DDLs with different Engines like Aria2 or qBit</i>
 
 ➲ <b><u>Available Args</u></b>:
 
 1.  <b>-n or -name :</b> Rename file.
 2.  <b>-z or -zip :</b> Zip files or Links
 3.  <b>-e or -extract or -uz or -unzip :</b> Extract/Unzip files from Archive
-4.  <b>-up or -upload :</b> Upload to your Drive or RClone or DDL
+4.  <b>-up or -upload :</b> Upload to your Drive or DDL
 6.  <b>-b or -bulk :</b> Download bulk links.
 7.  <b>-i :</b> Download multi links by reply
 9.  <b>-m or -sd or -samedir :</b> Download multi links within same upload directory.
@@ -128,13 +115,12 @@ MIRROR_HELP_MESSAGE = [
 12. <b>-u or -user :</b> Enter username for Auth
 13. <b>-p or -pass :</b> Enter password for Auth
 14. <b>-j or -join :</b> Join Multiple Files.
-15. <b>-rcf :</b> RClone additional Flags
-16. <b>-id :</b> GDrive Folder id or link
-17. <b>-index:</b> Index url for gdrive_arg
-18. <b>-c or -category :</b> Gdrive category to Upload, Specific Name (case insensitive)
-19. <b>-ud or -dump :</b> Dump category to Upload, Specific Name (case insensitive) or chat_id or chat_username
-20. <b>-ss or -screenshots :</b> Generate Screenshots for Leeched Files
-21. <b>-t or -thumb :</b> Custom Thumb for Specific Leech
+15. <b>-id :</b> GDrive Folder id or link
+16. <b>-index:</b> Index url for gdrive_arg
+17. <b>-c or -category :</b> Gdrive category to Upload, Specific Name (case insensitive)
+18. <b>-ud or -dump :</b> Dump category to Upload, Specific Name (case insensitive) or chat_id or chat_username
+19. <b>-ss or -screenshots :</b> Generate Screenshots for Leeched Files
+20. <b>-t or -thumb :</b> Custom Thumb for Specific Leech
 """,
     """
 ➲ <b><i>By along the cmd</i></b>:
@@ -198,29 +184,17 @@ You -ud all for Uploading in all Dump Chats of yours
 Make Sure Bot is already Admin else it will not accept.
 
 ➲ <b><i>Custom Upload</i></b>: -up or -upload
-<code>/cmd</code> link -up <code>rcl</code> (To select rclone config, remote and path)
+<code>/cmd</code> link -up <code>gd</code>
 <code>/cmd</code> link -up <code>ddl</code>
-You can directly add the upload path: -up remote:dir/subdir
-
-If DEFAULT_UPLOAD is `rc` then you can pass up: `gd` to upload using gdrive tools to GDRIVE_ID.
-If DEFAULT_UPLOAD is `gd` then you can pass up: `rc` to upload to RCLONE_PATH.
-If DEFAULT_UPLOAD is `ddl` then you can pass up: `rc` or `gd` to upload to RCLONE_PATH or GDRIVE_ID
-If you want to add path manually from your config (uploaded from usetting) add <code>mrcc:</code> before the path without space
-<code>/cmd</code> link -up <code>mrcc:</code>main:dump
-
-➲ <b><i>RClone Flags</i></b>: -rcf
-<code>/cmd</code> link|path|rcl -up path|rcl -rcf --buffer-size:8M|--drive-starred-only|key|key:value
-This will override all other flags except --exclude
-Check here all <a href='https://rclone.org/flags/'>RcloneFlags</a>.
 
 ➲ <b><i>Bulk Download</i></b>: -b or -bulk
 Bulk can be used by text message and by replying to text file contains links seperated by new line.
 You can use it only by reply to message(text/file).
 All options should be along with link!
 <b>Some Examples:</b>
-link1 -n new name -up remote1:path1 -rcf |key:value|key:value
-link2 -z -n new name -up remote2:path2
-link3 -uz -n new name -up remote2:path2
+link1 -n new name -up gd
+link2 -z -n new name -up ddl
+link3 -uz -n new name -up gd
 <b>NOTES:</b> You can't add -m arg for some links only, do it for all links or use multi without bulk!
 Reply to this example by this cmd <code>/cmd</code> -b(bulk)
 You can set start and end of the links from the bulk like seed, with -b start:end or only end by -b :end or only start by -b start. The default start is from zero(first link) to inf.
@@ -233,14 +207,6 @@ This option is not Merging of Two links/files.
 <code>/cmd</code> -b -j -m folder name
 If you have link which has splitted files:
 <code>/cmd</code> link -j
-
-➲ <b><i>RClone Download</i></b>:
-Treat rclone paths exactly like links
-<code>/cmd</code> main:dump/ubuntu.iso or <code>rcl</code>(To select config, remote and path)
-Users can add their own rclone from user settings
-
-If you want to add path manually from your config add <code>mrcc:</code> before the path without space
-<code>/cmd</code> <code>mrcc:</code>main:dump/ubuntu.iso
 
 ➲ <b><i>TG Links</i></b>:
 Treat tg links like any direct link
@@ -258,27 +224,23 @@ Some links need user access so sure you must add USER_SESSION_STRING for it.
 RSS_HELP_MESSAGE = ""
 
 CLONE_HELP_MESSAGE = [
-    """<i>Send Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link or RClone path along with or by replying to the link/rc_path by command with args.</i>
+    """<i>Send Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link along with or by replying to the link by command with args.</i>
 
 ➲ <b><u>Available Args</u></b>:
 
-1. <b>-up or -upload :</b> Upload to your Drive or RClone or DDL
+1. <b>-up or -upload :</b> Upload to your Drive or DDL
 2. <b>-i :</b> Download multi links by reply
-3. <b>-rcf :</b> RClone additional Flags
-4. <b>-id :</b> GDrive Folder id or link
-5. <b>-index:</b> Index url for gdrive_arg
-6. <b>-c or -category :</b> Gdrive category to Upload, Specific Name (case insensitive)""",
+3. <b>-id :</b> GDrive Folder id or link
+4. <b>-index:</b> Index url for gdrive_arg
+5. <b>-c or -category :</b> Gdrive category to Upload, Specific Name (case insensitive)""",
     """➲ <b><i>Links:</i></b>
-Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link or rclone path
+Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link
 
-➲ <b><i>Multi Links (only by replying to first gdlink or rclone_path):</i></b>
-<code>/cmd</code> -i 10(number of links/paths)
+➲ <b><i>Multi Links (only by replying to first gdlink):</i></b>
+<code>/cmd</code> -i 10(number of links)
 
 ➲ <b><i>Gdrive Link:</i></b>
 <code>/cmd</code> gdrive_link
-
-➲ <b><i>RClone Path with RC Flags:</i></b> -rcf
-<code>/cmd</code> (rcl or rclone_path) -up (rcl or rclone_path) -rcf flagkey:flagvalue|flagkey|flagkey:flagvalue
 
 ➲ <b><i>Upload Custom Drive:</i></b> -id & -index(Optional)
 <code>/{cmd}</code> -id <code>drive_folder_link</code> or <code>drive_id</code> -index <code>https://example.com/0:</code>
@@ -287,9 +249,8 @@ Gdrive | Gdtot | Filepress | Filebee | Appdrive | Gdflix link or rclone path
 <code>/{cmd}</code> -c <code>category_name</code>
 
 <b>NOTES:</b>
-1. If -up or -upload not specified then rclone destination will be the RCLONE_PATH from <code>config.env</code>.
-2. If UserTD enabled, then only it will upload to UserTD either by direct arg or category buttons.
-3. For Multi Custom Upload always use Arg in respective msgs and then reply with /cmd -i 10(number)
+1. If UserTD enabled, then only it will upload to UserTD either by direct arg or category buttons.
+2. For Multi Custom Upload always use Arg in respective msgs and then reply with /cmd -i 10(number)
 """,
 ]
 
@@ -453,7 +414,7 @@ default_desp = {
     "BOT_TOKEN": "The Telegram Bot Token that you got from @BotFather",
     "CMD_SUFFIX": "Telegram Bot Command Index number or Custom Text. This will added at the end all commands except Global Commands. Str",
     "DATABASE_URL": "Your Mongo Database URL (Connection string). Follow this Generate Database to generate database. Data will be saved in Database: auth and sudo users, users settings including thumbnails for each user, rss data and incomplete tasks.\n\n <b>NOTE:</b> You can always edit all settings that saved in database from the official site -> (Browse collections)",
-    "DEFAULT_UPLOAD": "Whether rc to upload to RCLONE_PATH or gd to upload to GDRIVE_ID or ddl to upload to DDLserver. Default is gd.",
+    "DEFAULT_UPLOAD": "Whether gd to upload to GDRIVE_ID or ddl to upload to DDLserver. Default is gd.",
     "DOWNLOAD_DIR": "The path to the local folder where the downloads should be downloaded to. ",
     "MDL_TEMPLATE": "Set Bot Custom Default MyDramaList Template. HTML Tags, Emojis Supported",
     "CLEAN_LOG_MSG": "Clean Leech Log & Bot PM Task Start Message. Default is False",
@@ -484,12 +445,6 @@ default_desp = {
     "QUEUE_ALL": "Number of parallel tasks of downloads and uploads. For example if 20 task added and QUEUE_ALL is 8, then the summation of uploading and downloading tasks are 8 and the rest in queue. Int. NOTE: if you want to fill QUEUE_DOWNLOAD or QUEUE_UPLOAD, then QUEUE_ALL value must be greater than or equal to the greatest one and less than or equal to summation of QUEUE_UPLOAD and QUEUE_DOWNLOAD",
     "QUEUE_DOWNLOAD": "Number of all parallel downloading tasks. Int",
     "QUEUE_UPLOAD": "Number of all parallel uploading tasks. Int",
-    "RCLONE_FLAGS": "key:value|key|key|key:value . Check here all RcloneFlags.",
-    "RCLONE_PATH": "Default rclone path to which you want to upload all the mirrors using rclone.",
-    "RCLONE_SERVE_URL": "Valid URL where the bot is deployed to use rclone serve. Format of URL should be http://myip, where myip is the IP/Domain(public) of your bot or if you have chosen port other than 80 so write it in this format http://myip:port (http and not https)",
-    "RCLONE_SERVE_USER": "Username for rclone serve authentication.",
-    "RCLONE_SERVE_PASS": "Password for rclone serve authentication.",
-    "RCLONE_SERVE_PORT": "Which is the RCLONE_SERVE_URL Port. Default is 8080.",
     "STATUS_LIMIT": "Limit the no. of tasks shown in status message with buttons. Default is 10. NOTE: Recommended limit is 4 tasks.",
     "STATUS_UPDATE_INTERVAL": "Time in seconds after which the progress/status message will be updated. Recommended 10 seconds at least.",
     "STOP_DUPLICATE": "Bot will check file/folder name in Drive incase uploading to GDRIVE_ID. If it's present in Drive then downloading or cloning will be stopped. (NOTE: Item will be checked using name and not hash, so this feature is not perfect yet). Default is False",
