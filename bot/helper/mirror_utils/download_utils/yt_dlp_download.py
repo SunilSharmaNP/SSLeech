@@ -93,6 +93,11 @@ class YoutubeDLHelper:
                 "file_access": lambda n: 3,
                 "extractor": lambda n: 3,
             },
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "ios", "mweb", "web"],
+                }
+            },
         }
         LOGGER.info(
             f"Using cookies.txt file: {cookie_to_use} | User ID : {getattr(self.__listener, 'user_id', 'Unknown')}"
