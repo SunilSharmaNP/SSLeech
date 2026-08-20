@@ -50,7 +50,6 @@ from bot.helper.ext_utils.bot_utils import setInterval, sync_to_async, new_threa
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.task_manager import start_from_queued
 from bot.helper.ext_utils.help_messages import default_desp
-from bot.helper.mirror_utils.rclone_utils.serve import rclone_serve_booter
 from bot.helper.themes import AVL_THEMES
 
 START = 0
@@ -141,17 +140,9 @@ async def load_config():
     if len(GDRIVE_ID) == 0:
         GDRIVE_ID = ""
 
-    RCLONE_PATH = environ.get("RCLONE_PATH", "")
-    if len(RCLONE_PATH) == 0:
-        RCLONE_PATH = ""
-
     DEFAULT_UPLOAD = environ.get("DEFAULT_UPLOAD", "")
-    if DEFAULT_UPLOAD != "rc" and DEFAULT_UPLOAD != "ddl":
+    if DEFAULT_UPLOAD != "ddl":
         DEFAULT_UPLOAD = "gd"
-
-    RCLONE_FLAGS = environ.get("RCLONE_FLAGS", "")
-    if len(RCLONE_FLAGS) == 0:
-        RCLONE_FLAGS = ""
 
     AUTHORIZED_CHATS = environ.get("AUTHORIZED_CHATS", "")
     if len(AUTHORIZED_CHATS) != 0:
@@ -380,21 +371,6 @@ async def load_config():
 
     BASE_URL_PORT = environ.get("BASE_URL_PORT", "")
     BASE_URL_PORT = 80 if len(BASE_URL_PORT) == 0 else int(BASE_URL_PORT)
-
-    RCLONE_SERVE_URL = environ.get("RCLONE_SERVE_URL", "")
-    if len(RCLONE_SERVE_URL) == 0:
-        RCLONE_SERVE_URL = ""
-
-    RCLONE_SERVE_PORT = environ.get("RCLONE_SERVE_PORT", "")
-    RCLONE_SERVE_PORT = 8080 if len(RCLONE_SERVE_PORT) == 0 else int(RCLONE_SERVE_PORT)
-
-    RCLONE_SERVE_USER = environ.get("RCLONE_SERVE_USER", "")
-    if len(RCLONE_SERVE_USER) == 0:
-        RCLONE_SERVE_USER = ""
-
-    RCLONE_SERVE_PASS = environ.get("RCLONE_SERVE_PASS", "")
-    if len(RCLONE_SERVE_PASS) == 0:
-        RCLONE_SERVE_PASS = ""
 
     await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
     BASE_URL = environ.get("BASE_URL", "").rstrip("/")
@@ -800,12 +776,6 @@ async def load_config():
             "QUEUE_ALL": QUEUE_ALL,
             "QUEUE_DOWNLOAD": QUEUE_DOWNLOAD,
             "QUEUE_UPLOAD": QUEUE_UPLOAD,
-            "RCLONE_FLAGS": RCLONE_FLAGS,
-            "RCLONE_PATH": RCLONE_PATH,
-            "RCLONE_SERVE_URL": RCLONE_SERVE_URL,
-            "RCLONE_SERVE_USER": RCLONE_SERVE_USER,
-            "RCLONE_SERVE_PASS": RCLONE_SERVE_PASS,
-            "RCLONE_SERVE_PORT": RCLONE_SERVE_PORT,
             "SAVE_MSG": SAVE_MSG,
             "SAFE_MODE": SAFE_MODE,
             "SET_COMMANDS": SET_COMMANDS,
@@ -837,7 +807,7 @@ async def load_config():
 
     if DATABASE_URL:
         await DbManger().update_config(config_dict)
-    await gather(start_from_queued(), rclone_serve_booter())
+    await start_from_queued()
 
 
 async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
@@ -1065,13 +1035,6 @@ async def edit_variable(_, message, pre_message, key):
         await set_commands(bot)
     elif key in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
         await start_from_queued()
-    elif key in [
-        "RCLONE_SERVE_URL",
-        "RCLONE_SERVE_PORT",
-        "RCLONE_SERVE_USER",
-        "RCLONE_SERVE_PASS",
-    ]:
-        await rclone_serve_booter()
 
 
 async def edit_aria(_, message, pre_message, key):
@@ -1139,8 +1102,6 @@ async def update_private_file(_, message, pre_message):
         if fn == "accounts":
             if await aiopath.exists("accounts"):
                 await aiormtree("accounts")
-            if await aiopath.exists("rclone_sa"):
-                await aiormtree("rclone_sa")
             config_dict["USE_SERVICE_ACCOUNTS"] = False
             if DATABASE_URL:
                 await DbManger().update_config({"USE_SERVICE_ACCOUNTS": False})
@@ -1180,8 +1141,6 @@ async def update_private_file(_, message, pre_message):
         if file_name == "accounts.zip":
             if await aiopath.exists("accounts"):
                 await aiormtree("accounts")
-            if await aiopath.exists("rclone_sa"):
-                await aiormtree("rclone_sa")
             await (
                 await create_subprocess_exec(
                     "7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"
@@ -1259,8 +1218,6 @@ async def update_private_file(_, message, pre_message):
             await sendMessage(message, msg, buttons.build_menu(2))
         else:
             await deleteMessage(message)
-    if file_name == "rclone.conf":
-        await rclone_serve_booter()
     await update_buttons(pre_message)
     if DATABASE_URL:
         await DbManger().update_private_file(path)
@@ -1370,13 +1327,6 @@ async def edit_bot_settings(client, query):
             await DbManger().update_config({data[2]: value})
         if data[2] in ["QUEUE_ALL", "QUEUE_DOWNLOAD", "QUEUE_UPLOAD"]:
             await start_from_queued()
-        elif data[2] in [
-            "RCLONE_SERVE_URL",
-            "RCLONE_SERVE_PORT",
-            "RCLONE_SERVE_USER",
-            "RCLONE_SERVE_PASS",
-        ]:
-            await rclone_serve_booter()
     elif data[1] == "resetaria":
         handler_dict[message.chat.id] = False
         if config_dict.get("DISABLE_TORRENTS"):
