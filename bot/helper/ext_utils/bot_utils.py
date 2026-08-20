@@ -216,11 +216,6 @@ def get_all_versions():
     except FileNotFoundError:
         vf = ""
     try:
-        result = srun([BinConfig.RCLONE_NAME, "version"], capture_output=True, text=True)
-        vr = result.stdout.split("\n")[0].split(" ")[1]
-    except FileNotFoundError:
-        vr = ""
-    try:
         vpy = pkg_version("pyrogram")
     except PackageNotFoundError:
         try:
@@ -238,7 +233,6 @@ def get_all_versions():
     bot_cache["eng_versions"] = {
         "p7zip": vp,
         "ffmpeg": vf,
-        "rclone": vr,
         "aria": aria_ver,
         "aiohttp": pkg_version("aiohttp"),
         "gapi": pkg_version("google-api-python-client"),
@@ -265,7 +259,6 @@ class EngineStatus:
         self.STATUS_SPLIT_MERGE = f"ffmpeg v{version_cache['ffmpeg']}"
         self.STATUS_ZIP = f"p7zip v{version_cache['p7zip']}"
         self.STATUS_QUEUE = "Sleep v0"
-        self.STATUS_RCLONE = f"RClone {version_cache['rclone']}"
 
 
 def get_readable_message():
@@ -496,15 +489,6 @@ def is_index_link(url):
 
 def is_mega_link(url):
     return "mega.nz" in url or "mega.co.nz" in url
-
-
-def is_rclone_path(path):
-    return bool(
-        re_match(
-            r"^(mrcc:)?(?!magnet:)(?![- ])[a-zA-Z0-9_\. -]+(?<! ):(?!.*\/\/).*$|^rcl$",
-            path,
-        )
-    )
 
 
 def get_mega_link_type(url):
@@ -904,11 +888,11 @@ async def set_commands(client):
         bot_cmds = [
             BotCommand(
                 BotCommands.MirrorCommand[0],
-                f"or /{BotCommands.MirrorCommand[1]} Mirror [links/media/rclone_path]",
+                f"or /{BotCommands.MirrorCommand[1]} Mirror [links/media]",
             ),
             BotCommand(
                 BotCommands.LeechCommand[0],
-                f"or /{BotCommands.LeechCommand[1]} Leech [links/media/rclone_path]",
+                f"or /{BotCommands.LeechCommand[1]} Leech [links/media]",
             ),
             BotCommand(
                 BotCommands.QbMirrorCommand[0],
@@ -928,11 +912,11 @@ async def set_commands(client):
             ),
             BotCommand(
                 BotCommands.CloneCommand[0],
-                f"or /{BotCommands.CloneCommand[1]} Copy file/folder to Drive (GDrive/RClone)",
+                f"or /{BotCommands.CloneCommand[1]} Copy file/folder to Google Drive",
             ),
             BotCommand(
                 BotCommands.CountCommand,
-                "[drive_url]: Count file/folder of Google Drive/RClone Drives",
+                "[drive_url]: Count file/folder of Google Drive",
             ),
             BotCommand(
                 BotCommands.StatusCommand[0],
@@ -1010,28 +994,28 @@ async def set_commands(client):
                 1,
                 BotCommand(
                     BotCommands.MirrorCommand[2],
-                    f"or /{BotCommands.MirrorCommand[3]} Mirror and UnZip [links/media/rclone_path]",
+                    f"or /{BotCommands.MirrorCommand[3]} Mirror and UnZip [links/media]",
                 ),
             )
             bot_cmds.insert(
                 1,
                 BotCommand(
                     BotCommands.MirrorCommand[4],
-                    f"or /{BotCommands.MirrorCommand[5]} Mirror and Zip [links/media/rclone_path]",
+                    f"or /{BotCommands.MirrorCommand[5]} Mirror and Zip [links/media]",
                 ),
             )
             bot_cmds.insert(
                 4,
                 BotCommand(
                     BotCommands.LeechCommand[2],
-                    f"or /{BotCommands.LeechCommand[3]} Leech and UnZip [links/media/rclone_path]",
+                    f"or /{BotCommands.LeechCommand[3]} Leech and UnZip [links/media]",
                 ),
             )
             bot_cmds.insert(
                 4,
                 BotCommand(
                     BotCommands.LeechCommand[4],
-                    f"or /{BotCommands.LeechCommand[5]} Leech and Zip [links/media/rclone_path]",
+                    f"or /{BotCommands.LeechCommand[5]} Leech and Zip [links/media]",
                 ),
             )
             bot_cmds.insert(
