@@ -75,12 +75,10 @@ from bot.helper.mirror_utils.status_utils.split_status import SplitStatus
 from bot.helper.mirror_utils.status_utils.gdrive_status import GdriveStatus
 from bot.helper.mirror_utils.status_utils.telegram_status import TelegramStatus
 from bot.helper.mirror_utils.status_utils.ddl_status import DDLStatus
-from bot.helper.mirror_utils.status_utils.rclone_status import RcloneStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from bot.helper.mirror_utils.upload_utils.pyrogramEngine import TgUploader
 from bot.helper.mirror_utils.upload_utils.ddlEngine import DDLUploader
-from bot.helper.mirror_utils.rclone_utils.transfer import RcloneTransferHelper
 from bot.helper.mirror_utils.status_utils.metadata_status import MetadataStatus
 from bot.helper.mirror_utils.status_utils.merge_status import MergeStatus
 from bot.helper.ext_utils.video_merge import (
@@ -203,7 +201,7 @@ class MirrorLeechListener:
             pass
 
     def __setModeEng(self):
-        mode = f" #{'Leech' if self.isLeech else 'Clone' if self.isClone else 'RClone' if self.upPath not in ['gd', 'ddl'] else 'DDL' if self.upPath != 'gd' else 'GDrive'}"
+        mode = f" #{'Leech' if self.isLeech else 'Clone' if self.isClone else 'DDL' if self.upPath == 'ddl' else 'GDrive'}"
         mode += " (Zip)" if self.compress else " (Unzip)" if self.extract else ""
         mode += f" | #{'qBit' if self.isQbit else 'ytdlp' if self.isYtdlp else 'GDrive' if (self.isClone or self.isGdrive) else 'Mega' if self.isMega else 'Aria2' if self.source_url and self.source_url != self.message.link else 'Tg'}"
         self.upload_details["mode"] = mode
@@ -682,16 +680,6 @@ class MirrorLeechListener:
                 download_dict[self.uid] = ddl_upload_status
             await update_all_messages()
             await ddl.upload(up_name, size)
-        else:
-            size = await get_path_size(up_path)
-            LOGGER.info(f"Upload Name: {up_name} via RClone")
-            RCTransfer = RcloneTransferHelper(self, up_name)
-            async with download_dict_lock:
-                download_dict[self.uid] = RcloneStatus(
-                    RCTransfer, self.message, gid, "up", self.upload_details
-                )
-            await update_all_messages()
-            await RCTransfer.upload(up_path, size)
 
     def _get_merge_output_path(self):
         output_name = self.merge_output_name or f"Merged_{self.uid}.mkv"
@@ -983,7 +971,7 @@ class MirrorLeechListener:
         return output_path
 
     async def onUploadComplete(
-        self, link, size, files, folders, mime_type, name, rclonePath="", private=False
+        self, link, size, files, folders, mime_type, name, private=False
     ):
         if (
             self.isSuperGroup
@@ -1127,24 +1115,13 @@ class MirrorLeechListener:
             if mime_type == "Folder":
                 msg += BotTheme("M_SUBFOLD", Folder=folders)
                 msg += BotTheme("TOTAL_FILES", Files=files)
-            if link or rclonePath and config_dict["RCLONE_SERVE_URL"] and not private:
+            if link and not private:
                 if is_DDL := isinstance(link, dict):
                     for dlup, dlink in link.items():
                         buttons.ubutton(BotTheme("DDL_LINK", Serv=dlup), dlink)
-                elif link and (
-                    user_id == OWNER_ID or not config_dict["DISABLE_DRIVE_LINK"]
-                ):
+                elif user_id == OWNER_ID or not config_dict["DISABLE_DRIVE_LINK"]:
                     buttons.ubutton(BotTheme("CLOUD_LINK"), link)
-                else:
-                    msg += BotTheme("RCPATH", RCpath=rclonePath)
-                if rclonePath and (RCLONE_SERVE_URL := config_dict["RCLONE_SERVE_URL"]):
-                    remote, path = rclonePath.split(":", 1)
-                    url_path = rutils.quote(f"{path}")
-                    share_url = f"{RCLONE_SERVE_URL}/{remote}/{url_path}"
-                    if mime_type == "Folder":
-                        share_url += "/"
-                    buttons.ubutton(BotTheme("RCLONE_LINK"), share_url)
-                elif not rclonePath and not is_DDL:
+                if not is_DDL:
                     INDEX_URL = (
                         self.index_link or config_dict["INDEX_URL"]
                     )
@@ -1159,9 +1136,6 @@ class MirrorLeechListener:
                             if mime_type.startswith(("image", "video", "audio")):
                                 share_urls = f"{INDEX_URL}/{url_path}?a=view"
                                 buttons.ubutton(BotTheme("VIEW_LINK"), share_urls)
-
-            else:
-                msg += BotTheme("RCPATH", RCpath=rclonePath)
             msg += BotTheme("M_CC", Tag=self.tag)
             message = msg
 
