@@ -20,6 +20,14 @@ from bot import BinConfig
 LOGGER = getLogger(__name__)
 
 
+def get_cookie_file(user_dict=None):
+    if user_dict and not user_dict.get("USE_DEFAULT_COOKIE", False):
+        usr_cookie = user_dict.get("USER_COOKIE_FILE", "")
+        if usr_cookie and ospath.exists(usr_cookie):
+            return usr_cookie
+    return "cookies.txt"
+
+
 class MyLogger:
     def __init__(self, obj, listener):
         self.obj = obj
@@ -63,11 +71,12 @@ class YoutubeDLHelper:
         self.is_playlist = False
         self.playlist_count = 0
         self.keep_thumb = False
+        cookie_to_use = get_cookie_file(getattr(self.__listener, "user_dict", None))
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self, self.__listener),
             "usenetrc": True,
-            "cookiefile": "cookies.txt",
+            "cookiefile": cookie_to_use,
             "allow_multiple_video_streams": True,
             "allow_multiple_audio_streams": True,
             "noprogress": True,
@@ -85,6 +94,9 @@ class YoutubeDLHelper:
                 "extractor": lambda n: 3,
             },
         }
+        LOGGER.info(
+            f"Using cookies.txt file: {cookie_to_use} | User ID : {getattr(self.__listener, 'user_id', 'Unknown')}"
+        )
 
     @property
     def download_speed(self):
