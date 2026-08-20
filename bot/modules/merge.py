@@ -25,7 +25,7 @@ from bot.helper.telegram_helper.message_utils import (
 )
 from bot.helper.ext_utils.bot_utils import (
     new_task, is_url, is_magnet, is_mega_link, is_gdrive_link,
-    is_telegram_link, is_rclone_path, sync_to_async, get_content_type,
+    is_telegram_link, sync_to_async, get_content_type,
 )
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.listeners.tasks_listener import MirrorLeechListener
@@ -326,7 +326,7 @@ async def merge_message_handler(client, message):
         url = message.text.strip()
         if any([
             is_url(url), is_magnet(url), is_gdrive_link(url),
-            is_mega_link(url), is_rclone_path(url), is_telegram_link(url),
+            is_mega_link(url), is_telegram_link(url),
         ]):
             item = {"label": url, "type": "url", "data": url, "msg": message}
     else:
