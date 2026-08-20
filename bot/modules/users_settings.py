@@ -85,10 +85,6 @@ def _get_lang_name(lang_code: str) -> str:
 
 handler_dict = {}
 desp_dict = {
-    "rcc": [
-        "𝐑ᴄʟᴏɴᴇ 𝐈s 𝐀 𝐂ᴏᴍᴍᴀɴᴅ-ʟɪɴᴇ 𝐏ʀᴏɢʀᴀᴍ 𝐓ᴏ 𝐒ʏɴᴄ 𝐅ɪʟᴇs 𝐀ɴᴅ 𝐃ɪʀᴇᴄᴛᴏʀɪᴇs 𝐓ᴏ 𝐀ɴᴅ 𝐅ʀᴏᴍ 𝐃ɪғғᴇʀᴇɴᴛ 𝐂ʟᴏᴜᴅ 𝐒ᴛᴏʀᴀɢᴇ 𝐏ʀᴏᴠɪᴅᴇʀs 𝐋ɪᴋᴇ 𝐆ᴅʀɪᴠᴇ, 𝐎ɴᴇ𝐃ʀɪᴠᴇ...",
-        "𝐒ᴇɴᴅ 𝐑ᴄʟᴏɴᴇ.ᴄᴏɴғ. \n<b>𝐓ɪᴍᴇᴏᴜᴛ:</b> 60 𝐒ᴇᴄ",
-    ],
     "lprefix": [
         "𝐋ᴇᴇᴄʜ 𝐅ɪʟᴇɴᴀᴍᴇ 𝐏ʀᴇғɪx 𝐈s 𝐓ʜᴇ 𝐅ʀᴏɴᴛ 𝐏ᴀʀᴛ 𝐀ᴛᴛᴀᴄᴛᴇᴅ 𝐖ɪᴛʜ 𝐓ʜᴇ 𝐅ɪʟᴇɴᴀᴍᴇ 𝐎ғ 𝐓ʜᴇ 𝐋ᴇᴇᴄʜ 𝐅ɪʟᴇs.",
         '𝐒ᴇɴᴅ 𝐋ᴇᴇᴄʜ 𝐅ɪʟᴇɴᴀmě 𝐏ʀᴇғɪx. 𝐃ᴏᴄᴜᴍᴇɴᴛᴀᴛɪᴏɴ 𝐇ᴇʀᴇ : <a href="https://t.me/WZML_X/77">𝐂ʟɪᴄᴋ 𝐌ᴇ</a> \n<b>𝐓ɪᴍᴇᴏᴜᴛ:</b> 60 𝐒ᴇᴄ',
@@ -184,7 +180,6 @@ desp_dict = {
 desp_dict["ar_fmt"] = desp_dict["auto_rename_fmt"]
 
 fname_dict = {
-    "rcc": "𝐑ᴄʟᴏɴᴇ",
     "lprefix": "𝐏ʀᴇғɪx",
     "lsuffix": "𝐒ᴜғғɪx",
     "lremname": "𝐑ᴇᴍɴᴀᴍᴇ",
@@ -219,7 +214,6 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
     name = from_user.mention(style="html")
     buttons = ButtonMaker()
     thumbpath = f"Thumbnails/{user_id}.jpg"
-    rclone_path = f"rclone/{user_id}.conf"
     user_dict = user_data.get(user_id, {})
     if key is None:
         buttons.ibutton("𝐔ɴɪᴠᴇʀsᴀʟ 𝐒ᴇᴛᴛɪɴɢs", f"userset {user_id} universal", icon_custom_emoji_id=5341715473882955310)
@@ -349,54 +343,51 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         token_exists = await aiopath.exists(token_path)
         gdrive_id = user_dict.get("GDRIVE_ID") or config_dict.get("GDRIVE_ID") or "None"
         index_url = user_dict.get("INDEX_URL")
-        if not index_url:
+        if index_url is None:
             index_url = config_dict.get("INDEX_URL") or "None"
         stop_duplicate = _setting_bool(
             user_dict.get("STOP_DUPLICATE", config_dict.get("STOP_DUPLICATE", False))
         )
         drive_categories = user_dict.get("DRIVE_CAT") or {}
-        user_drive_id = (
-            f"  <b>Custom</b>: <code>{escape(str(user_dict.get('GDRIVE_ID')))}</code>\n"
-            if user_dict.get("GDRIVE_ID")
-            else ""
-        )
-        default_drive_id = (
+        category_lines = [
             f"  <b>Default</b>: <code>{escape(str(gdrive_id))}</code>"
-            if not user_dict.get("GDRIVE_ID")
-            else ""
-        )
-        user_index = (
-            f"  <b>Custom</b>: <code>{escape(str(user_dict.get('INDEX_URL')))}</code>\n"
-            if user_dict.get("INDEX_URL")
-            else ""
-        )
-        default_index = (
-            f"  <b>Default</b>: <code>{escape(str(index_url))}</code>"
-            if not user_dict.get("INDEX_URL")
-            else ""
-        )
-        if drive_categories:
-            category_lines = [
-                f"• <b>{escape(str(name))}</b>: <code>{escape(str(data.get('drive_id', 'None')))}</code>"
-                for name, data in drive_categories.items()
-            ]
-        else:
-            category_lines = ["<i>None</i>"]
+        ]
+        if index_url != "None":
+            category_lines[0] += f" | <code>{escape(str(index_url))}</code>"
+        if isinstance(drive_categories, dict):
+            for category_name, category in drive_categories.items():
+                if isinstance(category, dict):
+                    category_id = category.get("drive_id", "")
+                    category_index = category.get("index_link", "")
+                else:
+                    category_id, _, category_index = str(category).partition("|")
+                index_part = (
+                    f" | <code>{escape(str(category_index))}</code>"
+                    if category_index
+                    else ""
+                )
+                category_lines.append(
+                    f"  <b>{escape(str(category_name))}</b>: "
+                    f"<code>{escape(str(category_id))}</code>{index_part}"
+                )
 
         buttons.ibutton(
-            "Drive Categories",
+            "User Drive Categories",
             f"userset {user_id} gdrive_menu DRIVE_CAT",
-            icon_custom_emoji_id=5447410659857805170,
+            "header",
+            icon_custom_emoji_id=5190806721286657692,
         )
         buttons.ibutton(
             "Default Gdrive ID",
             f"userset {user_id} gdrive_menu GDRIVE_ID",
-            icon_custom_emoji_id=5447410659857805170,
+            "f_body",
+            icon_custom_emoji_id=5224450179368767019,
         )
         buttons.ibutton(
             "Default Index URL",
             f"userset {user_id} gdrive_menu INDEX_URL",
-            icon_custom_emoji_id=5447410659857805170,
+            "f_body",
+            icon_custom_emoji_id=5271604874419647061,
         )
         buttons.ibutton(
             "Remove Token.pickle" if token_exists else "Token.pickle",
@@ -405,16 +396,22 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 if token_exists
                 else f"userset {user_id} gdrive_file TOKEN_PICKLE"
             ),
-            icon_custom_emoji_id=5447644880824181073 if token_exists else 5447410659857805170,
+            icon_custom_emoji_id=5197288647275071607,
         )
         buttons.ibutton(
-            f"{'Disable' if stop_duplicate else 'Enable'} Stop Duplicate",
+            "Disable Stop Duplicate" if stop_duplicate else "Enable Stop Duplicate",
             f"userset {user_id} gdrive_toggle STOP_DUPLICATE",
-            icon_custom_emoji_id=5447644880824181073 if stop_duplicate else 5447410659857805170,
+            icon_custom_emoji_id=5427168083074628963,
         )
         buttons.ibutton(
-            "Back",
+            " 𝐁ᴀᴄᴋ",
             f"userset {user_id} mirror",
+            "footer",
+            icon_custom_emoji_id=5416117059207572332,
+        )
+        buttons.ibutton(
+            " 𝐂ʟᴏsᴇ",
+            f"userset {user_id} close",
             "footer",
             icon_custom_emoji_id=5447644880824181073,
         )
@@ -422,6 +419,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         text = f"""㊂ <b><u>GDrive Tools Settings :</u></b>
 │
 ┠ <b>Name</b> → {name}
+┃
 ┠ <b>Gdrive ID</b> → <code>{escape(str(gdrive_id))}</code>
 ┠ <b>Index URL</b> → <code>{escape(str(index_url))}</code>
 ┠ <b>Stop Duplicate</b> → <b>{"Enabled" if stop_duplicate else "Disabled"}</b>
@@ -687,10 +685,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         button = buttons.build_menu(2)
     elif edit_type:
         text = f"㊂ <b><u>{fname_dict[key]} 𝐒ᴇᴛᴛɪɴɢs :</u></b>\n\n"
-        if key == "rcc":
-            set_exist = await aiopath.exists(rclone_path)
-            text += f"➲ <b>𝐑ᴄʟᴏɴᴇ.𝐂ᴏɴғ 𝐅ɪʟᴇ :</b> <i>{'' if set_exist else '𝐍ᴏᴛ '} 𝐄xɪsᴛs</i>\n\n"
-        elif key == "thumb":
+        if key == "thumb":
             set_exist = await aiopath.exists(thumbpath)
             text += f"➲ <b>𝐂ᴜsᴛᴏᴍ 𝐓ʜᴜᴍʙɴᴀɪʟ :</b> <i>{'' if set_exist else '𝐍ᴏᴛ '} 𝐄xɪsᴛs</i>\n\n"
         elif key == "yt_opt":
@@ -1094,21 +1089,6 @@ async def set_thumb(client, message, pre_event, key, direct=False):
         await DbManger().update_user_doc(user_id, "thumb", des_dir)
 
 
-async def add_rclone(client, message, pre_event):
-    user_id = message.from_user.id
-    handler_dict[user_id] = False
-    path = f"{getcwd()}/rclone/"
-    if not await aiopath.isdir(path):
-        await mkdir(path)
-    des_dir = ospath.join(path, f"{user_id}.conf")
-    await message.download(file_name=des_dir)
-    update_user_ldata(user_id, "rclone", f"rclone/{user_id}.conf")
-    await deleteMessage(message)
-    await update_user_settings(pre_event, "rcc", "mirror")
-    if DATABASE_URL:
-        await DbManger().update_user_doc(user_id, "rclone", des_dir)
-
-
 async def add_token_pickle(client, message, pre_event):
     user_id = message.from_user.id
     handler_dict[user_id] = False
@@ -1233,7 +1213,6 @@ async def edit_user_settings(client, query):
     message = query.message
     data = query.data.split()
     thumb_path = f"Thumbnails/{user_id}.jpg"
-    rclone_path = f"rclone/{user_id}.conf"
     token_path = f"tokens/{user_id}.pickle"
     user_dict = user_data.get(user_id, {})
     if user_id != int(data[1]):
@@ -1584,27 +1563,6 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, key, "ddl_servers")
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
-    elif data[2] == "rcc":
-        await query.answer()
-        edit_mode = len(data) == 4
-        await update_user_settings(query, data[2], "mirror", edit_mode)
-        if not edit_mode:
-            return
-        pfunc = partial(add_rclone, pre_event=query)
-        rfunc = partial(update_user_settings, query, data[2], "mirror")
-        await event_handler(client, query, pfunc, rfunc, document=True)
-    elif data[2] == "drcc":
-        handler_dict[user_id] = False
-        if await aiopath.exists(rclone_path):
-            await query.answer()
-            await aioremove(rclone_path)
-            update_user_ldata(user_id, "rclone", "")
-            await update_user_settings(query, "rcc", "mirror")
-            if DATABASE_URL:
-                await DbManger().update_user_doc(user_id, "rclone")
-        else:
-            await query.answer("𝐎ʟᴅ 𝐒ᴇᴛᴛɪɴɢs", show_alert=True)
-            await update_user_settings(query)
     elif data[2] in ["ddl_servers", "user_tds", "gofile", "streamtape"]:
         handler_dict[user_id] = False
         await query.answer()
@@ -1690,8 +1648,6 @@ async def edit_user_settings(client, query):
             return await update_user_settings(query)
         if await aiopath.exists(thumb_path):
             await aioremove(thumb_path)
-        if await aiopath.exists(rclone_path):
-            await aioremove(rclone_path)
         if await aiopath.exists(token_path):
             await aioremove(token_path)
         await query.answer()
@@ -1700,24 +1656,19 @@ async def edit_user_settings(client, query):
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
             await DbManger().update_user_doc(user_id, "thumb")
-            await DbManger().update_user_doc(user_id, "rclone")
             await DbManger().update_user_doc(user_id, "TOKEN_PICKLE")
     elif data[2] == "user_del":
         user_id = int(data[3])
         await query.answer()
         thumb_path = f"Thumbnails/{user_id}.jpg"
-        rclone_path = f"rclone/{user_id}.conf"
         if await aiopath.exists(thumb_path):
             await aioremove(thumb_path)
-        if await aiopath.exists(rclone_path):
-            await aioremove(rclone_path)
         if await aiopath.exists(token_path):
             await aioremove(token_path)
         update_user_ldata(user_id, None, None)
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
             await DbManger().update_user_doc(user_id, "thumb")
-            await DbManger().update_user_doc(user_id, "rclone")
             await DbManger().update_user_doc(user_id, "TOKEN_PICKLE")
         await editMessage(message, f"𝐃ᴀᴛᴀ 𝐑ᴇsᴇᴛ ғᴏʀ {user_id}")
     else:
