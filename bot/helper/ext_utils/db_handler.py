@@ -58,12 +58,11 @@ class DbManger:
         # User Data
         if await self.__db.users[bot_id].find_one():
             rows = self.__db.users[bot_id].find({})
-            # return a dict ==> {_id, is_sudo, is_auth, as_doc, thumb, yt_opt, media_group, equal_splits, split_size, rclone}
+            # return a dict ==> {_id, is_sudo, is_auth, as_doc, thumb, yt_opt, media_group, equal_splits, split_size}
             async for row in rows:
                 uid = row["_id"]
                 del row["_id"]
                 thumb_path = f"Thumbnails/{uid}.jpg"
-                rclone_path = f"rclone/{uid}.conf"
                 token_path = f"tokens/{uid}.pickle"
                 if row.get("thumb"):
                     if not await aiopath.exists("Thumbnails"):
@@ -71,12 +70,6 @@ class DbManger:
                     async with aiopen(thumb_path, "wb+") as f:
                         await f.write(row["thumb"])
                     row["thumb"] = thumb_path
-                if row.get("rclone"):
-                    if not await aiopath.exists("rclone"):
-                        await makedirs("rclone")
-                    async with aiopen(rclone_path, "wb+") as f:
-                        await f.write(row["rclone"])
-                    row["rclone"] = rclone_path
                 if row.get("TOKEN_PICKLE") and isinstance(row["TOKEN_PICKLE"], bytes):
                     if not await aiopath.exists("tokens"):
                         await makedirs("tokens")
@@ -147,9 +140,9 @@ class DbManger:
         # already stored bytes while updating normal user settings.
         stored = await self.__db.users[bot_id].find_one(
             {"_id": user_id},
-            {"thumb": 1, "rclone": 1, "TOKEN_PICKLE": 1},
+            {"thumb": 1, "TOKEN_PICKLE": 1},
         )
-        for key in ("thumb", "rclone", "TOKEN_PICKLE"):
+        for key in ("thumb", "TOKEN_PICKLE"):
             data.pop(key, None)
             if stored and stored.get(key):
                 data[key] = stored[key]
