@@ -29,8 +29,6 @@ from bot.helper.ext_utils.bot_utils import (
     is_gdrive_link,
     new_task,
     sync_to_async,
-    new_task,
-    is_rclone_path,
     new_thread,
     get_readable_time,
     arg_parser,
@@ -46,7 +44,6 @@ from bot.helper.mirror_utils.download_utils.direct_link_generator import (
     user_agent as _dlg_user_agent,
 )
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
-from bot.helper.mirror_utils.rclone_utils.list import RcloneList
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from bot.helper.telegram_helper.filters import CustomFilters
@@ -595,11 +592,9 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         return
 
     if not isLeech:
-        if config_dict["DEFAULT_UPLOAD"] == "rc" and not up or up == "rc":
-            up = config_dict["RCLONE_PATH"]
-        elif config_dict["DEFAULT_UPLOAD"] == "ddl" and not up or up == "ddl":
+        if not up and config_dict["DEFAULT_UPLOAD"] == "ddl" or up == "ddl":
             up = "ddl"
-        if not up and config_dict["DEFAULT_UPLOAD"] == "gd":
+        else:
             up = "gd"
             user_tds = {
                 **await fetch_user_drive_categories(message.from_user.id),
@@ -630,22 +625,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             await sendMessage(message, "GDRIVE_ID not Provided!")
             await delete_links(message)
             return
-        elif not up:
-            await sendMessage(message, "No Rclone Destination!")
-            await delete_links(message)
-            return
-        elif up not in ["rcl", "gd", "ddl"]:
-            if up.startswith("mrcc:"):
-                config_path = f"rclone/{message.from_user.id}.conf"
-            else:
-                config_path = "rclone.conf"
-            if not await aiopath.exists(config_path):
-                await delete_links(message)
-                return
-        if up != "gd" and up != "ddl" and not is_rclone_path(up):
-            await sendMessage(message, "Wrong Rclone Upload Destination!")
-            await delete_links(message)
-            return
     else:
         if user_dump and (user_dump.isdigit() or user_dump.startswith("-")):
             up = int(user_dump)
@@ -670,14 +649,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 if is_cancelled:
                     await delete_links(message)
                     return
-
-    if up == "rcl" and not isLeech:
-        up = await RcloneList(client, message).get_rclone_path("rcu")
-        if not is_rclone_path(up):
-            if up:
-                await sendMessage(message, up)
-            await delete_links(message)
-            return
 
     listener = MirrorLeechListener(
         message,
