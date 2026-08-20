@@ -28,7 +28,6 @@ from bot.helper.ext_utils.bot_utils import (
     get_content_type,
     new_task,
     sync_to_async,
-    is_rclone_path,
     is_telegram_link,
     arg_parser,
     fetch_user_tds,
@@ -42,8 +41,6 @@ from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_dow
 from bot.helper.mirror_utils.download_utils.gd_download import add_gd_download
 from bot.helper.mirror_utils.download_utils.qbit_download import add_qb_torrent
 from bot.helper.mirror_utils.download_utils.mega_download import add_mega_download
-from bot.helper.mirror_utils.download_utils.rclone_download import add_rclone_download
-from bot.helper.mirror_utils.rclone_utils.list import RcloneList
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from bot.helper.mirror_utils.download_utils.direct_link_generator import (
     direct_link_generator,
@@ -350,7 +347,6 @@ async def _mirror_leech(
         not is_url(link)
         and not is_magnet(link)
         and not await aiopath.exists(link)
-        and not is_rclone_path(link)
         and file_ is None
     ):
         btn = ButtonMaker()
@@ -396,7 +392,6 @@ async def _mirror_leech(
             not is_magnet(link) or (config_dict["REAL_DEBRID_API"] and is_magnet(link))
         )
         and (not isQbit or (config_dict["REAL_DEBRID_API"] and is_magnet(link)))
-        and not is_rclone_path(link)
         and not is_gdrive_link(link)
         and not link.endswith(".torrent")
         and file_ is None
@@ -430,11 +425,9 @@ async def _mirror_leech(
             await deleteMessage(process_msg)
 
     if not isLeech:
-        if config_dict["DEFAULT_UPLOAD"] == "rc" and not up or up == "rc":
-            up = config_dict["RCLONE_PATH"]
-        elif config_dict["DEFAULT_UPLOAD"] == "ddl" and not up or up == "ddl":
+        if not up and config_dict["DEFAULT_UPLOAD"] == "ddl" or up == "ddl":
             up = "ddl"
-        if not up and config_dict["DEFAULT_UPLOAD"] == "gd":
+        else:
             up = "gd"
             user_tds = {
                 **await fetch_user_drive_categories(message.from_user.id),
@@ -465,22 +458,6 @@ async def _mirror_leech(
         if up == "gd" and not (config_dict["GDRIVE_ID"] or drive_id):
             await sendMessage(message, "𝐆𝐃𝐑𝐈𝐕𝐄_𝐈𝐃 ɴᴏᴛ 𝐏ʀᴏᴠɪᴅᴇᴅ!")
             return
-        elif not up:
-            await sendMessage(message, "No RClone Destination!")
-            await delete_links(message)
-            return
-        elif up not in ["rcl", "gd", "ddl"]:
-            if up.startswith("mrcc:"):
-                config_path = f"rclone/{message.from_user.id}.conf"
-            else:
-                config_path = "rclone.conf"
-            if not await aiopath.exists(config_path):
-                await delete_links(message)
-                return
-        if up != "gd" and up != "ddl" and not is_rclone_path(up):
-            await sendMessage(message, "𝐖ʀᴏɴɢ 𝐑ᴄʟᴏɴᴇ 𝐔ᴘʟᴏᴀᴅ 𝐃ᴇsᴛɪɴᴀᴛɪᴏɴ!")
-            await delete_links(message)
-            return
     else:
         if user_dump and (user_dump.isdigit() or user_dump.startswith("-")):
             up = int(user_dump)
@@ -505,22 +482,6 @@ async def _mirror_leech(
                 if is_cancelled:
                     await delete_links(message)
                     return
-
-    if link == "rcl":
-        link = await RcloneList(client, message).get_rclone_path("rcd")
-        if not is_rclone_path(link):
-            if link:
-                await sendMessage(message, link)
-            await delete_links(message)
-            return
-
-    if up == "rcl" and not isLeech:
-        up = await RcloneList(client, message).get_rclone_path("rcu")
-        if not is_rclone_path(up):
-            if up:
-                await sendMessage(message, up)
-            await delete_links(message)
-            return
 
     if use_youtube_api:
         api_download = await choose_youtube_download(message, link, name)
@@ -573,16 +534,6 @@ async def _mirror_leech(
         )
     elif isinstance(link, dict):
         await add_direct_download(link, path, listener, _dl_name)
-    elif is_rclone_path(link):
-        if link.startswith("mrcc:"):
-            link = link.split("mrcc:", 1)[1]
-            config_path = f"rclone/{message.from_user.id}.conf"
-        else:
-            config_path = "rclone.conf"
-        if not await aiopath.exists(config_path):
-            await delete_links(message)
-            return
-        await add_rclone_download(link, config_path, f"{path}/", _dl_name, listener)
     elif is_gdrive_link(link):
         await delete_links(message)
         await add_gd_download(link, path, listener, _dl_name, org_link)
