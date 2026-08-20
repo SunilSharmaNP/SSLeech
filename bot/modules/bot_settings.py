@@ -69,7 +69,6 @@ default_values = {
     "AUTHOR_URL": "https://t.me/WZML_X",
     "TITLE_NAME": "WZ Mirror/Leech X",
     "GD_INFO": "Uploaded by WZML-X",
-    "DISABLE_YT_COOKIES": True,
 }
 bool_vars = [
     "AS_DOCUMENT",
@@ -501,11 +500,8 @@ async def load_config():
     DISABLE_YTDLP = DISABLE_YTDLP.lower() == "true"
 
     DISABLE_YT_COOKIES = environ.get("DISABLE_YT_COOKIES", "")
-    DISABLE_YT_COOKIES = (
-        config_dict.get("DISABLE_YT_COOKIES", True)
-        if len(DISABLE_YT_COOKIES) == 0
-        else DISABLE_YT_COOKIES.lower() == "true"
-    )
+    DISABLE_YT_COOKIES = DISABLE_YT_COOKIES.lower() == "true"
+
 
     DISABLE_MIRROR = environ.get("DISABLE_MIRROR", "")
     DISABLE_MIRROR = DISABLE_MIRROR.lower() == "true"
@@ -814,11 +810,6 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
     buttons = ButtonMaker()
     if key is None:
         buttons.ibutton("⚙️ Config Variables", "botset var")
-        yt_api_state = "ON" if config_dict.get("DISABLE_YT_COOKIES") else "OFF"
-        buttons.ibutton(
-            f"🍪 Disable YT-DLP + Cookies: {yt_api_state}",
-            "botset editvar DISABLE_YT_COOKIES",
-        )
         buttons.ibutton("📂 Private Files", "botset private")
         buttons.ibutton("🔧 Qbit Settings", "botset qbit")
         buttons.ibutton("🛠️ Aria2c Settings", "botset aria")
