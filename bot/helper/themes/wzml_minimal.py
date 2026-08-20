@@ -178,7 +178,6 @@ class WZMLStyle:
     # ----- BUTTONS -------
     CLOUD_LINK = "☁️ 𝐂ʟᴏᴜᴅ 𝐋ɪɴᴋ"
     SAVE_MSG = "📨 𝐒ᴀᴠᴇ 𝐌ᴇssᴀɢᴇ"
-    RCLONE_LINK = "♻️ 𝐑𝐂ʟᴏɴᴇ 𝐋ɪɴᴋ"
     DDL_LINK = "📎 {Serv} 𝐋ɪɴᴋ"
     SOURCE_URL = "🔐 𝐒ᴏᴜʀᴄᴇ 𝐋ɪɴᴋ"
     INDEX_LINK_F = "🗂 𝐈ɴᴅᴇx 𝐋ɪɴᴋ"
@@ -288,8 +287,7 @@ class WZMLStyle:
 
     MIRROR_LEGACY = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
 
-┎ <emoji id=5224450179368767019>🌎</emoji> <b>𝐑𝐂ʟᴏɴᴇ 𝐂ᴏɴꜰɪɢ :</b> <i>{RCLONE}</i>
-┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <i>{MPREFIX}</i>
+┎ <emoji id=5271604874419647061>🔗</emoji> <b>𝐌ɪʀʀᴏʀ 𝐏ʀᴇꜰɪx :</b> <i>{MPREFIX}</i>
 ┠ <emoji id=5427168083074628963>💎</emoji> <b>𝐌ɪʀʀᴏʀ 𝐒ᴜꜰꜰɪx :</b> <i>{MSUFFIX}</i>
 ┠ <emoji id=5416117059207572332>➡️</emoji> <b>𝐌ɪʀʀᴏʀ 𝐑ᴇᴍɴᴀᴍᴇ :</b> <i>{MREMNAME}</i>
 ┠ <emoji id=5193177581888755275>💻</emoji> <b>𝐃ᴅʟ 𝐒ᴇʀᴠᴇʀ(s) :</b> <i>{DDL_SERVER}</i>
