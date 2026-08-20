@@ -33,7 +33,10 @@ from bot.helper.ext_utils.bot_utils import (
     get_readable_time,
     arg_parser,
 )
-from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
+from bot.helper.mirror_utils.download_utils.yt_dlp_download import (
+    YoutubeDLHelper,
+    get_cookie_file,
+)
 from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
 from bot.helper.mirror_utils.download_utils.youtube_api_download import (
     choose_youtube_download,
@@ -683,6 +686,11 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         )
         return
 
+    cookie_to_use = get_cookie_file(user_data.get(message.from_user.id, {}))
+    LOGGER.info(
+        f"Using cookies.txt file: {cookie_to_use} | User ID : {message.from_user.id}"
+    )
+
     if "mdisk.me" in link:
         name, link = await _mdisk(link, name)
 
@@ -749,13 +757,13 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 "filesize_approx": _lulu_filesize or None,
                 "duration": _lulu_duration or None,
             }
-            options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+            options = {"usenetrc": True, "cookiefile": cookie_to_use}
         except DirectDownloadLinkException as e:
             await sendMessage(message, f"{tag} {e}")
             await delete_links(message)
             return
     else:
-        options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+        options = {"usenetrc": True, "cookiefile": cookie_to_use}
     # ────────────────────────────────────────────────────────────────────────────
     ydl_opts = {}
     if opt:
