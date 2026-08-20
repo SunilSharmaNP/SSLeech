@@ -349,51 +349,54 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         token_exists = await aiopath.exists(token_path)
         gdrive_id = user_dict.get("GDRIVE_ID") or config_dict.get("GDRIVE_ID") or "None"
         index_url = user_dict.get("INDEX_URL")
-        if index_url is None:
+        if not index_url:
             index_url = config_dict.get("INDEX_URL") or "None"
         stop_duplicate = _setting_bool(
             user_dict.get("STOP_DUPLICATE", config_dict.get("STOP_DUPLICATE", False))
         )
         drive_categories = user_dict.get("DRIVE_CAT") or {}
-        category_lines = [
+        user_drive_id = (
+            f"  <b>Custom</b>: <code>{escape(str(user_dict.get('GDRIVE_ID')))}</code>\n"
+            if user_dict.get("GDRIVE_ID")
+            else ""
+        )
+        default_drive_id = (
             f"  <b>Default</b>: <code>{escape(str(gdrive_id))}</code>"
-        ]
-        if index_url != "None":
-            category_lines[0] += f" | <code>{escape(str(index_url))}</code>"
-        if isinstance(drive_categories, dict):
-            for category_name, category in drive_categories.items():
-                if isinstance(category, dict):
-                    category_id = category.get("drive_id", "")
-                    category_index = category.get("index_link", "")
-                else:
-                    category_id, _, category_index = str(category).partition("|")
-                index_part = (
-                    f" | <code>{escape(str(category_index))}</code>"
-                    if category_index
-                    else ""
-                )
-                category_lines.append(
-                    f"  <b>{escape(str(category_name))}</b>: "
-                    f"<code>{escape(str(category_id))}</code>{index_part}"
-                )
+            if not user_dict.get("GDRIVE_ID")
+            else ""
+        )
+        user_index = (
+            f"  <b>Custom</b>: <code>{escape(str(user_dict.get('INDEX_URL')))}</code>\n"
+            if user_dict.get("INDEX_URL")
+            else ""
+        )
+        default_index = (
+            f"  <b>Default</b>: <code>{escape(str(index_url))}</code>"
+            if not user_dict.get("INDEX_URL")
+            else ""
+        )
+        if drive_categories:
+            category_lines = [
+                f"• <b>{escape(str(name))}</b>: <code>{escape(str(data.get('drive_id', 'None')))}</code>"
+                for name, data in drive_categories.items()
+            ]
+        else:
+            category_lines = ["<i>None</i>"]
 
         buttons.ibutton(
-            "User Drive Categories",
+            "Drive Categories",
             f"userset {user_id} gdrive_menu DRIVE_CAT",
-            "header",
-            icon_custom_emoji_id=5190806721286657692,
+            icon_custom_emoji_id=5447410659857805170,
         )
         buttons.ibutton(
             "Default Gdrive ID",
             f"userset {user_id} gdrive_menu GDRIVE_ID",
-            "f_body",
-            icon_custom_emoji_id=5224450179368767019,
+            icon_custom_emoji_id=5447410659857805170,
         )
         buttons.ibutton(
             "Default Index URL",
             f"userset {user_id} gdrive_menu INDEX_URL",
-            "f_body",
-            icon_custom_emoji_id=5271604874419647061,
+            icon_custom_emoji_id=5447410659857805170,
         )
         buttons.ibutton(
             "Remove Token.pickle" if token_exists else "Token.pickle",
@@ -402,35 +405,29 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 if token_exists
                 else f"userset {user_id} gdrive_file TOKEN_PICKLE"
             ),
-            icon_custom_emoji_id=5197288647275071607,
+            icon_custom_emoji_id=5447644880824181073 if token_exists else 5447410659857805170,
         )
         buttons.ibutton(
-            "Disable Stop Duplicate" if stop_duplicate else "Enable Stop Duplicate",
+            f"{'Disable' if stop_duplicate else 'Enable'} Stop Duplicate",
             f"userset {user_id} gdrive_toggle STOP_DUPLICATE",
-            icon_custom_emoji_id=5427168083074628963,
+            icon_custom_emoji_id=5447644880824181073 if stop_duplicate else 5447410659857805170,
         )
         buttons.ibutton(
-            " 𝐁ᴀᴄᴋ",
+            "Back",
             f"userset {user_id} mirror",
-            "footer",
-            icon_custom_emoji_id=5416117059207572332,
-        )
-        buttons.ibutton(
-            " 𝐂ʟᴏsᴇ",
-            f"userset {user_id} close",
             "footer",
             icon_custom_emoji_id=5447644880824181073,
         )
+        joined_categories = "\n   ".join(category_lines)
         text = f"""㊂ <b><u>GDrive Tools Settings :</u></b>
 │
 ┠ <b>Name</b> → {name}
-┃
 ┠ <b>Gdrive ID</b> → <code>{escape(str(gdrive_id))}</code>
 ┠ <b>Index URL</b> → <code>{escape(str(index_url))}</code>
 ┠ <b>Stop Duplicate</b> → <b>{"Enabled" if stop_duplicate else "Disabled"}</b>
 ┠ <b>GDrive token.pickle</b> → <b>{"Exists" if token_exists else "Not Exists"}</b>
 ┖ <b>Drive Categories:</b>
-   {"<br>".join(category_lines)}"""
+   {joined_categories}"""
         button = buttons.build_menu(1, fb_cols=2, f_cols=2)
     elif key == "leech":
         if (
