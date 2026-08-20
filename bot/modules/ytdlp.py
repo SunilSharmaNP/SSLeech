@@ -763,7 +763,15 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             await delete_links(message)
             return
     else:
-        options = {"usenetrc": True, "cookiefile": cookie_to_use}
+        options = {
+            "usenetrc": True,
+            "cookiefile": cookie_to_use,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "ios", "mweb", "web"],
+                }
+            },
+        }
     # ────────────────────────────────────────────────────────────────────────────
     ydl_opts = {}
     if opt:
