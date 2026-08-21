@@ -55,6 +55,13 @@ from bot.helper.ext_utils.help_messages import YT_HELP_MESSAGE
 from bot.helper.ext_utils.bulk_links import extract_bulk_links
 
 
+_YOUTUBE_UNSUPPORTED_OPTIONS = {
+    "remote_components",
+    "js_runtimes",
+    "extractor_args",
+}
+
+
 @new_task
 async def select_format(_, query, obj):
     data = query.data.split()
@@ -779,7 +786,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 ydl_opts = {}
         if ydl_opts:
             for key, value in ydl_opts.items():
-                if key in ["postprocessors", "download_ranges"]:
+                if key in ["postprocessors", "download_ranges"] or key in _YOUTUBE_UNSUPPORTED_OPTIONS:
                     continue
                 if key == "format":
                     if select:
@@ -794,6 +801,8 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             yt_opt = opt.split("|")
             for ytopt in yt_opt:
                 key, value = map(str.strip, ytopt.split(":", 1))
+                if key in _YOUTUBE_UNSUPPORTED_OPTIONS:
+                    continue
                 if key == "format":
                     if select:
                         qual = ""
