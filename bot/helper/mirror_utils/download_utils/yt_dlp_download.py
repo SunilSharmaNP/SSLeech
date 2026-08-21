@@ -19,16 +19,6 @@ from bot import BinConfig
 
 LOGGER = getLogger(__name__)
 
-# Android and iOS clients do not accept cookie files, while mweb currently
-# requires a PO token.  For cookie-based downloads use the web client and let
-# yt-dlp's EJS solver handle YouTube's n challenge.
-YOUTUBE_EXTRACTOR_ARGS = {
-    "youtube": {
-        "player_client": ["web"],
-    }
-}
-
-
 def get_cookie_file(user_dict=None):
     if user_dict and not user_dict.get("USE_DEFAULT_COOKIE", False):
         usr_cookie = user_dict.get("USER_COOKIE_FILE", "")
@@ -102,11 +92,6 @@ class YoutubeDLHelper:
                 "file_access": lambda n: 3,
                 "extractor": lambda n: 3,
             },
-            "extractor_args": {
-                **YOUTUBE_EXTRACTOR_ARGS,
-            },
-            "js_runtimes": {"deno": {}},
-            "remote_components": {"ejs": ["github"]},
         }
         LOGGER.info(
             f"Using cookies.txt file: {cookie_to_use} | User ID : {getattr(self.__listener, 'user_id', 'Unknown')}"
