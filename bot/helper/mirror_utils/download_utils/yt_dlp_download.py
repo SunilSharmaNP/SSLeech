@@ -19,6 +19,13 @@ from bot import BinConfig
 
 LOGGER = getLogger(__name__)
 
+_YOUTUBE_UNSUPPORTED_OPTIONS = {
+    "remote_components",
+    "js_runtimes",
+    "extractor_args",
+}
+
+
 def get_cookie_file(user_dict=None):
     if user_dict and not user_dict.get("USE_DEFAULT_COOKIE", False):
         usr_cookie = user_dict.get("USER_COOKIE_FILE", "")
@@ -466,6 +473,8 @@ class YoutubeDLHelper:
     def __set_options(self, options):
         if isinstance(options, dict):
             for key, value in options.items():
+                if key in _YOUTUBE_UNSUPPORTED_OPTIONS:
+                    continue
                 if key == "postprocessors":
                     if isinstance(value, list):
                         self.opts[key].extend(tuple(value))
@@ -482,6 +491,8 @@ class YoutubeDLHelper:
         options = options.split("|")
         for opt in options:
             key, value = map(str.strip, opt.split(":", 1))
+            if key in _YOUTUBE_UNSUPPORTED_OPTIONS:
+                continue
             if key == "format" and value.startswith("ba/b-"):
                 continue
             if value.startswith("^"):
