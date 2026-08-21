@@ -10,6 +10,10 @@ RUN ln -sf "$(which aria2c)"          /usr/local/bin/blitzfetcher \
  && ln -sf "$(which qbittorrent-nox)" /usr/local/bin/stormtorrent \
  && ln -sf "$(which ffmpeg)"          /usr/local/bin/mediaforge
 
+# yt-dlp-ejs needs a JavaScript runtime for YouTube's n challenge.
+RUN curl -fsSL https://deno.land/install.sh | sh \
+ && ln -sf /root/.deno/bin/deno /usr/local/bin/deno
+
 COPY requirements.txt .
 
 RUN pip3 uninstall -y pyrogram pyrofork 2>/dev/null || true
