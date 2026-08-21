@@ -36,6 +36,7 @@ uvloop
 uv
 xattr
 yt-dlp[default,curl-cffi]
+yt-dlp-ejs
 pytz
 tzlocal
 cryptography>=41.0.0
