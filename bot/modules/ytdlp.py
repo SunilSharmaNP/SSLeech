@@ -55,16 +55,6 @@ from bot.helper.ext_utils.help_messages import YT_HELP_MESSAGE
 from bot.helper.ext_utils.bulk_links import extract_bulk_links
 
 
-# Android and iOS clients do not accept cookie files, while mweb currently
-# requires a PO token.  Keep cookie-based YouTube extraction on web; the
-# Deno/EJS settings below solve YouTube's n challenge.
-YOUTUBE_EXTRACTOR_ARGS = {
-    "youtube": {
-        "player_client": ["web"],
-    }
-}
-
-
 @new_task
 async def select_format(_, query, obj):
     data = query.data.split()
@@ -776,9 +766,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         options = {
             "usenetrc": True,
             "cookiefile": cookie_to_use,
-            "extractor_args": YOUTUBE_EXTRACTOR_ARGS,
-            "js_runtimes": {"deno": {}},
-            "remote_components": {"ejs": ["github"]},
         }
     # ────────────────────────────────────────────────────────────────────────────
     ydl_opts = {}
