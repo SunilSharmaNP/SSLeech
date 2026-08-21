@@ -23,30 +23,43 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.bot_utils import (
     get_readable_file_size,
     fetch_user_tds,
+    fetch_user_drive_categories,
     fetch_user_dumps,
     is_url,
     is_gdrive_link,
     new_task,
     sync_to_async,
-    new_task,
-    is_rclone_path,
     new_thread,
     get_readable_time,
     arg_parser,
 )
-from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
+from bot.helper.mirror_utils.download_utils.yt_dlp_download import (
+    YoutubeDLHelper,
+    get_cookie_file,
+)
+from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
+from bot.helper.mirror_utils.download_utils.youtube_api_download import (
+    choose_youtube_download,
+    is_youtube_url,
+)
 from bot.helper.mirror_utils.download_utils.direct_link_generator import (
     direct_link_generator,
     user_agent as _dlg_user_agent,
 )
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
-from bot.helper.mirror_utils.rclone_utils.list import RcloneList
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.listeners.tasks_listener import MirrorLeechListener
 from bot.helper.ext_utils.help_messages import YT_HELP_MESSAGE
 from bot.helper.ext_utils.bulk_links import extract_bulk_links
+
+
+_YOUTUBE_UNSUPPORTED_OPTIONS = {
+    "remote_components",
+    "js_runtimes",
+    "extractor_args",
+}
 
 
 @new_task
@@ -432,14 +445,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     args = arg_parser(input_list[1:], arg_base)
     cmd = input_list[0].split("@")[0]
 
-    if config_dict.get("DISABLE_YTDLP"):
-        await sendMessage(
-            message,
-            "<b>❌ YT-DLP Disabled!</b>\n\nyt-dlp (YouTube/media URL) downloads are currently disabled by the admin.",
-        )
-        await delete_links(message)
-        return
-
     try:
         multi = int(args["-i"])
     except Exception:
@@ -464,6 +469,9 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     bulk_end = 0
     thumb = args["-t"] or args["-thumb"]
     sshots = int(ss) if (ss := (args["-ss"] or args["-screenshots"])).isdigit() else 0
+
+    drive_id = drive_id or user_data.get(message.from_user.id, {}).get("GDRIVE_ID")
+    index_link = index_link or user_data.get(message.from_user.id, {}).get("INDEX_URL")
 
     if not isinstance(isBulk, bool):
         dargs = isBulk.split(":")
@@ -566,6 +574,17 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         await delete_links(message)
         return
 
+    if config_dict.get("DISABLE_YTDLP") and not (
+        config_dict.get("DISABLE_YT_COOKIES") and is_youtube_url(link)
+    ):
+        await sendMessage(
+            message,
+            "<b>❌ YT-DLP Disabled!</b>\n\n"
+            "yt-dlp downloads are currently disabled by the admin.",
+        )
+        await delete_links(message)
+        return
+
     error_msg = []
     error_button = None
     task_utilis_msg, error_button = await task_utils(message)
@@ -583,13 +602,15 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         return
 
     if not isLeech:
-        if config_dict["DEFAULT_UPLOAD"] == "rc" and not up or up == "rc":
-            up = config_dict["RCLONE_PATH"]
-        elif config_dict["DEFAULT_UPLOAD"] == "ddl" and not up or up == "ddl":
+        if not up and config_dict["DEFAULT_UPLOAD"] == "ddl" or up == "ddl":
             up = "ddl"
-        if not up and config_dict["DEFAULT_UPLOAD"] == "gd":
+        else:
             up = "gd"
-            user_tds = await fetch_user_tds(message.from_user.id)
+            user_tds = {
+                **await fetch_user_drive_categories(message.from_user.id),
+                **await fetch_user_tds(message.from_user.id),
+            }
+            all_categories = {**categories_dict, **user_tds}
             if not drive_id and gd_cat:
                 merged_dict = {**categories_dict, **user_tds}
                 for drive_name, drive_dict in merged_dict.items():
@@ -601,39 +622,17 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                         break
             if not drive_id and len(user_tds) == 1:
                 drive_id, index_link = next(iter(user_tds.values())).values()
-            elif not drive_id and (
-                len(categories_dict) > 1
-                and len(user_tds) == 0
-                or len(categories_dict) >= 1
-                and len(user_tds) > 1
-            ):
+            elif not drive_id and len(all_categories) > 1:
                 drive_id, index_link, is_cancelled = await open_category_btns(message)
                 if is_cancelled:
                     await delete_links(message)
                     return
             if drive_id and not await sync_to_async(
-                GoogleDriveHelper().getFolderData, drive_id
+                GoogleDriveHelper(user_id=message.from_user.id).getFolderData, drive_id
             ):
                 return await sendMessage(message, "Google Drive ID validation failed!!")
-        if up == "gd" and not config_dict["GDRIVE_ID"] and not drive_id:
+        if up == "gd" and not (config_dict["GDRIVE_ID"] or drive_id):
             await sendMessage(message, "GDRIVE_ID not Provided!")
-            await delete_links(message)
-            return
-        elif not up:
-            await sendMessage(message, "No Rclone Destination!")
-            await delete_links(message)
-            return
-        elif up not in ["rcl", "gd", "ddl"]:
-            if up.startswith("mrcc:"):
-                config_path = f"rclone/{message.from_user.id}.conf"
-            else:
-                config_path = "rclone.conf"
-            if not await aiopath.exists(config_path):
-                await sendMessage(message, f"Rclone Config: {config_path} not Exists!")
-                await delete_links(message)
-                return
-        if up != "gd" and up != "ddl" and not is_rclone_path(up):
-            await sendMessage(message, "Wrong Rclone Upload Destination!")
             await delete_links(message)
             return
     else:
@@ -661,13 +660,6 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                     await delete_links(message)
                     return
 
-    if up == "rcl" and not isLeech:
-        up = await RcloneList(client, message).get_rclone_path("rcu")
-        if not is_rclone_path(up):
-            await sendMessage(message, up)
-            await delete_links(message)
-            return
-
     listener = MirrorLeechListener(
         message,
         compress,
@@ -681,6 +673,29 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         isYtdlp=True,
         source_url=link,
         leech_utils={"screenshots": sshots, "thumb": thumb},
+    )
+
+    if config_dict.get("DISABLE_YT_COOKIES") and is_youtube_url(link):
+        api_download = await choose_youtube_download(message, link, name)
+        if api_download is None:
+            await delete_links(message)
+            return
+        __run_multi()
+        await delete_links(message)
+        await add_aria2c_download(
+            api_download["url"],
+            path,
+            listener,
+            api_download["filename"],
+            "",
+            None,
+            None,
+        )
+        return
+
+    cookie_to_use = get_cookie_file(user_data.get(message.from_user.id, {}))
+    LOGGER.info(
+        f"Using cookies.txt file: {cookie_to_use} | User ID : {message.from_user.id}"
     )
 
     if "mdisk.me" in link:
@@ -749,13 +764,16 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 "filesize_approx": _lulu_filesize or None,
                 "duration": _lulu_duration or None,
             }
-            options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+            options = {"usenetrc": True, "cookiefile": cookie_to_use}
         except DirectDownloadLinkException as e:
             await sendMessage(message, f"{tag} {e}")
             await delete_links(message)
             return
     else:
-        options = {"usenetrc": True, "cookiefile": "cookies.txt"}
+        options = {
+            "usenetrc": True,
+            "cookiefile": cookie_to_use,
+        }
     # ────────────────────────────────────────────────────────────────────────────
     ydl_opts = {}
     if opt:
@@ -768,7 +786,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
                 ydl_opts = {}
         if ydl_opts:
             for key, value in ydl_opts.items():
-                if key in ["postprocessors", "download_ranges"]:
+                if key in ["postprocessors", "download_ranges"] or key in _YOUTUBE_UNSUPPORTED_OPTIONS:
                     continue
                 if key == "format":
                     if select:
@@ -783,6 +801,8 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
             yt_opt = opt.split("|")
             for ytopt in yt_opt:
                 key, value = map(str.strip, ytopt.split(":", 1))
+                if key in _YOUTUBE_UNSUPPORTED_OPTIONS:
+                    continue
                 if key == "format":
                     if select:
                         qual = ""
