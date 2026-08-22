@@ -350,7 +350,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         drive_categories = user_dict.get("DRIVE_CAT") or {}
         category_lines = [
-            f"┠ <emoji id=5190806721286657692>🗂️</emoji> "
+            f"┎ <emoji id=5190806721286657692>🗂️</emoji> "
             f"<b>𝐃ᴇғᴀᴜʟᴛ 𝐆ᴅʀɪᴠᴇ</b> : <code>{escape(str(gdrive_id))}</code>"
         ]
         if index_url != "None":
@@ -374,27 +374,27 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 )
 
         buttons.ibutton(
-            "📁 𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs",
+            "📁 𝐔sᴇʀ 𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs",
             f"userset {user_id} gdrive_menu DRIVE_CAT",
             "header",
             icon_custom_emoji_id=5190806721286657692,
         )
         buttons.ibutton(
-            "🗂️ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃",
+            "🗂️ 𝐃ᴇғᴀᴜʟᴛ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃",
             f"userset {user_id} gdrive_menu GDRIVE_ID",
             "f_body",
             icon_custom_emoji_id=5224450179368767019,
         )
         buttons.ibutton(
-            "🔗 𝐈ɴᴅᴇx 𝐔𝐑𝐋",
+            "🔗 𝐃ᴇғᴀᴜʟᴛ 𝐈ɴᴅᴇx 𝐔𝐑𝐋",
             f"userset {user_id} gdrive_menu INDEX_URL",
             "f_body",
             icon_custom_emoji_id=5271604874419647061,
         )
         buttons.ibutton(
-            "🗑️ 𝐑ᴇᴍᴏᴠᴇ Tᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ"
+            "🗑️ 𝐑ᴇᴍᴏᴠᴇ 𝐭ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ"
             if token_exists
-            else "🔐 𝐔ᴘʟᴏᴀᴅ Tᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ",
+            else "🔐 𝐔ᴘʟᴏᴀᴅ 𝐭ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ",
             (
                 f"userset {user_id} gdrive_remove TOKEN_PICKLE"
                 if token_exists
@@ -426,10 +426,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         token_status = f"{_TICK} 𝐑ᴇᴀᴅʏ" if token_exists else f"{_CROSS} 𝐍ᴏᴛ 𝐒ᴇᴛ"
         text = f"""💠 <b><u>𝐆ᴅʀɪᴠᴇ 𝐓ᴏᴏʟs 𝐒ᴇᴛᴛɪɴɢs : {name}</u></b>
 
-┎ <emoji id=5190806721286657692>🗂️</emoji> <b>𝐆ᴅʀɪᴠᴇ 𝐈𝐃</b> : <code>{escape(str(gdrive_id))}</code>
-┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐈ɴᴅᴇx 𝐔𝐑𝐋</b> : <code>{escape(str(index_url))}</code>
+┎ <emoji id=5190806721286657692>🗂️</emoji> <b>𝐃ᴇғᴀᴜʟᴛ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃</b> : <code>{escape(str(gdrive_id))}</code>
+┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐃ᴇғᴀᴜʟᴛ 𝐈ɴᴅᴇx 𝐔𝐑𝐋</b> : <code>{escape(str(index_url))}</code>
 ┠ <emoji id=5445284980978621387>🛡️</emoji> <b>𝐒ᴛᴏᴘ 𝐃ᴜᴘʟɪᴄᴀᴛᴇ</b> : {stop_status}
-┠ <emoji id=5291873529464122510>🔐</emoji> <b>ᴛᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ</b> : {token_status}
+┠ <emoji id=5291873529464122510>🔐</emoji> <b>𝐭ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ</b> : {token_status}
+
 ┠ <emoji id=5379748618268510153>📁</emoji> <b>𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs</b> :
 {joined_categories}
 
