@@ -1272,20 +1272,19 @@ async def edit_user_settings(client, query):
         mode = data[4] if len(data) > 4 else "set"
         prompt = {
             "GDRIVE_ID": (
-                "<b>Send the default Google Drive folder/Team Drive ID.</b>\n"
-                "You may also send a Google Drive folder URL."
+                "<b>⚡Send The Your Google Drive folder/Team Drive ID.</b>\n\n"
+                "<b>⚡You May Also Aend A Google Drive Folder URL.</b>"
             ),
             "INDEX_URL": (
-                "<b>Send the default Google Drive Index URL.</b>\n"
-                "Send an empty value only if you want to clear it."
+                "<b>⚡Send Your Google Drive Index URL.</b>\n\n"
             ),
             "DRIVE_CAT": (
                 (
-                    "<b>Send categories as a Python dictionary:</b>\n"
+                    "<b>Send Categories As A Python Dictionary:</b>\n"
                     "<code>{'Movies': 'drive_id|https://index.example/'}</code>"
                     if mode == "set"
                     else (
-                        "<b>Send one category as:</b>\n"
+                        "<b>Send One category as:</b>\n"
                         "<code>Name drive_id https://index.example/</code>"
                     )
                 )
