@@ -298,11 +298,14 @@ class WZMLStyle:
 ✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏𝐨ᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
 """
 
-    MIRROR = """㊂ <b><u>𝐌ɪʀʀᴏʀ/𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
+    MIRROR = """💠 <b><u>𝐌ɪʀʀᴏʀ / 𝐂ʟᴏɴᴇ 𝐒ᴇᴛᴛɪɴɢs</u></b>
 
-┖ <emoji id=5429651785352501917>↗️</emoji> <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ :</b> <i>{DM} ᴘᴇʀ ᴅᴀʏ</i>
+👤 <b>𝐏ʀᴏғɪʟᴇ :</b> <i>{NAME}</i>
+📤 <b>𝐃ᴀɪʟʏ 𝐌ɪʀʀᴏʀ 𝐐ᴜᴏᴛᴀ :</b> <code>{DM}</code> <i>ᴘᴇʀ ᴅᴀʏ</i>
 
-✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a><b> ༺❘✦
+<i>⚡ 𝐂ᴏɴғɪɢᴜʀᴇ ʏᴏᴜʀ 𝐃ʀɪᴠᴇ ᴀɴᴅ 𝐃ᴅʟ ᴘʀᴇғᴇʀᴇɴᴄᴇs ʙᴇʟᴏᴡ.</i>
+
+✦❘༻ <b><a href=https://t.me/SSBotsUpdates>𝐏ᴏᴡᴇʀᴇᴅ 𝐁ʏ : 𝐒𝐒 𝐁ᴏᴛs</a></b> ༺❘✦
 """
 
     LEECH = """㊂ <b><u>𝐋ᴇᴇᴄʜ 𝐒ᴇᴛᴛɪɴɢs : {NAME}</u></b>
