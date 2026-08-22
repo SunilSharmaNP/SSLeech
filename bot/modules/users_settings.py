@@ -350,7 +350,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         drive_categories = user_dict.get("DRIVE_CAT") or {}
         category_lines = [
-            f"  🗂️ <b>𝐃ᴇғᴀᴜʟᴛ</b>: <code>{escape(str(gdrive_id))}</code>"
+            f"┎ <emoji id=5190806721286657692>🗂️</emoji> "
+            f"<b>𝐃ᴇғᴀᴜʟᴛ 𝐆ᴅʀɪᴠᴇ</b> : <code>{escape(str(gdrive_id))}</code>"
         ]
         if index_url != "None":
             category_lines[0] += f" | <code>{escape(str(index_url))}</code>"
@@ -367,7 +368,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                     else ""
                 )
                 category_lines.append(
-                    f"  📁 <b>{escape(str(category_name))}</b>: "
+                    f"┠ <emoji id=5379763379953803263>📁</emoji> "
+                    f"<b>{escape(str(category_name))}</b> : "
                     f"<code>{escape(str(category_id))}</code>{index_part}"
                 )
 
@@ -420,25 +422,19 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             icon_custom_emoji_id=5447644880824181073,
         )
         joined_categories = "\n   ".join(category_lines)
-        stop_status = "🟢 𝐄ɴᴀʙʟᴇᴅ" if stop_duplicate else "🔴 𝐃ɪsᴀʙʟᴇᴅ"
-        token_status = "🟢 𝐑ᴇᴀᴅʏ" if token_exists else "🟡 𝐍ᴏᴛ 𝐒ᴇᴛ"
-        text = f"""💠 <b><u>𝐆ᴅʀɪᴠᴇ 𝐓ᴏᴏʟs 𝐒ᴇᴛᴛɪɴɢs</u></b>
+        stop_status = f"{_TICK} 𝐄ɴᴀʙʟᴇᴅ" if stop_duplicate else f"{_CROSS} 𝐃ɪsᴀʙʟᴇᴅ"
+        token_status = f"{_TICK} 𝐑ᴇᴀᴅʏ" if token_exists else f"{_CROSS} 𝐍ᴏᴛ 𝐒ᴇᴛ"
+        text = f"""💠 <b><u>𝐆ᴅʀɪᴠᴇ 𝐓ᴏᴏʟs 𝐒ᴇᴛᴛɪɴɢs : {name}</u></b>
 
-👤 <b>𝐏ʀᴏғɪʟᴇ :</b> <i>{name}</i>
+┎ <emoji id=5190806721286657692>🗂️</emoji> <b>𝐃ᴇғᴀᴜʟᴛ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃</b> : <code>{escape(str(gdrive_id))}</code>
+┠ <emoji id=5271604874419647061>🔗</emoji> <b>𝐃ᴇғᴀᴜʟᴛ 𝐈ɴᴅᴇx 𝐔𝐑𝐋</b> : <code>{escape(str(index_url))}</code>
+┠ <emoji id=5445284980978621387>🛡️</emoji> <b>𝐒ᴛᴏᴘ 𝐃ᴜᴘʟɪᴄᴀᴛᴇ</b> : {stop_status}
+┠ <emoji id=5291873529464122510>🔐</emoji> <b>𝐭ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ</b> : {token_status}
 
-🗂️ <b>𝐃ᴇғᴀᴜʟᴛ 𝐃ʀɪᴠᴇ 𝐈𝐃 :</b>
-<code>{escape(str(gdrive_id))}</code>
+┠ <emoji id=5379748618268510153>📁</emoji> <b>𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs</b> :
+{joined_categories}
 
-🔗 <b>𝐃ᴇғᴀᴜʟᴛ 𝐈ɴᴅᴇx :</b>
-<code>{escape(str(index_url))}</code>
-
-🛡️ <b>𝐒ᴛᴏᴘ 𝐃ᴜᴘʟɪᴄᴀᴛᴇ :</b> {stop_status}
-🔐 <b>𝐀ᴜᴛʜ 𝐓ᴏᴋᴇɴ :</b> {token_status}
-
-📁 <b>𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs :</b>
-   {joined_categories}
-
-<i>💡 𝐔sᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ᴜᴘᴅᴀᴛᴇ ʏᴏᴜʀ 𝐆ᴅʀɪᴠᴇ ᴘʀᴇғᴇʀᴇɴᴄᴇs.</i>"""
+<i>💡 𝐒ᴇʟᴇᴄᴛ ᴀɴ ᴏᴘᴛɪᴏɴ ʙᴇʟᴏᴡ ᴛᴏ ᴜᴘᴅᴀᴛᴇ ʏᴏᴜʀ 𝐆ᴅʀɪᴠᴇ ᴘʀᴇғᴇʀᴇɴᴄᴇs.</i>"""
         button = buttons.build_menu(1, fb_cols=2, f_cols=2)
     elif key == "leech":
         if (
