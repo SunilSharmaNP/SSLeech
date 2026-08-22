@@ -310,12 +310,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         button = buttons.build_menu(2)
     elif key == "mirror":
         buttons.ibutton(
-            "Gdrive tools",
+            "☁️ 𝐆ᴅʀɪᴠᴇ 𝐓ᴏᴏʟs",
             f"userset {user_id} gdrive_tools",
             icon_custom_emoji_id=5224450179368767019,
         )
         buttons.ibutton(
-            "DDL Servers",
+            "🚀 𝐃𝐃𝐋 𝐒ᴇʀᴠᴇʀs",
             f"userset {user_id} ddl_servers",
             icon_custom_emoji_id=5193177581888755275,
         )
@@ -335,8 +335,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             DM=f"{dailyup} / {dailytlup}",
         )
 
-        buttons.ibutton(" 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer", icon_custom_emoji_id=5416117059207572332)
-        buttons.ibutton(" 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
+        buttons.ibutton("🔙 𝐁ᴀᴄᴋ", f"userset {user_id} back", "footer", icon_custom_emoji_id=5416117059207572332)
+        buttons.ibutton("✖️ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer", icon_custom_emoji_id=5447644880824181073)
         button = buttons.build_menu(2)
     elif key == "gdrive_tools":
         token_path = f"tokens/{user_id}.pickle"
@@ -350,7 +350,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         )
         drive_categories = user_dict.get("DRIVE_CAT") or {}
         category_lines = [
-            f"  <b>Default</b>: <code>{escape(str(gdrive_id))}</code>"
+            f"  🗂️ <b>𝐃ᴇғᴀᴜʟᴛ</b>: <code>{escape(str(gdrive_id))}</code>"
         ]
         if index_url != "None":
             category_lines[0] += f" | <code>{escape(str(index_url))}</code>"
@@ -367,30 +367,32 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                     else ""
                 )
                 category_lines.append(
-                    f"  <b>{escape(str(category_name))}</b>: "
+                    f"  📁 <b>{escape(str(category_name))}</b>: "
                     f"<code>{escape(str(category_id))}</code>{index_part}"
                 )
 
         buttons.ibutton(
-            "User Drive Categories",
+            "📁 𝐔sᴇʀ 𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs",
             f"userset {user_id} gdrive_menu DRIVE_CAT",
             "header",
             icon_custom_emoji_id=5190806721286657692,
         )
         buttons.ibutton(
-            "Default Gdrive ID",
+            "🗂️ 𝐃ᴇғᴀᴜʟᴛ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃",
             f"userset {user_id} gdrive_menu GDRIVE_ID",
             "f_body",
             icon_custom_emoji_id=5224450179368767019,
         )
         buttons.ibutton(
-            "Default Index URL",
+            "🔗 𝐃ᴇғᴀᴜʟᴛ 𝐈ɴᴅᴇx 𝐔𝐑𝐋",
             f"userset {user_id} gdrive_menu INDEX_URL",
             "f_body",
             icon_custom_emoji_id=5271604874419647061,
         )
         buttons.ibutton(
-            "Remove Token.pickle" if token_exists else "Token.pickle",
+            "🗑️ 𝐑ᴇᴍᴏᴠᴇ 𝐭ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ"
+            if token_exists
+            else "🔐 𝐔ᴘʟᴏᴀᴅ 𝐭ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ",
             (
                 f"userset {user_id} gdrive_remove TOKEN_PICKLE"
                 if token_exists
@@ -399,33 +401,44 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             icon_custom_emoji_id=5197288647275071607,
         )
         buttons.ibutton(
-            "Disable Stop Duplicate" if stop_duplicate else "Enable Stop Duplicate",
+            "🛡️ 𝐃ɪsᴀʙʟᴇ 𝐒ᴛᴏᴘ 𝐃ᴜᴘʟɪᴄᴀᴛᴇ"
+            if stop_duplicate
+            else "🛡️ 𝐄ɴᴀʙʟᴇ 𝐒ᴛᴏᴘ 𝐃ᴜᴘʟɪᴄᴀᴛᴇ",
             f"userset {user_id} gdrive_toggle STOP_DUPLICATE",
             icon_custom_emoji_id=5427168083074628963,
         )
         buttons.ibutton(
-            " 𝐁ᴀᴄᴋ",
+            "🔙 𝐁ᴀᴄᴋ",
             f"userset {user_id} mirror",
             "footer",
             icon_custom_emoji_id=5416117059207572332,
         )
         buttons.ibutton(
-            " 𝐂ʟᴏsᴇ",
+            "✖️ 𝐂ʟᴏsᴇ",
             f"userset {user_id} close",
             "footer",
             icon_custom_emoji_id=5447644880824181073,
         )
         joined_categories = "\n   ".join(category_lines)
-        text = f"""㊂ <b><u>GDrive Tools Settings :</u></b>
-│
-┠ <b>Name</b> → {name}
-┃
-┠ <b>Gdrive ID</b> → <code>{escape(str(gdrive_id))}</code>
-┠ <b>Index URL</b> → <code>{escape(str(index_url))}</code>
-┠ <b>Stop Duplicate</b> → <b>{"Enabled" if stop_duplicate else "Disabled"}</b>
-┠ <b>GDrive token.pickle</b> → <b>{"Exists" if token_exists else "Not Exists"}</b>
-┖ <b>Drive Categories:</b>
-   {joined_categories}"""
+        stop_status = "🟢 𝐄ɴᴀʙʟᴇᴅ" if stop_duplicate else "🔴 𝐃ɪsᴀʙʟᴇᴅ"
+        token_status = "🟢 𝐑ᴇᴀᴅʏ" if token_exists else "🟡 𝐍ᴏᴛ 𝐒ᴇᴛ"
+        text = f"""💠 <b><u>𝐆ᴅʀɪᴠᴇ 𝐓ᴏᴏʟs 𝐒ᴇᴛᴛɪɴɢs</u></b>
+
+👤 <b>𝐏ʀᴏғɪʟᴇ :</b> <i>{name}</i>
+
+🗂️ <b>𝐃ᴇғᴀᴜʟᴛ 𝐃ʀɪᴠᴇ 𝐈𝐃 :</b>
+<code>{escape(str(gdrive_id))}</code>
+
+🔗 <b>𝐃ᴇғᴀᴜʟᴛ 𝐈ɴᴅᴇx :</b>
+<code>{escape(str(index_url))}</code>
+
+🛡️ <b>𝐒ᴛᴏᴘ 𝐃ᴜᴘʟɪᴄᴀᴛᴇ :</b> {stop_status}
+🔐 <b>𝐀ᴜᴛʜ 𝐓ᴏᴋᴇɴ :</b> {token_status}
+
+📁 <b>𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs :</b>
+   {joined_categories}
+
+<i>💡 𝐔sᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ᴜᴘᴅᴀᴛᴇ ʏᴏᴜʀ 𝐆ᴅʀɪᴠᴇ ᴘʀᴇғᴇʀᴇɴᴄᴇs.</i>"""
         button = buttons.build_menu(1, fb_cols=2, f_cols=2)
     elif key == "leech":
         if (
@@ -1249,15 +1262,15 @@ async def edit_user_settings(client, query):
                 for category_name in categories
             ) or "• No user categories configured."
             buttons = ButtonMaker()
-            buttons.ibutton("Set / Replace All", f"userset {user_id} gdrive_menu DRIVE_CAT set")
-            buttons.ibutton("Add Category", f"userset {user_id} gdrive_menu DRIVE_CAT add")
-            buttons.ibutton("Remove Category", f"userset {user_id} gdrive_menu DRIVE_CAT remove")
-            buttons.ibutton("Reset Categories", f"userset {user_id} gdrive_reset DRIVE_CAT")
-            buttons.ibutton("Back", f"userset {user_id} gdrive_tools", "footer")
-            buttons.ibutton("Close", f"userset {user_id} close", "footer")
+            buttons.ibutton("📝 𝐒ᴇᴛ / 𝐑ᴇᴘʟᴀᴄᴇ 𝐀ʟʟ", f"userset {user_id} gdrive_menu DRIVE_CAT set")
+            buttons.ibutton("➕ 𝐀ᴅᴅ 𝐂ᴀᴛᴇɢᴏʀʏ", f"userset {user_id} gdrive_menu DRIVE_CAT add")
+            buttons.ibutton("➖ 𝐑ᴇᴍᴏᴠᴇ 𝐂ᴀᴛᴇɢᴏʀʏ", f"userset {user_id} gdrive_menu DRIVE_CAT remove")
+            buttons.ibutton("♻️ 𝐑ᴇsᴇᴛ 𝐂ᴀᴛᴇɢᴏʀɪᴇs", f"userset {user_id} gdrive_reset DRIVE_CAT")
+            buttons.ibutton("🔙 𝐁ᴀᴄᴋ", f"userset {user_id} gdrive_tools", "footer")
+            buttons.ibutton("✖️ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
             await editMessage(
                 message,
-                f"<b>GDrive Tools — User Drive Categories</b>\n\n{category_text}",
+                f"📁 <b><u>𝐔sᴇʀ 𝐃ʀɪᴠᴇ 𝐂ᴀᴛᴇɢᴏʀɪᴇs</u></b>\n\n{category_text}",
                 buttons.build_menu(1),
             )
             return
@@ -1287,17 +1300,17 @@ async def edit_user_settings(client, query):
             await update_user_settings(query, "gdrive_tools")
             return
         buttons = ButtonMaker()
-        buttons.ibutton("Stop", f"userset {user_id} gdrive_cancel")
+        buttons.ibutton("🛑 𝐒ᴛᴏᴘ", f"userset {user_id} gdrive_cancel")
         if option in ["GDRIVE_ID", "INDEX_URL"] or (
             option == "DRIVE_CAT" and mode == "set"
         ):
             buttons.ibutton("Reset", f"userset {user_id} gdrive_reset {option}")
-        buttons.ibutton("Back", f"userset {user_id} gdrive_tools", "footer")
-        buttons.ibutton("Close", f"userset {user_id} close", "footer")
+        buttons.ibutton("🔙 𝐁ᴀᴄᴋ", f"userset {user_id} gdrive_tools", "footer")
+        buttons.ibutton("✖️ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         await editMessage(
             message,
-            f"<b>GDrive Tools — {option.replace('_', ' ').title()}</b>\n\n{prompt}\n\n"
-            "<b>Time left:</b> <code>60 sec</code>",
+            f"⚙️ <b><u>𝐆ᴅʀɪᴠᴇ 𝐓ᴏᴏʟs • {option.replace('_', ' ').title()}</u></b>\n\n{prompt}\n\n"
+            "⏱️ <b>𝐓ɪᴍᴇ 𝐋ᴇғᴛ :</b> <code>60 sec</code>",
             buttons.build_menu(1),
         )
         if option == "DRIVE_CAT" and mode == "add":
@@ -1312,14 +1325,15 @@ async def edit_user_settings(client, query):
         handler_dict[user_id] = False
         await query.answer()
         buttons = ButtonMaker()
-        buttons.ibutton("Stop", f"userset {user_id} gdrive_cancel")
-        buttons.ibutton("Back", f"userset {user_id} gdrive_tools", "footer")
-        buttons.ibutton("Close", f"userset {user_id} close", "footer")
+        buttons.ibutton("🛑 𝐒ᴛᴏᴘ", f"userset {user_id} gdrive_cancel")
+        buttons.ibutton("🔙 𝐁ᴀᴄᴋ", f"userset {user_id} gdrive_tools", "footer")
+        buttons.ibutton("✖️ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         await editMessage(
             message,
-            "<b>Send your token.pickle file as a document.</b>\n\n"
-            "<i>This token is stored separately for your user and used for your "
-            "Google Drive operations.</i>\n\n<b>Time left:</b> <code>60 sec</code>",
+            "🔐 <b>𝐔ᴘʟᴏᴀᴅ 𝐘ᴏᴜʀ 𝐓ᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ</b> ᴀs ᴀ ᴅᴏᴄᴜᴍᴇɴᴛ.\n\n"
+            "<i>💡 𝐓ʜɪs ᴛᴏᴋᴇɴ ɪs sᴛᴏʀᴇᴅ sᴇᴘᴀʀᴀᴛᴇʟʏ ᴀɴᴅ ᴜsᴇᴅ ғᴏʀ ʏᴏᴜʀ "
+            "𝐆ᴏᴏɢʟᴇ 𝐃ʀɪᴠᴇ ᴏᴘᴇʀᴀᴛɪᴏɴs.</i>\n\n"
+            "⏱️ <b>𝐓ɪᴍᴇ 𝐋ᴇғᴛ :</b> <code>60 sec</code>",
             buttons.build_menu(1),
         )
         pfunc = partial(add_token_pickle, pre_event=query)
