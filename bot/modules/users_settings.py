@@ -392,18 +392,6 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             icon_custom_emoji_id=5271604874419647061,
         )
         buttons.ibutton(
-            "🧹 𝐂ʟᴇᴀʀ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃",
-            f"userset {user_id} gdrive_reset GDRIVE_ID",
-            "f_body",
-            icon_custom_emoji_id=5445267414562389170,
-        )
-        buttons.ibutton(
-            "🧹 𝐂ʟᴇᴀʀ 𝐈ɴᴅᴇx 𝐔𝐑𝐋",
-            f"userset {user_id} gdrive_reset INDEX_URL",
-            "f_body",
-            icon_custom_emoji_id=5445267414562389170,
-        )
-        buttons.ibutton(
             "🗑️ 𝐑ᴇᴍᴏᴠᴇ Tᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ"
             if token_exists
             else "🔐 𝐔ᴘʟᴏᴀᴅ Tᴏᴋᴇɴ.ᴘɪᴄᴋʟᴇ",
@@ -1307,11 +1295,20 @@ async def edit_user_settings(client, query):
             await update_user_settings(query, "gdrive_tools")
             return
         buttons = ButtonMaker()
-        buttons.ibutton("🛑 𝐒ᴛᴏᴘ", f"userset {user_id} gdrive_cancel")
+        if option not in ["GDRIVE_ID", "INDEX_URL"]:
+            buttons.ibutton("🛑 𝐒ᴛᴏᴘ", f"userset {user_id} gdrive_cancel")
         if option in ["GDRIVE_ID", "INDEX_URL"] or (
             option == "DRIVE_CAT" and mode == "set"
         ):
-            buttons.ibutton("Reset", f"userset {user_id} gdrive_reset {option}")
+            buttons.ibutton(
+                "🧹 𝐂ʟᴇᴀʀ 𝐆ᴅʀɪᴠᴇ 𝐈𝐃"
+                if option == "GDRIVE_ID"
+                else "🧹 𝐂ʟᴇᴀʀ 𝐈ɴᴅᴇx 𝐔𝐑𝐋"
+                if option == "INDEX_URL"
+                else "♻️ 𝐑ᴇsᴇᴛ 𝐂ᴀᴛᴇɢᴏʀɪᴇs",
+                f"userset {user_id} gdrive_reset {option}",
+                icon_custom_emoji_id=5445267414562389170,
+            )
         buttons.ibutton("🔙 𝐁ᴀᴄᴋ", f"userset {user_id} gdrive_tools", "footer")
         buttons.ibutton("✖️ 𝐂ʟᴏsᴇ", f"userset {user_id} close", "footer")
         await editMessage(
